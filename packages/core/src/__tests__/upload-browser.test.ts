@@ -111,6 +111,43 @@ describe("uploadFileViaXhr", () => {
     expect(xhr.setRequestHeader).toHaveBeenCalledWith("Content-Type", "text/plain");
   });
 
+  it("test_uploadFileViaXhr_sends_checksum_header", async () => {
+    const file = new Blob(["hello"], { type: "text/plain" });
+    const promise = uploadFileViaXhr({
+      url: "https://s3.example.com/presigned",
+      file,
+      contentType: "text/plain",
+      checksumSHA256: "LPJNul+wow4m6DsqxbninhsWHlwfp0JecwQzYpOLmCQ=",
+    });
+
+    const xhr = mockXhrInstances[0]!;
+    xhr._triggerLoad(200, '"etag-456"');
+
+    await promise;
+    expect(xhr.setRequestHeader).toHaveBeenCalledWith("Content-Type", "text/plain");
+    expect(xhr.setRequestHeader).toHaveBeenCalledWith(
+      "x-amz-checksum-sha256",
+      "LPJNul+wow4m6DsqxbninhsWHlwfp0JecwQzYpOLmCQ=",
+    );
+  });
+
+  it("test_uploadFileViaXhr_no_checksum_header_when_not_provided", async () => {
+    const file = new Blob(["hello"], { type: "text/plain" });
+    const promise = uploadFileViaXhr({
+      url: "https://s3.example.com/presigned",
+      file,
+      contentType: "text/plain",
+    });
+
+    const xhr = mockXhrInstances[0]!;
+    xhr._triggerLoad(200, '"etag-789"');
+
+    await promise;
+    // Should only have Content-Type header, not checksum
+    expect(xhr.setRequestHeader).toHaveBeenCalledTimes(1);
+    expect(xhr.setRequestHeader).toHaveBeenCalledWith("Content-Type", "text/plain");
+  });
+
   it("test_uploadFileViaXhr_progress", async () => {
     const file = new Blob(["hello world"], { type: "text/plain" });
     const progressEvents: Array<{ loaded: number; total: number; percentage: number }> = [];
@@ -299,6 +336,34 @@ describe("uploadFile (unified)", () => {
     const result = await promise;
     expect(result.key).toBe("abc123.txt");
     expect(result.etags).toBeUndefined();
+  });
+
+  it("test_uploadFile_simple_with_checksum", async () => {
+    const file = new File(["hello"], "test.txt", { type: "text/plain" });
+
+    const promise = uploadFile({
+      file,
+      presignedData: {
+        key: "abc123.txt",
+        url: "https://s3.example.com/presigned",
+        checksumSHA256: "LPJNul+wow4m6DsqxbninhsWHlwfp0JecwQzYpOLmCQ=",
+      },
+    });
+
+    await vi.waitFor(() => {
+      expect(mockXhrInstances.length).toBe(1);
+    });
+
+    const xhr = mockXhrInstances[0]!;
+    xhr._triggerLoad(200, '"etag-checksum"');
+
+    const result = await promise;
+    expect(result.key).toBe("abc123.txt");
+    // Verify the checksum header was sent
+    expect(xhr.setRequestHeader).toHaveBeenCalledWith(
+      "x-amz-checksum-sha256",
+      "LPJNul+wow4m6DsqxbninhsWHlwfp0JecwQzYpOLmCQ=",
+    );
   });
 
   it("test_uploadFile_multipart", async () => {

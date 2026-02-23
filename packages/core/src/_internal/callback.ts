@@ -32,20 +32,42 @@ export async function resolveFileMetadata(
     fileNames: Record<string, string>;
     fileSizes: Record<string, number>;
     fileTypes: Record<string, string>;
+    fileChecksums?: Record<string, string>;
   },
 ): Promise<UploadedFile> {
   // Primary source: metadata token (set during upload request in Task 21)
   const name = tokenData.fileNames[key] ?? key.split("/").pop() ?? key;
   let size = tokenData.fileSizes[key] ?? 0;
   let type = tokenData.fileTypes[key] ?? "application/octet-stream";
+  const expectedChecksum = tokenData.fileChecksums?.[key];
 
   // Enrich/verify with HeadObject from S3 (authoritative for size after upload)
   try {
-    const command = new HeadObjectCommand({ Bucket: bucket, Key: key });
+    const command = new HeadObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      // Enable checksum retrieval so S3 returns ChecksumSHA256 if present
+      ...(expectedChecksum && { ChecksumMode: "ENABLED" as const }),
+    });
     const response = await s3.send(command);
     size = response.ContentLength ?? size;
     if (response.ContentType) type = response.ContentType;
-  } catch {
+
+    // Verify integrity: compare the checksum S3 stored with what the browser computed
+    if (expectedChecksum) {
+      const actualChecksum = response.ChecksumSHA256;
+      if (actualChecksum && actualChecksum !== expectedChecksum) {
+        throw new UploadError({
+          code: "INTEGRITY_CHECK_FAILED",
+          message: `SHA-256 checksum mismatch for "${key}": expected ${expectedChecksum}, got ${actualChecksum}`,
+        });
+      }
+    }
+  } catch (error) {
+    // Re-throw integrity errors — they must not be swallowed
+    if (error instanceof UploadError && error.code === "INTEGRITY_CHECK_FAILED") {
+      throw error;
+    }
     // Fallback to token data if HEAD fails (e.g. eventual consistency)
   }
 
@@ -124,6 +146,7 @@ export async function handleUploadCallback(
         fileNames: uploadMetadata.fileNames,
         fileSizes: uploadMetadata.fileSizes ?? {},
         fileTypes: uploadMetadata.fileTypes ?? {},
+        fileChecksums: uploadMetadata.fileChecksums,
       }),
     ),
   );

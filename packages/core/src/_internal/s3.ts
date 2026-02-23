@@ -17,7 +17,7 @@ import type { S3Config } from "@s3-good/shared";
 const clientCache = new Map<string, S3Client>();
 
 function configToKey(config: S3Config): string {
-  return `${config.region}:${config.bucket}:${config.accessKeyId}:${config.endpoint ?? "default"}`;
+  return `${config.region}:${config.bucket}:${config.accessKeyId}:${config.endpoint ?? "default"}:${config.sessionToken ?? "none"}`;
 }
 
 /**
@@ -35,9 +35,16 @@ export function getS3Client(config: S3Config): S3Client {
       credentials: {
         accessKeyId: config.accessKeyId,
         secretAccessKey: config.secretAccessKey,
+        ...(config.sessionToken && { sessionToken: config.sessionToken }),
       },
       ...(config.endpoint && { endpoint: config.endpoint }),
       forcePathStyle: config.forcePathStyle ?? false,
+      // Disable automatic checksum computation. AWS SDK v3 enables flexible
+      // checksums by default which bakes a CRC32 of the (empty) body into
+      // presigned URLs. When the browser later PUTs actual file data the
+      // checksum mismatches and S3 returns 403 SignatureDoesNotMatch.
+      requestChecksumCalculation: "WHEN_REQUIRED",
+      responseChecksumValidation: "WHEN_REQUIRED",
     });
     clientCache.set(key, client);
   }
@@ -99,15 +106,39 @@ export interface PresignedUrlOptions {
   bucket: string;
   key: string;
   contentType: string;
+  /**
+   * Content-Disposition value for the S3 object.
+   *
+   * **Note:** This is intentionally NOT included in the presigned URL signature.
+   * The AWS SDK presigner does not hoist `Content-Disposition` to a query
+   * parameter (unlike `Content-Type`), so it becomes a signed header that the
+   * client must send verbatim. Since browser upload code typically doesn't send
+   * this header, including it causes 403 SignatureDoesNotMatch errors.
+   *
+   * Content-Disposition is still tracked in the upload metadata for reference
+   * but is not part of the S3 PUT signature.
+   */
   contentDisposition?: "inline" | "attachment";
   /** URL expiry in seconds. Defaults to 3600 (1 hour). */
   expiresIn?: number;
+  /**
+   * Base64-encoded SHA-256 checksum (tracked in metadata only).
+   *
+   * Checksums are NOT embedded in presigned URLs because they require the
+   * client to send exact header values that match the signature. Instead,
+   * integrity is verified server-side via HeadObject on the upload callback —
+   * S3 automatically computes checksums (CRC64NVME since Dec 2024).
+   */
+  checksumSHA256?: string;
 }
 
 /**
  * Generates a presigned PUT URL for uploading a single file to S3.
  *
- * The `ContentType` is included in the signature to prevent MIME-type spoofing.
+ * Only `Bucket`, `Key`, and `ContentType` are included in the command.
+ * `ContentDisposition` and checksum fields are intentionally excluded to avoid
+ * signed-header mismatches — the presigner does not hoist these to query
+ * parameters, so the client would need to send them as exact headers.
  */
 export async function generatePresignedPutUrl(
   s3: S3Client,
@@ -117,9 +148,6 @@ export async function generatePresignedPutUrl(
     Bucket: opts.bucket,
     Key: opts.key,
     ContentType: opts.contentType,
-    ...(opts.contentDisposition && {
-      ContentDisposition: opts.contentDisposition,
-    }),
   });
 
   return getSignedUrl(s3, command, {
@@ -132,6 +160,8 @@ export interface FilePresignedUrl {
   url: string;
   name: string;
   fileType: string;
+  /** Base64-encoded SHA-256 checksum the browser must send as a header. */
+  checksumSHA256?: string;
 }
 
 /**
@@ -144,6 +174,7 @@ export async function generatePresignedUrls(
     name: string;
     contentType: string;
     contentDisposition?: "inline" | "attachment";
+    checksumSHA256?: string;
   }>,
   bucket: string,
 ): Promise<FilePresignedUrl[]> {
@@ -155,9 +186,11 @@ export async function generatePresignedUrls(
         key: file.key,
         contentType: file.contentType,
         contentDisposition: file.contentDisposition,
+        checksumSHA256: file.checksumSHA256,
       }),
       name: file.name,
       fileType: file.contentType,
+      ...(file.checksumSHA256 && { checksumSHA256: file.checksumSHA256 }),
     })),
   );
 }

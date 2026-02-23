@@ -97,6 +97,68 @@ describe("Presigned URLs", () => {
     const urls = new Set(results.map((r) => r.url));
     expect(urls.size).toBe(3);
   });
+
+  it("test_generatePresignedPutUrl_with_checksum_excluded_from_signature", async () => {
+    vi.mocked(getSignedUrl).mockResolvedValueOnce("https://s3.example.com/url-with-checksum");
+
+    await generatePresignedPutUrl(mockS3, {
+      bucket: "my-bucket",
+      key: "photos/cat.jpg",
+      contentType: "image/jpeg",
+      checksumSHA256: "LPJNul+wow4m6DsqxbninhsWHlwfp0JecwQzYpOLmCQ=",
+    });
+
+    // Checksums are intentionally NOT included in the PutObjectCommand for
+    // presigned URLs — they cause signed-header mismatches. Integrity is
+    // verified server-side via HeadObject on the upload callback instead.
+    expect(PutObjectCommand).toHaveBeenCalledWith({
+      Bucket: "my-bucket",
+      Key: "photos/cat.jpg",
+      ContentType: "image/jpeg",
+    });
+
+    // Verify getSignedUrl was called WITHOUT unhoistableHeaders
+    expect(getSignedUrl).toHaveBeenCalledWith(
+      mockS3,
+      expect.anything(),
+      { expiresIn: 3600 },
+    );
+  });
+
+  it("test_generatePresignedPutUrl_excludes_content_disposition_from_signature", async () => {
+    vi.mocked(getSignedUrl).mockResolvedValueOnce("https://s3.example.com/url-no-disp");
+
+    await generatePresignedPutUrl(mockS3, {
+      bucket: "my-bucket",
+      key: "photos/cat.jpg",
+      contentType: "image/jpeg",
+      contentDisposition: "inline",
+    });
+
+    // ContentDisposition is intentionally NOT included in the PutObjectCommand
+    // because the presigner doesn't hoist it to a query parameter — it becomes
+    // a signed header that the client must send verbatim, causing 403 errors.
+    expect(PutObjectCommand).toHaveBeenCalledWith({
+      Bucket: "my-bucket",
+      Key: "photos/cat.jpg",
+      ContentType: "image/jpeg",
+    });
+  });
+
+  it("test_generatePresignedUrls_batch_with_checksums", async () => {
+    const files = [
+      { key: "a.jpg", name: "a.jpg", contentType: "image/jpeg", checksumSHA256: "abc123==" },
+      { key: "b.png", name: "b.png", contentType: "image/png" }, // no checksum
+    ];
+
+    const results = await generatePresignedUrls(mockS3, files, "my-bucket");
+
+    expect(results).toHaveLength(2);
+    // First file should have checksum in response
+    expect(results[0]!.checksumSHA256).toBe("abc123==");
+    // Second file should not have checksum
+    expect(results[1]!.checksumSHA256).toBeUndefined();
+  });
 });
 
 describe("Content Disposition", () => {

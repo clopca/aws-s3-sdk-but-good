@@ -51,7 +51,7 @@ export async function setupBucket(
               AllowedHeaders: ["*"],
               AllowedMethods: ["GET", "PUT", "HEAD"],
               AllowedOrigins: opts?.allowedOrigins ?? ["*"],
-              ExposeHeaders: ["ETag", "Content-Length", "Content-Type"],
+              ExposeHeaders: ["ETag", "Content-Length", "Content-Type", "x-amz-checksum-sha256"],
               MaxAgeSeconds: 3600,
             },
           ],

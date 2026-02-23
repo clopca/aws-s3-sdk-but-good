@@ -6,6 +6,8 @@ export interface S3Config {
   bucket: string;
   accessKeyId: string;
   secretAccessKey: string;
+  /** AWS session token (required for temporary credentials from STS/SSO) */
+  sessionToken?: string;
   /** Custom endpoint for S3-compatible services (MinIO, R2, etc.) */
   endpoint?: string;
   /** Use path-style addressing (required for some S3-compatible services) */

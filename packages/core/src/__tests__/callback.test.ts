@@ -115,6 +115,107 @@ describe("resolveFileMetadata", () => {
     expect(result.type).toBe("image/jpeg"); // From token
     expect(result.url).toContain("uploads/abc.jpg");
   });
+
+  it("test_resolveFileMetadata_checksum_match", async () => {
+    // Arrange — HeadObject returns matching checksum
+    mockS3Send.mockResolvedValueOnce({
+      ContentLength: 2048,
+      ContentType: "image/png",
+      ChecksumSHA256: "LPJNul+wow4m6DsqxbninhsWHlwfp0JecwQzYpOLmCQ=",
+    });
+
+    const s3 = { send: mockS3Send } as never;
+    const tokenData = {
+      fileNames: { "uploads/abc.jpg": "photo.jpg" },
+      fileSizes: { "uploads/abc.jpg": 1024 },
+      fileTypes: { "uploads/abc.jpg": "image/jpeg" },
+      fileChecksums: { "uploads/abc.jpg": "LPJNul+wow4m6DsqxbninhsWHlwfp0JecwQzYpOLmCQ=" },
+    };
+
+    // Act — should succeed without throwing
+    const result = await resolveFileMetadata(
+      s3,
+      "test-bucket",
+      "uploads/abc.jpg",
+      mockConfig,
+      tokenData,
+    );
+
+    expect(result.key).toBe("uploads/abc.jpg");
+    expect(result.size).toBe(2048);
+  });
+
+  it("test_resolveFileMetadata_checksum_mismatch", async () => {
+    // Arrange — HeadObject returns DIFFERENT checksum
+    mockS3Send.mockResolvedValueOnce({
+      ContentLength: 2048,
+      ContentType: "image/png",
+      ChecksumSHA256: "TAMPERED_CHECKSUM_VALUE==",
+    });
+
+    const s3 = { send: mockS3Send } as never;
+    const tokenData = {
+      fileNames: { "uploads/abc.jpg": "photo.jpg" },
+      fileSizes: { "uploads/abc.jpg": 1024 },
+      fileTypes: { "uploads/abc.jpg": "image/jpeg" },
+      fileChecksums: { "uploads/abc.jpg": "LPJNul+wow4m6DsqxbninhsWHlwfp0JecwQzYpOLmCQ=" },
+    };
+
+    // Act & Assert — should throw INTEGRITY_CHECK_FAILED
+    await expect(
+      resolveFileMetadata(
+        s3,
+        "test-bucket",
+        "uploads/abc.jpg",
+        mockConfig,
+        tokenData,
+      ),
+    ).rejects.toThrow(UploadError);
+
+    await expect(
+      resolveFileMetadata(
+        { send: vi.fn().mockResolvedValue({
+          ContentLength: 2048,
+          ContentType: "image/png",
+          ChecksumSHA256: "TAMPERED_CHECKSUM_VALUE==",
+        }) } as never,
+        "test-bucket",
+        "uploads/abc.jpg",
+        mockConfig,
+        tokenData,
+      ),
+    ).rejects.toMatchObject({
+      code: "INTEGRITY_CHECK_FAILED",
+    });
+  });
+
+  it("test_resolveFileMetadata_no_checksum_expected_skips_verification", async () => {
+    // Arrange — HeadObject returns data but no checksum expected
+    mockS3Send.mockResolvedValueOnce({
+      ContentLength: 2048,
+      ContentType: "image/png",
+    });
+
+    const s3 = { send: mockS3Send } as never;
+    const tokenData = {
+      fileNames: { "uploads/abc.jpg": "photo.jpg" },
+      fileSizes: { "uploads/abc.jpg": 1024 },
+      fileTypes: { "uploads/abc.jpg": "image/jpeg" },
+      // No fileChecksums — should skip verification
+    };
+
+    // Act — should succeed without throwing
+    const result = await resolveFileMetadata(
+      s3,
+      "test-bucket",
+      "uploads/abc.jpg",
+      mockConfig,
+      tokenData,
+    );
+
+    expect(result.key).toBe("uploads/abc.jpg");
+    expect(result.size).toBe(2048);
+  });
 });
 
 // ─── Tests: handleUploadCallback ────────────────────────────────────────────

@@ -14,6 +14,8 @@ export interface XhrUploadOptions {
   url: string;
   file: File | Blob;
   contentType: string;
+  /** Base64-encoded SHA-256 checksum to send as x-amz-checksum-sha256 header. */
+  checksumSHA256?: string;
   onProgress?: (event: UploadProgressEvent) => void;
   signal?: AbortSignal;
 }
@@ -98,6 +100,9 @@ export function uploadFileViaXhr(
 
     xhr.open("PUT", opts.url);
     xhr.setRequestHeader("Content-Type", opts.contentType);
+    if (opts.checksumSHA256) {
+      xhr.setRequestHeader("x-amz-checksum-sha256", opts.checksumSHA256);
+    }
     xhr.send(opts.file);
   });
 }
@@ -385,6 +390,8 @@ export interface FileUploadOptions {
     key: string;
     /** Presigned PUT URL for simple (single-request) upload. */
     url?: string;
+    /** Base64-encoded SHA-256 checksum to send with the upload. */
+    checksumSHA256?: string;
     /** S3 multipart upload ID. */
     uploadId?: string;
     /** Presigned URLs for each part of a multipart upload. */
@@ -419,6 +426,7 @@ export async function uploadFile(
       url: opts.presignedData.url,
       file: opts.file,
       contentType: opts.file.type,
+      checksumSHA256: opts.presignedData.checksumSHA256,
       onProgress: opts.onProgress,
       signal: opts.signal,
     });

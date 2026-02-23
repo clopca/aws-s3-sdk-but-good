@@ -13,6 +13,7 @@ export type UploadErrorCode =
   | "S3_ERROR"
   | "UPLOAD_EXPIRED"
   | "UPLOAD_FAILED"
+  | "INTEGRITY_CHECK_FAILED"
   | "INTERNAL_ERROR";
 
 const DEFAULT_STATUS_MAP: Record<UploadErrorCode, number> = {
@@ -26,6 +27,7 @@ const DEFAULT_STATUS_MAP: Record<UploadErrorCode, number> = {
   S3_ERROR: 502,
   UPLOAD_EXPIRED: 410,
   UPLOAD_FAILED: 500,
+  INTEGRITY_CHECK_FAILED: 422,
   INTERNAL_ERROR: 500,
 };
 

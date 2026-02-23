@@ -26,6 +26,8 @@ export interface UploadActionPayload {
     name: string;
     size: number;
     type: string;
+    /** Base64-encoded SHA-256 checksum computed by the browser (optional). */
+    checksumSHA256?: string;
   }>;
   input?: unknown;
 }
@@ -36,6 +38,8 @@ export interface UploadActionResponse {
     url: string;
     name: string;
     fileType: string;
+    /** Base64-encoded SHA-256 checksum the browser must send as a header. */
+    checksumSHA256?: string;
     /** Present for multipart uploads */
     uploadId?: string;
     /** Presigned URLs for each part (multipart only) */
@@ -215,6 +219,8 @@ export interface UploadMetadata {
   fileNames: Record<string, string>;
   fileSizes: Record<string, number>;
   fileTypes: Record<string, string>;
+  /** Expected SHA-256 checksums per file key (only for single-part uploads). */
+  fileChecksums?: Record<string, string>;
   metadata: unknown;
   routeSlug: string;
   uploadIds?: Record<string, string>;
@@ -294,15 +300,24 @@ export async function handleUploadRequest(
 
       if (!parts.isMultipart) {
         // Simple upload — single presigned PUT URL
+        // Include checksum if the browser provided one
         const url = await generatePresignedPutUrl(s3, {
           bucket: config.bucket,
           key: fk.key,
           contentType: file.type,
           contentDisposition: getContentDisposition(file.type),
+          checksumSHA256: file.checksumSHA256,
         });
-        return { key: fk.key, url, name: file.name, fileType: file.type };
+        return {
+          key: fk.key,
+          url,
+          name: file.name,
+          fileType: file.type,
+          ...(file.checksumSHA256 && { checksumSHA256: file.checksumSHA256 }),
+        };
       } else {
         // Multipart upload — create upload, generate part URLs
+        // Checksums are not supported for multipart uploads (out of scope)
         const { uploadId } = await createMultipartUpload(s3, {
           bucket: config.bucket,
           key: fk.key,
@@ -332,12 +347,14 @@ export async function handleUploadRequest(
   const fileNames: Record<string, string> = {};
   const fileSizes: Record<string, number> = {};
   const fileTypes: Record<string, string> = {};
+  const fileChecksums: Record<string, string> = {};
   const uploadIdMap: Record<string, string> = {};
   fileKeys.forEach((fk, i) => {
     const file = payload.files[i]!;
     fileNames[fk.key] = file.name;
     fileSizes[fk.key] = file.size;
     fileTypes[fk.key] = file.type;
+    if (file.checksumSHA256) fileChecksums[fk.key] = file.checksumSHA256;
     const rf = responseFiles[i]!;
     if (rf.uploadId) uploadIdMap[fk.key] = rf.uploadId;
   });
@@ -348,6 +365,7 @@ export async function handleUploadRequest(
       fileNames,
       fileSizes,
       fileTypes,
+      fileChecksums: Object.keys(fileChecksums).length > 0 ? fileChecksums : undefined,
       metadata,
       routeSlug: slug,
       uploadIds: Object.keys(uploadIdMap).length > 0 ? uploadIdMap : undefined,

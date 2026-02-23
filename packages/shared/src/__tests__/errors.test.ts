@@ -40,6 +40,17 @@ describe("UploadError", () => {
     expect(error.message).toBe("Something went wrong");
     expect(error.name).toBe("UploadError");
   });
+
+  it("supports INTEGRITY_CHECK_FAILED error code", () => {
+    const error = new UploadError({
+      code: "INTEGRITY_CHECK_FAILED",
+      message: "SHA-256 checksum mismatch",
+    });
+
+    expect(error.code).toBe("INTEGRITY_CHECK_FAILED");
+    expect(error.status).toBe(422);
+    expect(error.message).toBe("SHA-256 checksum mismatch");
+  });
 });
 
 describe("S3Error", () => {

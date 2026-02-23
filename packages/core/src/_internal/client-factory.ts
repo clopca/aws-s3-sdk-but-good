@@ -4,9 +4,10 @@ import type {
   inferEndpoints,
 } from "./types";
 import type { UploadFileResponse } from "@s3-good/shared";
-import { UploadError } from "@s3-good/shared";
+import { UploadError, computeSHA256 } from "@s3-good/shared";
 import type { UploadProgressEvent } from "./upload-browser";
 import { uploadFile } from "./upload-browser";
+import { MULTIPART_THRESHOLD } from "./s3";
 
 // ─── Client Types ───────────────────────────────────────────────────────────
 
@@ -37,13 +38,14 @@ export interface UploadFilesOptions<
 async function requestPresignedUrls(
   url: string,
   endpoint: string,
-  files: File[],
+  files: Array<{ name: string; size: number; type: string; checksumSHA256?: string }>,
   input: unknown,
   headers?: HeadersInit,
 ): Promise<{
   files: Array<{
     key: string;
     url?: string;
+    checksumSHA256?: string;
     uploadId?: string;
     parts?: Array<{ partNumber: number; url: string }>;
     chunkSize?: number;
@@ -58,7 +60,12 @@ async function requestPresignedUrls(
       ...headers,
     },
     body: JSON.stringify({
-      files: files.map((f) => ({ name: f.name, size: f.size, type: f.type })),
+      files: files.map((f) => ({
+        name: f.name,
+        size: f.size,
+        type: f.type,
+        ...(f.checksumSHA256 && { checksumSHA256: f.checksumSHA256 }),
+      })),
       input,
     }),
   });
@@ -78,6 +85,7 @@ async function requestPresignedUrls(
     files: Array<{
       key: string;
       url?: string;
+      checksumSHA256?: string;
       uploadId?: string;
       parts?: Array<{ partNumber: number; url: string }>;
       chunkSize?: number;
@@ -171,16 +179,36 @@ export function genUploader<TRouter extends FileRouter>(
     const resolvedHeaders =
       typeof headers === "function" ? await headers() : headers;
 
-    // 1. Request presigned URLs from server
+    // 1. Compute SHA-256 checksums for single-part files (< MULTIPART_THRESHOLD)
+    const fileMetadata = await Promise.all(
+      files.map(async (f) => {
+        const meta: { name: string; size: number; type: string; checksumSHA256?: string } = {
+          name: f.name,
+          size: f.size,
+          type: f.type,
+        };
+        // Only compute checksums for files that will use single-part upload
+        if (f.size < MULTIPART_THRESHOLD) {
+          try {
+            meta.checksumSHA256 = await computeSHA256(await f.arrayBuffer());
+          } catch {
+            // If checksum computation fails (e.g. no Web Crypto API), skip it
+          }
+        }
+        return meta;
+      }),
+    );
+
+    // 2. Request presigned URLs from server
     const presignedData = await requestPresignedUrls(
       url,
       endpoint as string,
-      files,
+      fileMetadata,
       input,
       resolvedHeaders,
     );
 
-    // 2. Upload each file to S3
+    // 3. Upload each file to S3
     const uploadResults = await Promise.all(
       files.map(async (file, i) => {
         onUploadBegin?.(file.name);
@@ -194,7 +222,7 @@ export function genUploader<TRouter extends FileRouter>(
       }),
     );
 
-    // 3. Notify server of completion
+    // 4. Notify server of completion
     // Build per-file etags map for multipart uploads
     const fileEtags: Record<
       string,

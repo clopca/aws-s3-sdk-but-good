@@ -93,3 +93,22 @@ export function generateId(): string {
 
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
+
+/**
+ * Computes a Base64-encoded SHA-256 checksum of binary data.
+ * Uses the Web Crypto API (available in all modern browsers and Node 18+).
+ *
+ * Accepts `ArrayBuffer` for maximum portability — callers should convert
+ * `File`/`Blob` via `.arrayBuffer()` before calling.
+ */
+export async function computeSHA256(data: ArrayBuffer): Promise<string> {
+  const subtle = (globalThis as unknown as { crypto: { subtle: { digest(algo: string, data: ArrayBuffer): Promise<ArrayBuffer> } } }).crypto.subtle;
+  const hashBuffer = await subtle.digest("SHA-256", data);
+  const bytes = new Uint8Array(hashBuffer);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]!);
+  }
+  // btoa is available in all modern browsers and Node 16+
+  return (globalThis as unknown as { btoa(s: string): string }).btoa(binary);
+}
