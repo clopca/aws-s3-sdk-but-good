@@ -80,6 +80,58 @@ describe("browser hooks", () => {
     expect(result.current.previewItem).toBeNull();
   });
 
+  it("test_useBrowser_invalid_default_bucket_falls_back_to_first_allowed", async () => {
+    const { result } = renderHook(() => useBrowser({
+      url: "/api/browser",
+      config: { buckets: ["bucket-a", "bucket-b"], defaultBucket: "invalid-bucket" },
+    }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalled();
+    });
+
+    const firstBody = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body ?? "{}"));
+    expect(firstBody.bucket).toBe("bucket-a");
+    expect(result.current.activeBucket).toBe("bucket-a");
+  });
+
+  it("test_useBrowser_deleteSelected_allows_folder_keys", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({
+      action: "list",
+      success: true,
+      items: [{ kind: "folder", key: "photos/", name: "photos" }],
+      isTruncated: false,
+    }), { status: 200 }));
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({
+      action: "delete",
+      success: true,
+      deleted: ["photos/"],
+    }), { status: 200 }));
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({
+      action: "list",
+      success: true,
+      items: [],
+      isTruncated: false,
+    }), { status: 200 }));
+
+    const { result } = renderHook(() => useBrowser({ url: "/api/browser" }));
+
+    await waitFor(() => {
+      expect(result.current.items.length).toBe(1);
+    });
+
+    act(() => {
+      result.current.select("photos/");
+    });
+
+    await act(async () => {
+      await result.current.deleteSelected();
+    });
+
+    expect(result.current.error).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
   it("test_useBreadcrumbs_root", () => {
     const { result } = renderHook(() => useBreadcrumbs(""));
     expect(result.current).toEqual([{ label: "Root", path: "" }]);

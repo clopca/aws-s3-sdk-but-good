@@ -96,9 +96,6 @@ export function Toolbar({
 
         <SelectRoot
           value={sort.field}
-          onValueChange={(value) => {
-            if (value) onSortChange(value as SortField);
-          }}
         >
           <SelectTrigger className="inline-flex min-w-[132px] items-center justify-between rounded-md border border-slate-300 px-2 py-1.5 text-sm text-slate-800">
             <SelectValue>{(value) => `Sort: ${SORT_LABELS[(value as SortField) ?? "name"]}`}</SelectValue>

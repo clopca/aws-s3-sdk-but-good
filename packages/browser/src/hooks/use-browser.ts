@@ -36,7 +36,15 @@ function resolveAllowedBuckets(config?: BrowserConfig): string[] {
 
 function resolveDefaultBucket(config?: BrowserConfig): string {
   const allowedBuckets = resolveAllowedBuckets(config);
-  return config?.defaultBucket ?? allowedBuckets[0] ?? "";
+  if (allowedBuckets.length === 0) {
+    return config?.defaultBucket ?? "";
+  }
+
+  if (config?.defaultBucket && allowedBuckets.includes(config.defaultBucket)) {
+    return config.defaultBucket;
+  }
+
+  return allowedBuckets[0] ?? "";
 }
 
 export interface UseBrowserReturn {

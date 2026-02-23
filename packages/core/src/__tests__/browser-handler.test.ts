@@ -253,6 +253,51 @@ describe("browser handler", () => {
     });
   });
 
+  it("test_handleDelete_folder_recursively", async () => {
+    vi.mocked(listObjects).mockResolvedValueOnce({
+      objects: [
+        {
+          key: "uploads/folder/a.txt",
+          size: 1,
+          lastModified: new Date("2026-01-01"),
+        },
+        {
+          key: "uploads/folder/nested/b.txt",
+          size: 1,
+          lastModified: new Date("2026-01-01"),
+        },
+      ],
+      folders: [],
+      isTruncated: false,
+    });
+    vi.mocked(deleteObjects).mockResolvedValueOnce({
+      deleted: ["uploads/folder/", "uploads/folder/a.txt", "uploads/folder/nested/b.txt"],
+      errors: [],
+    });
+
+    const response = await handleBrowserAction(
+      new Request("http://localhost/api/browser", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "delete", key: "uploads/folder/" }),
+      }),
+      { route: { rootPrefix: "uploads/" }, config },
+    );
+
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(listObjects).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      bucket: "bucket",
+      prefix: "uploads/folder/",
+      delimiter: "",
+    }));
+    expect(deleteObjects).toHaveBeenCalledWith(expect.anything(), {
+      bucket: "bucket",
+      keys: ["uploads/folder/", "uploads/folder/a.txt", "uploads/folder/nested/b.txt"],
+    });
+    expect(body.deleted).toEqual(["uploads/folder/", "uploads/folder/a.txt", "uploads/folder/nested/b.txt"]);
+  });
+
   it("test_handleDelete_uses_explicit_allowed_bucket", async () => {
     vi.mocked(deleteObject).mockResolvedValueOnce();
 
@@ -314,6 +359,45 @@ describe("browser handler", () => {
     expect(deleteObject).toHaveBeenCalled();
   });
 
+  it("test_handleRename_folder_recursively", async () => {
+    vi.mocked(listObjects).mockResolvedValueOnce({
+      objects: [
+        {
+          key: "uploads/photos/a.jpg",
+          size: 1,
+          lastModified: new Date("2026-01-01"),
+        },
+      ],
+      folders: [],
+      isTruncated: false,
+    });
+    vi.mocked(copyObject).mockResolvedValueOnce();
+    vi.mocked(deleteObjects).mockResolvedValueOnce({
+      deleted: ["uploads/photos/", "uploads/photos/a.jpg"],
+      errors: [],
+    });
+
+    const response = await handleBrowserAction(
+      new Request("http://localhost/api/browser", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "rename", key: "uploads/photos/", newName: "images" }),
+      }),
+      { route: { rootPrefix: "uploads/" }, config },
+    );
+
+    expect(response.status).toBe(200);
+    expect(copyObject).toHaveBeenCalledWith(expect.anything(), {
+      bucket: "bucket",
+      sourceKey: "uploads/photos/a.jpg",
+      destinationKey: "uploads/images/a.jpg",
+    });
+    expect(deleteObjects).toHaveBeenCalledWith(expect.anything(), {
+      bucket: "bucket",
+      keys: ["uploads/photos/", "uploads/photos/a.jpg"],
+    });
+  });
+
   it("test_handleMove_and_copy", async () => {
     vi.mocked(copyObject).mockResolvedValue(undefined);
     vi.mocked(deleteObject).mockResolvedValue(undefined);
@@ -342,6 +426,45 @@ describe("browser handler", () => {
       bucket: "bucket",
       sourceKey: "uploads/a.txt",
       destinationKey: "uploads/folder/a.txt",
+    });
+  });
+
+  it("test_handleMove_folder_recursively", async () => {
+    vi.mocked(listObjects).mockResolvedValueOnce({
+      objects: [
+        {
+          key: "uploads/photos/a.jpg",
+          size: 1,
+          lastModified: new Date("2026-01-01"),
+        },
+      ],
+      folders: [],
+      isTruncated: false,
+    });
+    vi.mocked(copyObject).mockResolvedValueOnce();
+    vi.mocked(deleteObjects).mockResolvedValueOnce({
+      deleted: ["uploads/photos/", "uploads/photos/a.jpg"],
+      errors: [],
+    });
+
+    const response = await handleBrowserAction(
+      new Request("http://localhost/api/browser", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "move", key: "uploads/photos/", destination: "uploads/archive/" }),
+      }),
+      { route: { rootPrefix: "uploads/" }, config },
+    );
+
+    expect(response.status).toBe(200);
+    expect(copyObject).toHaveBeenCalledWith(expect.anything(), {
+      bucket: "bucket",
+      sourceKey: "uploads/photos/a.jpg",
+      destinationKey: "uploads/archive/photos/a.jpg",
+    });
+    expect(deleteObjects).toHaveBeenCalledWith(expect.anything(), {
+      bucket: "bucket",
+      keys: ["uploads/photos/", "uploads/photos/a.jpg"],
     });
   });
 

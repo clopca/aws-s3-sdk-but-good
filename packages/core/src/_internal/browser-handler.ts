@@ -77,6 +77,21 @@ function destinationKeyForPath(sourceKey: string, destination: string): string {
   return destination;
 }
 
+function normalizeFolderPrefix(key: string): string {
+  return key.endsWith("/") ? key : `${key}/`;
+}
+
+function destinationPrefixForFolder(sourcePrefix: string, destination: string): string {
+  if (destination.endsWith("/")) {
+    return `${destination}${getNameFromKey(sourcePrefix)}/`;
+  }
+  return normalizeFolderPrefix(destination);
+}
+
+function mapFolderObjectKey(sourcePrefix: string, destinationPrefix: string, key: string): string {
+  return `${destinationPrefix}${key.slice(sourcePrefix.length)}`;
+}
+
 function validateAction(
   action: BrowserAction,
   allowedActions?: BrowserAction[],
@@ -164,6 +179,53 @@ function validateListFilters(filters: BrowserListFilters): void {
   }
 }
 
+async function listAllObjectKeysInPrefix(
+  s3: ReturnType<typeof getS3Client>,
+  bucket: string,
+  prefix: string,
+): Promise<string[]> {
+  const keys: string[] = [];
+  let continuationToken: string | undefined;
+
+  do {
+    const page = await listObjects(s3, {
+      bucket,
+      prefix,
+      delimiter: "",
+      continuationToken,
+      maxKeys: PAGE_SIZE_MAX,
+    });
+    keys.push(...page.objects.map((obj) => obj.key));
+    continuationToken = page.nextContinuationToken;
+    if (!page.isTruncated) break;
+  } while (continuationToken);
+
+  return keys;
+}
+
+async function copyFolderPrefix(
+  s3: ReturnType<typeof getS3Client>,
+  bucket: string,
+  sourcePrefix: string,
+  destinationPrefix: string,
+): Promise<string[]> {
+  const keys = await listAllObjectKeysInPrefix(s3, bucket, sourcePrefix);
+  if (keys.length === 0) {
+    await putEmptyObject(s3, { bucket, key: destinationPrefix });
+    return [];
+  }
+
+  for (const sourceKey of keys) {
+    await copyObject(s3, {
+      bucket,
+      sourceKey,
+      destinationKey: mapFolderObjectKey(sourcePrefix, destinationPrefix, sourceKey),
+    });
+  }
+
+  return keys;
+}
+
 export async function parseBrowserRequest(
   req: Request,
 ): Promise<BrowserActionPayload> {
@@ -244,14 +306,23 @@ async function handleDelete(
   rootPrefix?: string,
 ): Promise<BrowserActionResponse> {
   const key = enforceRootPrefix(requireKey(payload), rootPrefix);
-  await deleteObject(s3, {
-    bucket,
-    key,
-  });
+  let deletedKeys: string[] = [key];
+
+  if (key.endsWith("/")) {
+    const keys = await listAllObjectKeysInPrefix(s3, bucket, normalizeFolderPrefix(key));
+    const targets = Array.from(new Set([normalizeFolderPrefix(key), ...keys]));
+    await deleteObjects(s3, { bucket, keys: targets });
+    deletedKeys = targets;
+  } else {
+    await deleteObject(s3, {
+      bucket,
+      key,
+    });
+  }
   return {
     action: "delete",
     success: true,
-    deleted: [key],
+    deleted: deletedKeys,
   };
 }
 
@@ -290,6 +361,21 @@ async function handleRename(
     throw new BrowserError("Missing newName", 400);
   }
 
+  if (key.endsWith("/")) {
+    const sourcePrefix = normalizeFolderPrefix(key);
+    const withoutSlash = sourcePrefix.slice(0, -1);
+    const slash = withoutSlash.lastIndexOf("/");
+    const parentPrefix = slash >= 0 ? withoutSlash.slice(0, slash + 1) : "";
+    const destinationPrefix = `${parentPrefix}${payload.newName}/`;
+    const copiedKeys = await copyFolderPrefix(s3, bucket, sourcePrefix, destinationPrefix);
+    const deleteTargets = Array.from(new Set([sourcePrefix, ...copiedKeys]));
+    await deleteObjects(s3, { bucket, keys: deleteTargets });
+    return {
+      action: "rename",
+      success: true,
+    };
+  }
+
   const slash = key.lastIndexOf("/");
   const parentPrefix = slash >= 0 ? key.slice(0, slash + 1) : "";
   const destinationKey = `${parentPrefix}${payload.newName}`;
@@ -319,6 +405,21 @@ async function handleMoveOrCopy(
 ): Promise<BrowserActionResponse> {
   const key = enforceRootPrefix(requireKey(payload), rootPrefix);
   const destination = enforceRootPrefix(requireDestination(payload), rootPrefix);
+
+  if (key.endsWith("/")) {
+    const sourcePrefix = normalizeFolderPrefix(key);
+    const destinationPrefix = destinationPrefixForFolder(sourcePrefix, destination);
+    const copiedKeys = await copyFolderPrefix(s3, bucket, sourcePrefix, destinationPrefix);
+    if (action === "move") {
+      const deleteTargets = Array.from(new Set([sourcePrefix, ...copiedKeys]));
+      await deleteObjects(s3, { bucket, keys: deleteTargets });
+    }
+    return {
+      action,
+      success: true,
+    };
+  }
+
   const destinationKey = destinationKeyForPath(key, destination);
 
   await copyObject(s3, {
