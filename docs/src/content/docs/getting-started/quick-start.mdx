@@ -1,0 +1,273 @@
+---
+title: Quick Start
+description: Get up and running with @s3-good in under 10 minutes.
+---
+
+import { Tabs, TabItem, Aside, Steps } from "@astrojs/starlight/components";
+
+This guide walks you through building a working file upload from scratch. By the end you'll have a server-side file router, an API route, and a React upload button — all fully type-safe.
+
+<Aside>
+  **Prerequisites**: Make sure you've completed the [Installation](/getting-started/installation/) and [S3 Setup](/getting-started/s3-setup/) steps first.
+</Aside>
+
+## Next.js App Router
+
+<Steps>
+
+1. **Define your file router**
+
+    Create a file that defines which upload routes your app supports. Each route specifies allowed file types, size limits, middleware (for auth), and a completion callback.
+
+    ```typescript title="src/server/upload-router.ts"
+    import { createUploader } from "@s3-good/core/server";
+    import type { FileRouter } from "@s3-good/core/server";
+
+    const f = createUploader();
+
+    export const uploadRouter = {
+      // An image uploader that accepts up to 4MB images
+      imageUploader: f({ image: { maxFileSize: "4MB" } })
+        .middleware(async ({ req }) => {
+          // Run any auth or validation logic here
+          // Whatever you return is available in onUploadComplete as `metadata`
+          return { userId: "user_123" };
+        })
+        .onUploadComplete(async ({ metadata, file }) => {
+          console.log("Upload complete for user:", metadata.userId);
+          console.log("File URL:", file.url);
+          return { uploadedBy: metadata.userId };
+        }),
+
+      // A document uploader that accepts PDFs up to 16MB
+      documentUploader: f({ pdf: { maxFileSize: "16MB", maxFileCount: 4 } })
+        .middleware(async ({ req }) => {
+          return { userId: "user_123" };
+        })
+        .onUploadComplete(async ({ metadata, file }) => {
+          console.log("Document uploaded:", file.name);
+        }),
+    } satisfies FileRouter;
+
+    // Export the type for use in client components
+    export type OurFileRouter = typeof uploadRouter;
+    ```
+
+2. **Create the API route**
+
+    Wire the file router into a Next.js App Router API route. This handles presigned URL generation and upload completion.
+
+    ```typescript title="src/app/api/upload/route.ts"
+    import { createRouteHandler } from "@s3-good/core/next";
+    import { uploadRouter } from "~/server/upload-router";
+
+    export const { GET, POST } = createRouteHandler({
+      router: uploadRouter,
+      config: {
+        region: process.env.AWS_REGION!,
+        bucket: process.env.AWS_BUCKET!,
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+      },
+    });
+    ```
+
+3. **Generate typed components**
+
+    Create typed upload components that are bound to your file router. This gives you autocomplete on endpoint names and type-safe input/output.
+
+    ```typescript title="src/lib/upload.ts"
+    import {
+      generateUploadButton,
+      generateUploadDropzone,
+    } from "@s3-good/core/next";
+    import type { OurFileRouter } from "~/server/upload-router";
+
+    export const UploadButton = generateUploadButton<OurFileRouter>();
+    export const UploadDropzone = generateUploadDropzone<OurFileRouter>();
+    ```
+
+4. **Use the upload component**
+
+    Drop the `UploadButton` into any client component. The `endpoint` prop is autocompleted with your route names.
+
+    ```tsx title="src/app/page.tsx"
+    "use client";
+
+    import { UploadButton } from "~/lib/upload";
+
+    export default function Home() {
+      return (
+        <main>
+          <h1>Upload a file</h1>
+          <UploadButton
+            endpoint="imageUploader"
+            onClientUploadComplete={(res) => {
+              console.log("Files:", res);
+              alert("Upload complete!");
+            }}
+            onUploadError={(error) => {
+              alert(`Upload failed: ${error.message}`);
+            }}
+          />
+        </main>
+      );
+    }
+    ```
+
+5. **Start the dev server**
+
+    ```bash
+    pnpm dev
+    ```
+
+    Open your app in the browser, click the upload button, and select an image. You should see the upload complete log in your terminal and the success alert in the browser.
+
+</Steps>
+
+## Hono
+
+<Steps>
+
+1. **Define your file router**
+
+    The file router definition is the same regardless of framework:
+
+    ```typescript title="src/server/upload-router.ts"
+    import { createUploader } from "@s3-good/core/server";
+    import type { FileRouter } from "@s3-good/core/server";
+
+    const f = createUploader();
+
+    export const uploadRouter = {
+      imageUploader: f({ image: { maxFileSize: "4MB" } })
+        .middleware(async ({ req }) => {
+          return { userId: "user_123" };
+        })
+        .onUploadComplete(async ({ metadata, file }) => {
+          console.log("Upload complete:", metadata.userId, file.url);
+        }),
+    } satisfies FileRouter;
+
+    export type OurFileRouter = typeof uploadRouter;
+    ```
+
+2. **Create the Hono route**
+
+    ```typescript title="src/index.ts"
+    import { Hono } from "hono";
+    import { createRouteHandler } from "@s3-good/core/hono";
+    import { uploadRouter } from "./server/upload-router";
+
+    const app = new Hono();
+
+    const { GET, POST } = createRouteHandler({
+      router: uploadRouter,
+      config: {
+        region: process.env.AWS_REGION!,
+        bucket: process.env.AWS_BUCKET!,
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+      },
+    });
+
+    app.get("/api/upload", (c) => GET(c));
+    app.post("/api/upload", (c) => POST(c));
+
+    export default app;
+    ```
+
+3. **Upload files programmatically**
+
+    Without React, use the `genUploader` client to upload files from the browser:
+
+    ```typescript title="src/client.ts"
+    import { genUploader } from "@s3-good/core/client";
+    import type { OurFileRouter } from "./server/upload-router";
+
+    const { uploadFiles } = genUploader<OurFileRouter>({
+      url: "/api/upload",
+    });
+
+    // Upload from a file input
+    const input = document.querySelector<HTMLInputElement>("#file-input")!;
+    input.addEventListener("change", async () => {
+      const files = Array.from(input.files ?? []);
+      const result = await uploadFiles("imageUploader", {
+        files,
+        onUploadProgress: (p) => console.log(`Progress: ${p.progress}%`),
+      });
+      console.log("Uploaded:", result);
+    });
+    ```
+
+</Steps>
+
+## Using the React hook directly
+
+If you prefer hooks over pre-built components, use `useUpload`:
+
+```tsx title="src/components/CustomUploader.tsx"
+"use client";
+
+import { generateReactHelpers } from "@s3-good/react";
+import type { OurFileRouter } from "~/server/upload-router";
+
+const { useUpload } = generateReactHelpers<OurFileRouter>();
+
+export function CustomUploader() {
+  const { startUpload, isUploading, progress } = useUpload(
+    "imageUploader",
+    {
+      onClientUploadComplete: (res) => {
+        console.log("Done!", res);
+      },
+      onUploadError: (err) => {
+        console.error("Error:", err);
+      },
+    },
+  );
+
+  return (
+    <div>
+      <input
+        type="file"
+        onChange={async (e) => {
+          const files = Array.from(e.target.files ?? []);
+          await startUpload(files);
+        }}
+      />
+      {isUploading && <p>Uploading... {progress}%</p>}
+    </div>
+  );
+}
+```
+
+## File type configuration
+
+The `f()` builder accepts a configuration object that maps file type categories to their constraints:
+
+```typescript
+const f = createUploader();
+
+// Single type
+f({ image: { maxFileSize: "4MB" } })
+
+// Multiple types
+f({
+  image: { maxFileSize: "4MB", maxFileCount: 10 },
+  pdf: { maxFileSize: "16MB" },
+})
+
+// Any file type (blob is a catch-all)
+f({ blob: { maxFileSize: "32MB" } })
+```
+
+Available file type categories: `image`, `video`, `audio`, `pdf`, `text`, `blob`.
+
+## Next steps
+
+- [S3 Setup](/getting-started/s3-setup/) — configure your AWS bucket (CORS, IAM, lifecycle rules)
+- [File Router](/server/file-router/) — learn about middleware, input validation, and error handling
+- [Components](/components/upload-button/) — customize the UploadButton and UploadDropzone
+- [React Hooks](/client/hooks/) — build fully custom upload UIs

@@ -1,0 +1,29 @@
+{
+  "name": "aws-s3-sdk-but-good",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test && vitest run tests/infrastructure/",
+    "test:e2e": "vitest run --config tests/e2e/vitest.config.ts",
+    "clean": "turbo run clean",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "pnpm build && changeset publish"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-s3": "^3.600.0",
+    "@changesets/cli": "^2.27.0",
+    "@s3-good/shared": "workspace:*",
+    "turbo": "^2.0.0",
+    "prettier": "^3.0.0",
+    "vitest": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "packageManager": "pnpm@9.0.0"
+}

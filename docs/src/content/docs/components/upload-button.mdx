@@ -1,0 +1,204 @@
+---
+title: UploadButton
+description: A ready-to-use button component for file uploads.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+The `UploadButton` is a pre-built component that renders a file input styled as a button. It handles file selection, upload progress, and displays allowed file types — all with zero configuration.
+
+## Basic usage
+
+```tsx
+import { UploadButton } from "@s3-good/react";
+
+function MyPage() {
+  return (
+    <UploadButton
+      endpoint="imageUploader"
+      onClientUploadComplete={(res) => {
+        console.log("Files:", res);
+      }}
+      onUploadError={(error) => {
+        alert(`Error: ${error.message}`);
+      }}
+    />
+  );
+}
+```
+
+For Next.js, use the generated typed version for endpoint autocomplete:
+
+```tsx
+import { UploadButton } from "~/lib/upload";
+
+<UploadButton
+  endpoint="imageUploader"  // ← autocompleted from your FileRouter
+  onClientUploadComplete={(res) => console.log(res)}
+/>
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `endpoint` | `string` | — | **Required.** Route name from your file router |
+| `input` | Inferred | — | Input data for routes with `.input()` schema |
+| `mode` | `"auto" \| "manual"` | `"auto"` | Upload mode (see below) |
+| `disabled` | `boolean` | `false` | Disable the button |
+| `className` | `string` | — | CSS class for the container |
+| `appearance` | `UploadButtonAppearance` | — | Style overrides (see [Theming](#theming)) |
+| `content` | `object` | — | Content overrides (see [Custom content](#custom-content)) |
+| `onClientUploadComplete` | `(res: UploadFileResponse[]) => void` | — | Called when upload finishes |
+| `onUploadError` | `(error: UploadError) => void` | — | Called on upload failure |
+| `onUploadBegin` | `(fileName: string) => void` | — | Called when each file starts uploading |
+| `onUploadProgress` | `(progress: number) => void` | — | Called with progress percentage |
+| `headers` | `HeadersInit \| (() => HeadersInit)` | — | Custom headers for the API request |
+
+## Upload modes
+
+### Auto mode (default)
+
+Files are uploaded immediately after selection:
+
+```tsx
+<UploadButton endpoint="imageUploader" mode="auto" />
+```
+
+### Manual mode
+
+Files are selected first, then uploaded when the user clicks a separate "Upload" button:
+
+```tsx
+<UploadButton
+  endpoint="imageUploader"
+  mode="manual"
+  onClientUploadComplete={(res) => console.log(res)}
+/>
+```
+
+In manual mode, after selecting files, a secondary button appears showing "Upload N file(s)".
+
+## Custom content
+
+Override the default button text and allowed content text:
+
+```tsx
+<UploadButton
+  endpoint="imageUploader"
+  content={{
+    button: "Upload Photo",
+    allowedContent: "PNG, JPG up to 4MB",
+  }}
+/>
+```
+
+Use functions for dynamic content based on upload state:
+
+```tsx
+<UploadButton
+  endpoint="imageUploader"
+  content={{
+    button: ({ isUploading, uploadProgress }) =>
+      isUploading ? `${uploadProgress}%` : "Choose Image",
+    allowedContent: ({ fileTypes }) =>
+      fileTypes.length > 0 ? `Accepts: ${fileTypes.join(", ")}` : "",
+  }}
+/>
+```
+
+### ButtonContentOpts
+
+The content function receives:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `ready` | `boolean` | Whether the button is ready for interaction |
+| `isUploading` | `boolean` | Whether an upload is in progress |
+| `uploadProgress` | `number` | Upload progress (0-100) |
+| `fileTypes` | `string[]` | Allowed file type categories |
+
+## Theming
+
+Customize the appearance using CSS classes, inline styles, or dynamic functions:
+
+```tsx
+// CSS class names
+<UploadButton
+  endpoint="imageUploader"
+  appearance={{
+    button: "bg-blue-500 text-white px-4 py-2 rounded",
+    container: "flex flex-col items-center",
+    allowedContent: "text-sm text-gray-500",
+  }}
+/>
+
+// Inline styles
+<UploadButton
+  endpoint="imageUploader"
+  appearance={{
+    button: { backgroundColor: "#8b5cf6", borderRadius: "12px" },
+    container: { gap: "8px" },
+  }}
+/>
+
+// Dynamic styles based on state
+<UploadButton
+  endpoint="imageUploader"
+  appearance={{
+    button: ({ isUploading }) =>
+      isUploading
+        ? { backgroundColor: "#6366f1", cursor: "wait" }
+        : { backgroundColor: "#8b5cf6" },
+  }}
+/>
+```
+
+### Appearance slots
+
+| Slot | Element | Description |
+|------|---------|-------------|
+| `container` | Outer `<div>` | Wraps the entire component |
+| `button` | `<label>` | The clickable button element |
+| `allowedContent` | `<div>` | The "Allowed: image, pdf" text below the button |
+
+See [Appearance API](/theming/appearance/) for full theming documentation.
+
+## Data attributes
+
+The component exposes `data-state` attributes for CSS targeting:
+
+| Attribute | Values | Element |
+|-----------|--------|---------|
+| `data-state` | `"ready"`, `"uploading"`, `"disabled"` | Container and button |
+| `data-uploading` | Present when uploading | Button |
+
+```css
+[data-state="uploading"] {
+  opacity: 0.7;
+}
+
+[data-state="ready"]:hover {
+  transform: scale(1.02);
+}
+```
+
+## Accessibility
+
+- The button is a `<label>` wrapping a hidden `<input type="file">`, making it keyboard-accessible
+- `Enter` and `Space` keys trigger file selection
+- When uploading, clicking the button aborts the upload
+- The `accept` attribute is automatically set based on the route's file type configuration
+- The `multiple` attribute is set when `maxFileCount > 1`
+
+## With input data
+
+Pass validated input data alongside the upload:
+
+```tsx
+<UploadButton
+  endpoint="documentUploader"
+  input={{ projectId: "proj_123", tags: ["report"] }}
+  onClientUploadComplete={(res) => console.log(res)}
+/>
+```

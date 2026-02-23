@@ -1,0 +1,189 @@
+---
+title: FilePreview
+description: Preview uploaded files with thumbnails and metadata.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+The `FilePreview` component displays a single file with a thumbnail (for images) or a file icon (for other types), along with the file name and size. It works with both `File` objects and URL strings.
+
+## Basic usage
+
+```tsx
+import { FilePreview } from "@s3-good/react";
+
+// With a File object
+function PreviewFromFile({ file }: { file: File }) {
+  return <FilePreview file={file} />;
+}
+
+// With a URL string
+function PreviewFromUrl() {
+  return (
+    <FilePreview
+      file="https://my-bucket.s3.amazonaws.com/uploads/photo.jpg"
+      name="photo.jpg"
+      size={245000}
+    />
+  );
+}
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `file` | `File \| string` | — | **Required.** A `File` object or URL string |
+| `name` | `string` | — | Override the displayed file name |
+| `size` | `number` | — | Override the displayed file size (bytes) |
+| `appearance` | `FilePreviewAppearance` | — | Style overrides |
+| `content` | `object` | — | Content overrides |
+| `className` | `string` | — | CSS class for the container |
+
+### File name and size resolution
+
+When using a `File` object, the name and size are extracted automatically. When using a URL string, the name is extracted from the URL path. Use the `name` and `size` props to override:
+
+```tsx
+<FilePreview
+  file="https://cdn.example.com/abc123"
+  name="quarterly-report.pdf"
+  size={1048576}
+/>
+```
+
+## Image detection
+
+The component automatically detects image files and shows a thumbnail preview:
+
+- **File objects**: Detected via `file.type.startsWith("image/")`
+- **URL strings**: Detected via file extension (`.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.svg`, `.bmp`, `.ico`, `.avif`)
+
+For `File` objects, a temporary object URL is created for the thumbnail and automatically cleaned up when the component unmounts.
+
+## Custom content
+
+Override the default rendering for each section:
+
+```tsx
+<FilePreview
+  file={file}
+  content={{
+    thumbnail: ({ fileName }) => (
+      <img src={`/thumbnails/${fileName}`} alt={fileName} />
+    ),
+    icon: <MyCustomFileIcon />,
+    fileName: ({ fileName }) => (
+      <a href={`/files/${fileName}`}>{fileName}</a>
+    ),
+    fileSize: ({ fileSize }) =>
+      fileSize ? `${(fileSize / 1024).toFixed(1)} KB` : null,
+  }}
+/>
+```
+
+### FilePreviewContentOpts
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `file` | `File \| string` | The original file or URL |
+| `isImage` | `boolean` | Whether the file is an image |
+| `fileName` | `string` | Resolved file name |
+| `fileSize` | `number \| undefined` | Resolved file size in bytes |
+
+## Theming
+
+```tsx
+// CSS class names
+<FilePreview
+  file={file}
+  appearance={{
+    container: "flex items-center gap-3 p-3 border rounded-lg",
+    thumbnail: "w-12 h-12 object-cover rounded",
+    icon: "w-12 h-12 flex items-center justify-center bg-gray-100 rounded",
+    fileName: "font-medium text-sm truncate",
+    fileSize: "text-xs text-gray-500",
+  }}
+/>
+
+// Inline styles
+<FilePreview
+  file={file}
+  appearance={{
+    container: { padding: "16px", borderRadius: "12px" },
+    thumbnail: { width: "64px", height: "64px" },
+  }}
+/>
+```
+
+### Appearance slots
+
+| Slot | Element | Description |
+|------|---------|-------------|
+| `container` | Outer `<div>` | Wraps the entire component |
+| `thumbnail` | `<img>` | Image thumbnail (shown for image files) |
+| `icon` | `<div>` | File icon container (shown for non-image files) |
+| `fileInfo` | `<div>` | Wraps the file name and size |
+| `fileName` | `<div>` | The file name text |
+| `fileSize` | `<div>` | The file size text |
+
+## Data attributes
+
+| Attribute | Values | Element |
+|-----------|--------|---------|
+| `data-state` | `"image"`, `"file"` | Container |
+
+```css
+[data-state="image"] {
+  background-color: #faf5ff;
+}
+
+[data-state="file"] {
+  background-color: #f9fafb;
+}
+```
+
+## Accessibility
+
+- Image thumbnails include an `alt` attribute set to the file name
+- The file icon SVG has `aria-hidden="true"` to avoid screen reader noise
+- File size is displayed in a human-readable format (e.g. "2.5 MB")
+
+## Examples
+
+### After upload completion
+
+```tsx
+function UploadResult({ results }: { results: UploadFileResponse[] }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+      {results.map((file) => (
+        <FilePreview
+          key={file.key}
+          file={file.url}
+          name={file.name}
+          size={file.size}
+        />
+      ))}
+    </div>
+  );
+}
+```
+
+### With custom styling
+
+```tsx
+<FilePreview
+  file={file}
+  appearance={{
+    container: {
+      backgroundColor: "#1f2937",
+      color: "#f9fafb",
+      borderColor: "#374151",
+    },
+    fileName: { color: "#f9fafb" },
+    fileSize: { color: "#9ca3af" },
+    icon: { backgroundColor: "#374151", color: "#9ca3af" },
+  }}
+/>
+```

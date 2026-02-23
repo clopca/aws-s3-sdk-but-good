@@ -1,0 +1,187 @@
+---
+title: ProgressBar
+description: Display upload progress with a visual progress bar.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+The `ProgressBar` component displays upload progress as a horizontal bar with an optional percentage label. It supports determinate progress, indeterminate (loading) state, and completion styling.
+
+## Basic usage
+
+```tsx
+import { ProgressBar } from "@s3-good/react";
+
+function UploadProgress({ progress }: { progress: number }) {
+  return <ProgressBar progress={progress} />;
+}
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `progress` | `number` | — | **Required.** Progress value (0-100) |
+| `showLabel` | `boolean` | `true` | Show the percentage label |
+| `labelFormat` | `(progress: number) => string` | Formats as `"45%"` | Custom label format function |
+| `indeterminate` | `boolean` | `false` | Show indeterminate (loading) state |
+| `appearance` | `ProgressBarAppearance` | — | Style overrides |
+| `content` | `object` | — | Content overrides |
+| `className` | `string` | — | CSS class for the container |
+
+## Progress states
+
+### Determinate
+
+Shows a fill bar proportional to the progress value:
+
+```tsx
+<ProgressBar progress={45} />
+```
+
+### Complete
+
+When progress reaches 100, the fill color changes to green:
+
+```tsx
+<ProgressBar progress={100} />
+```
+
+### Indeterminate
+
+Shows a loading state without a specific progress value:
+
+```tsx
+<ProgressBar progress={0} indeterminate />
+```
+
+## Custom label
+
+Override the default percentage label:
+
+```tsx
+// Custom format function
+<ProgressBar
+  progress={progress}
+  labelFormat={(p) => `${Math.round(p)}% uploaded`}
+/>
+
+// Hide the label
+<ProgressBar progress={progress} showLabel={false} />
+
+// Custom content
+<ProgressBar
+  progress={progress}
+  content={{
+    label: ({ progress, isComplete }) =>
+      isComplete ? "Done!" : `${Math.round(progress)}%`,
+  }}
+/>
+```
+
+### ProgressBarContentOpts
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `progress` | `number` | Current progress (0-100, clamped) |
+| `isComplete` | `boolean` | Whether progress is 100 and not indeterminate |
+| `isIndeterminate` | `boolean` | Whether in indeterminate mode |
+
+## Theming
+
+```tsx
+// CSS class names
+<ProgressBar
+  progress={progress}
+  appearance={{
+    container: "flex flex-col gap-1",
+    track: "h-2 bg-gray-200 rounded-full overflow-hidden",
+    fill: "h-full bg-blue-500 rounded-full transition-all",
+    label: "text-xs text-gray-600 text-right",
+  }}
+/>
+
+// Inline styles
+<ProgressBar
+  progress={progress}
+  appearance={{
+    fill: { backgroundColor: "#8b5cf6" },
+    track: { height: "12px", borderRadius: "6px" },
+  }}
+/>
+
+// Dynamic styles
+<ProgressBar
+  progress={progress}
+  appearance={{
+    fill: ({ isComplete }) =>
+      isComplete
+        ? { backgroundColor: "#22c55e" }
+        : { backgroundColor: "#3b82f6" },
+  }}
+/>
+```
+
+### Appearance slots
+
+| Slot | Element | Description |
+|------|---------|-------------|
+| `container` | Outer `<div>` | Wraps the track and label |
+| `track` | `<div>` | The background track |
+| `fill` | `<div>` | The progress fill bar |
+| `label` | `<div>` | The percentage label |
+
+## Data attributes
+
+| Attribute | Values | Element |
+|-----------|--------|---------|
+| `data-state` | `"progress"`, `"complete"`, `"indeterminate"` | Container |
+
+```css
+[data-state="complete"] .fill {
+  background-color: #22c55e;
+}
+```
+
+## Accessibility
+
+- The track element has `role="progressbar"`
+- `aria-valuemin="0"` and `aria-valuemax="100"` are always set
+- `aria-valuenow` is set to the current progress (omitted in indeterminate mode)
+- Progress value is clamped between 0 and 100
+
+## With useUpload
+
+Combine with the upload hook for a complete upload experience:
+
+```tsx
+import { useUpload } from "~/lib/upload";
+import { ProgressBar } from "@s3-good/react";
+
+function Uploader() {
+  const { startUpload, isUploading, progress } = useUpload(
+    "imageUploader",
+  );
+
+  return (
+    <div>
+      <input
+        type="file"
+        onChange={(e) => {
+          const files = Array.from(e.target.files ?? []);
+          startUpload(files);
+        }}
+        disabled={isUploading}
+      />
+      {isUploading && (
+        <ProgressBar
+          progress={progress}
+          appearance={{
+            fill: { transition: "width 0.3s ease" },
+          }}
+        />
+      )}
+    </div>
+  );
+}
+```

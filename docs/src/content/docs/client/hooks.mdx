@@ -1,0 +1,322 @@
+---
+title: React Hooks
+description: React hooks for file uploads with @s3-good.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+The `@s3-good/react` package provides React hooks for building custom upload UIs with full type safety, progress tracking, and abort support.
+
+## generateReactHelpers
+
+The recommended way to use hooks is through the `generateReactHelpers` factory, which binds everything to your file router type:
+
+```typescript title="src/lib/upload.ts"
+import { generateReactHelpers } from "@s3-good/react";
+import type { OurFileRouter } from "~/server/upload-router";
+
+export const { useUpload, uploadFiles, createUpload } =
+  generateReactHelpers<OurFileRouter>({
+    url: "/api/upload", // default
+  });
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `url` | `string` | `"/api/upload"` | API endpoint URL |
+
+### Returns
+
+| Export | Type | Description |
+|--------|------|-------------|
+| `useUpload` | Hook | React hook for uploads with state management |
+| `uploadFiles` | Function | Imperative upload function (same as `genUploader`) |
+| `createUpload` | Function | Creates a controllable upload handle |
+
+<Aside>
+  For Next.js apps, you can also use `generateNextHelpers` from `@s3-good/core/next` which is a convenience wrapper with `/api/upload` as the default URL.
+</Aside>
+
+## useUpload
+
+The core hook for building custom upload UIs. It manages upload state, progress tracking, and provides a `startUpload` function.
+
+```tsx
+import { useUpload } from "~/lib/upload";
+
+function CustomUploader() {
+  const { startUpload, isUploading, progress, abort, permittedFileInfo } =
+    useUpload("imageUploader", {
+      onClientUploadComplete: (res) => {
+        console.log("Upload complete!", res);
+      },
+      onUploadError: (error) => {
+        console.error("Upload failed:", error.message);
+      },
+      onUploadProgress: (progress) => {
+        console.log(`Progress: ${progress}%`);
+      },
+      onUploadBegin: (fileName) => {
+        console.log(`Starting: ${fileName}`);
+      },
+    });
+
+  return (
+    <div>
+      <input
+        type="file"
+        onChange={async (e) => {
+          const files = Array.from(e.target.files ?? []);
+          await startUpload(files);
+        }}
+        disabled={isUploading}
+      />
+      {isUploading && <p>Uploading... {progress}%</p>}
+      {isUploading && (
+        <button onClick={abort}>Cancel</button>
+      )}
+      {permittedFileInfo && (
+        <p>Allowed: {permittedFileInfo.fileTypes.join(", ")}</p>
+      )}
+    </div>
+  );
+}
+```
+
+### Parameters
+
+```typescript
+useUpload(endpoint, options?)
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `endpoint` | `string` | Route name from your file router (autocompleted) |
+| `options` | `UseUploadProps` | Optional callbacks and configuration |
+
+### Options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `onClientUploadComplete` | `(res: UploadFileResponse[]) => void` | Called when all files finish uploading |
+| `onUploadError` | `(error: UploadError) => void` | Called when an upload fails |
+| `onUploadProgress` | `(progress: number) => void` | Called with progress percentage (0-100) |
+| `onUploadBegin` | `(fileName: string) => void` | Called when each file starts uploading |
+| `headers` | `HeadersInit \| (() => HeadersInit)` | Custom headers for the API request |
+
+### Return value
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `startUpload` | `(files: File[], input?) => Promise<UploadFileResponse[] \| undefined>` | Start uploading files |
+| `isUploading` | `boolean` | Whether an upload is in progress |
+| `progress` | `number` | Upload progress percentage (0-100) |
+| `abort` | `() => void` | Cancel the current upload |
+| `permittedFileInfo` | `PermittedFileInfo \| undefined` | File type info fetched from the server |
+
+### PermittedFileInfo
+
+The hook automatically fetches route configuration from the server on mount:
+
+```typescript
+interface PermittedFileInfo {
+  slug: string;                    // Route name
+  config: ExpandedRouteConfig;     // Full route config
+  fileTypes: string[];             // e.g. ["image", "pdf"]
+  maxFileSize: string;             // e.g. "4MB"
+  maxFileCount: number;            // e.g. 10
+}
+```
+
+This is used by the built-in components to show allowed file types and enforce limits client-side.
+
+## Passing input
+
+If your route has an `.input()` schema, pass the input data as the second argument to `startUpload`:
+
+```tsx
+const { startUpload } = useUpload("documentUploader");
+
+// With input
+await startUpload(files, { projectId: "proj_123", tags: ["report"] });
+```
+
+The input type is inferred from your route's Zod schema — TypeScript will enforce the correct shape.
+
+## Progress tracking
+
+Progress is debounced via `requestAnimationFrame` to avoid excessive re-renders during fast uploads:
+
+```tsx
+function UploadWithProgress() {
+  const { startUpload, isUploading, progress } = useUpload(
+    "imageUploader",
+  );
+
+  return (
+    <div>
+      <input
+        type="file"
+        onChange={(e) => {
+          const files = Array.from(e.target.files ?? []);
+          startUpload(files);
+        }}
+      />
+      {isUploading && (
+        <div style={{ width: "200px", background: "#e5e7eb", borderRadius: "4px" }}>
+          <div
+            style={{
+              width: `${progress}%`,
+              height: "8px",
+              background: "#3b82f6",
+              borderRadius: "4px",
+              transition: "width 0.3s ease",
+            }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+Or use the [`ProgressBar`](/components/progress-bar/) component for a ready-made solution.
+
+## Abort support
+
+The `abort()` function cancels the in-progress upload and resets state:
+
+```tsx
+function AbortableUpload() {
+  const { startUpload, isUploading, abort } = useUpload(
+    "imageUploader",
+  );
+
+  return (
+    <div>
+      <input
+        type="file"
+        onChange={(e) => {
+          const files = Array.from(e.target.files ?? []);
+          startUpload(files);
+        }}
+        disabled={isUploading}
+      />
+      {isUploading && (
+        <button onClick={abort}>Cancel Upload</button>
+      )}
+    </div>
+  );
+}
+```
+
+When aborted:
+- The XHR request to S3 is cancelled
+- `isUploading` resets to `false`
+- `progress` resets to `0`
+- `onUploadError` is called with an `UploadError` with code `"UPLOAD_FAILED"`
+
+## Direct (untyped) hook
+
+For simple use cases where you don't need full type inference, you can import `useUpload` directly:
+
+```tsx
+import { useUpload } from "@s3-good/react";
+
+// Works but without endpoint autocomplete or input type inference
+const { startUpload } = useUpload("imageUploader");
+```
+
+<Aside type="caution">
+  The direct import doesn't provide type safety on endpoint names or input types. Prefer `generateReactHelpers` for production use.
+</Aside>
+
+## Complete example
+
+A fully custom upload UI with drag-and-drop, progress, and file list:
+
+```tsx title="src/components/CustomUploader.tsx"
+"use client";
+
+import { useState, useCallback } from "react";
+import { useUpload } from "~/lib/upload";
+import { ProgressBar, FileList } from "@s3-good/react";
+import type { FileItem } from "@s3-good/react";
+
+export function CustomUploader() {
+  const [files, setFiles] = useState<FileItem[]>([]);
+
+  const { startUpload, isUploading, progress } = useUpload(
+    "imageUploader",
+    {
+      onUploadBegin: (fileName) => {
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.name === fileName
+              ? { ...f, status: "uploading" as const }
+              : f,
+          ),
+        );
+      },
+      onClientUploadComplete: (res) => {
+        setFiles((prev) =>
+          prev.map((f) => ({
+            ...f,
+            status: "complete" as const,
+            progress: 100,
+            url: res.find((r) => r.name === f.name)?.url,
+          })),
+        );
+      },
+      onUploadError: (error) => {
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.status === "uploading"
+              ? { ...f, status: "error" as const, error: error.message }
+              : f,
+          ),
+        );
+      },
+    },
+  );
+
+  const handleFiles = useCallback(
+    (newFiles: File[]) => {
+      const items: FileItem[] = newFiles.map((f) => ({
+        id: `${f.name}-${f.size}`,
+        name: f.name,
+        size: f.size,
+        type: f.type,
+        progress: 0,
+        status: "pending" as const,
+        file: f,
+      }));
+      setFiles(items);
+      startUpload(newFiles);
+    },
+    [startUpload],
+  );
+
+  return (
+    <div>
+      <input
+        type="file"
+        multiple
+        onChange={(e) => {
+          handleFiles(Array.from(e.target.files ?? []));
+        }}
+        disabled={isUploading}
+      />
+
+      {isUploading && <ProgressBar progress={progress} />}
+
+      <FileList
+        files={files}
+        onRemove={(id) => setFiles((prev) => prev.filter((f) => f.id !== id))}
+      />
+    </div>
+  );
+}
+```

@@ -1,0 +1,259 @@
+---
+title: Upload Files
+description: Upload files from the browser using the @s3-good client.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+The client module provides framework-agnostic functions for uploading files from the browser. Use these when you need full control over the upload flow — without React hooks or pre-built components.
+
+## genUploader
+
+The `genUploader` factory creates typed upload functions bound to your file router:
+
+```typescript
+import { genUploader } from "@s3-good/core/client";
+import type { OurFileRouter } from "~/server/upload-router";
+
+const { uploadFiles, createUpload } = genUploader<OurFileRouter>({
+  url: "/api/upload", // default
+});
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `url` | `string` | `"/api/upload"` | API endpoint URL |
+
+## uploadFiles
+
+Upload files to a specific endpoint. Handles the full flow: presigned URL generation, S3 upload with progress tracking, and server completion notification.
+
+```typescript
+const result = await uploadFiles("imageUploader", {
+  files: [file1, file2],
+  input: { category: "avatar" },
+  onUploadBegin: (fileName) => {
+    console.log(`Starting upload: ${fileName}`);
+  },
+  onUploadProgress: (event) => {
+    console.log(`Progress: ${event.percentage}%`);
+  },
+});
+
+// result is UploadFileResponse[]
+result.forEach((file) => {
+  console.log(file.url, file.serverData);
+});
+```
+
+### Parameters
+
+The first argument is the endpoint name (autocompleted from your file router). The second is an options object:
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `files` | `File[]` | Yes | Files to upload |
+| `input` | Inferred from route | No | Input data validated by the route's Zod schema |
+| `onUploadBegin` | `(fileName: string) => void` | No | Called when each file starts uploading |
+| `onUploadProgress` | `(event: UploadProgressEvent) => void` | No | Called with progress updates |
+| `headers` | `HeadersInit \| (() => HeadersInit)` | No | Custom headers sent to the API endpoint |
+| `signal` | `AbortSignal` | No | Abort signal to cancel the upload |
+
+### UploadProgressEvent
+
+```typescript
+interface UploadProgressEvent {
+  loaded: number;      // Bytes uploaded so far
+  total: number;       // Total bytes
+  percentage: number;  // 0-100
+}
+```
+
+### Return value
+
+Returns `Promise<UploadFileResponse[]>`:
+
+```typescript
+interface UploadFileResponse<TServerData = unknown> {
+  key: string;         // S3 object key
+  url: string;         // Public URL
+  name: string;        // Original file name
+  size: number;        // File size in bytes
+  type: string;        // MIME type
+  serverData: TServerData;  // Data returned from onUploadComplete
+}
+```
+
+## createUpload
+
+Creates a controllable upload handle with deferred start and abort capability:
+
+```typescript
+const upload = createUpload("imageUploader", {
+  files: [file],
+  onUploadProgress: (event) => {
+    progressBar.style.width = `${event.percentage}%`;
+  },
+});
+
+// Start the upload later
+startButton.addEventListener("click", async () => {
+  const result = await upload.done();
+  console.log("Uploaded:", result);
+});
+
+// Cancel the upload
+cancelButton.addEventListener("click", () => {
+  upload.abort();
+});
+```
+
+### Return value
+
+| Method | Type | Description |
+|--------|------|-------------|
+| `done()` | `Promise<UploadFileResponse[]>` | Execute the upload and return results |
+| `abort()` | `void` | Cancel the in-progress upload |
+
+## Upload flow
+
+Under the hood, `uploadFiles` performs these steps:
+
+1. **POST to server** — Sends file metadata (name, size, type) and input data to your API endpoint. The server runs middleware, validates files, and returns presigned S3 URLs.
+
+2. **Upload to S3** — Files are uploaded directly to S3 using the presigned URLs via `XMLHttpRequest` (for progress tracking). Large files are automatically split into multipart uploads with concurrent chunk uploading.
+
+3. **Notify server** — After all files are uploaded, the client notifies the server which runs `onUploadComplete` callbacks and returns the final response with `serverData`.
+
+<Aside>
+  Files are uploaded directly from the browser to S3 — they never pass through your server. Only metadata flows through your API route.
+</Aside>
+
+## Error handling
+
+Upload errors throw `UploadError` with a structured error code:
+
+```typescript
+import { UploadError } from "@s3-good/shared";
+
+try {
+  const result = await uploadFiles("imageUploader", { files });
+} catch (error) {
+  if (error instanceof UploadError) {
+    console.error(error.code);    // e.g. "FILE_TOO_LARGE"
+    console.error(error.message); // e.g. "File exceeds 4MB limit"
+    console.error(error.status);  // e.g. 400
+  }
+}
+```
+
+### Error codes
+
+| Code | Status | Description |
+|------|--------|-------------|
+| `ROUTE_NOT_FOUND` | 404 | The endpoint name doesn't match any route |
+| `INVALID_FILE_TYPE` | 400 | File type not allowed by the route config |
+| `FILE_TOO_LARGE` | 400 | File exceeds the route's `maxFileSize` |
+| `TOO_MANY_FILES` | 400 | More files than `maxFileCount` |
+| `TOO_FEW_FILES` | 400 | Fewer files than `minFileCount` |
+| `INPUT_VALIDATION_FAILED` | 400 | Input data failed Zod validation |
+| `MIDDLEWARE_ERROR` | 500 | Error thrown from middleware |
+| `UPLOAD_FAILED` | 500 | S3 upload failed |
+| `INTERNAL_ERROR` | 500 | Unexpected server error |
+
+## Aborting uploads
+
+Use an `AbortController` to cancel in-progress uploads:
+
+```typescript
+const controller = new AbortController();
+
+// Start upload
+const uploadPromise = uploadFiles("imageUploader", {
+  files,
+  signal: controller.signal,
+});
+
+// Cancel after 10 seconds
+setTimeout(() => controller.abort(), 10_000);
+
+try {
+  const result = await uploadPromise;
+} catch (error) {
+  // error.message === "Upload aborted"
+}
+```
+
+Or use `createUpload` which provides a built-in `abort()` method:
+
+```typescript
+const upload = createUpload("imageUploader", { files });
+
+// Cancel
+upload.abort();
+```
+
+## Custom headers
+
+Pass custom headers to the API endpoint (useful for authentication):
+
+```typescript
+const result = await uploadFiles("imageUploader", {
+  files,
+  headers: {
+    Authorization: `Bearer ${token}`,
+  },
+});
+
+// Or use a function for dynamic headers
+const result = await uploadFiles("imageUploader", {
+  files,
+  headers: async () => ({
+    Authorization: `Bearer ${await getToken()}`,
+  }),
+});
+```
+
+## Vanilla JavaScript example
+
+A complete example without any framework:
+
+```html title="index.html"
+<input type="file" id="file-input" multiple />
+<button id="upload-btn" disabled>Upload</button>
+<div id="progress">0%</div>
+<div id="result"></div>
+
+<script type="module">
+  import { genUploader } from "@s3-good/core/client";
+
+  const { uploadFiles } = genUploader({ url: "/api/upload" });
+  const input = document.getElementById("file-input");
+  const btn = document.getElementById("upload-btn");
+  const progress = document.getElementById("progress");
+  const result = document.getElementById("result");
+
+  input.addEventListener("change", () => {
+    btn.disabled = input.files.length === 0;
+  });
+
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    try {
+      const res = await uploadFiles("imageUploader", {
+        files: Array.from(input.files),
+        onUploadProgress: (e) => {
+          progress.textContent = `${e.percentage}%`;
+        },
+      });
+      result.textContent = `Uploaded ${res.length} file(s)`;
+    } catch (err) {
+      result.textContent = `Error: ${err.message}`;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+</script>
+```

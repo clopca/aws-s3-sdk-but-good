@@ -1,0 +1,398 @@
+---
+title: "@s3-good/react"
+description: API reference for the @s3-good/react package.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Complete API reference for the `@s3-good/react` package. This package provides React components, hooks, and theming utilities for building file upload UIs.
+
+## Components
+
+### UploadButton
+
+A pre-built button component for file uploads.
+
+```typescript
+import { UploadButton } from "@s3-good/react";
+```
+
+**Props:** `UploadButtonProps<TRouter, TEndpoint>`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `endpoint` | `string` | — | Route name from your file router |
+| `input` | Inferred | — | Input data for the route |
+| `mode` | `"auto" \| "manual"` | `"auto"` | Upload mode |
+| `disabled` | `boolean` | `false` | Disable the button |
+| `className` | `string` | — | CSS class for the container |
+| `appearance` | `UploadButtonAppearance` | — | Style overrides |
+| `content` | `{ button?, allowedContent? }` | — | Content overrides |
+| `onClientUploadComplete` | `(res: UploadFileResponse[]) => void` | — | Upload complete callback |
+| `onUploadError` | `(error: UploadError) => void` | — | Error callback |
+| `onUploadBegin` | `(fileName: string) => void` | — | Upload begin callback |
+| `onUploadProgress` | `(progress: number) => void` | — | Progress callback |
+| `headers` | `HeadersInit \| (() => HeadersInit)` | — | Custom headers |
+
+See [UploadButton docs](/components/upload-button/) for full documentation.
+
+---
+
+### UploadDropzone
+
+A drag-and-drop zone component for file uploads.
+
+```typescript
+import { UploadDropzone } from "@s3-good/react";
+```
+
+**Props:** `UploadDropzoneProps<TRouter, TEndpoint>`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `endpoint` | `string` | — | Route name from your file router |
+| `input` | Inferred | — | Input data for the route |
+| `mode` | `"auto" \| "manual"` | `"auto"` | Upload mode |
+| `disabled` | `boolean` | `false` | Disable the dropzone |
+| `onPaste` | `boolean` | `false` | Enable clipboard paste |
+| `className` | `string` | — | CSS class for the container |
+| `appearance` | `UploadDropzoneAppearance` | — | Style overrides |
+| `content` | `{ uploadIcon?, label?, allowedContent?, button? }` | — | Content overrides |
+| `onClientUploadComplete` | `(res: UploadFileResponse[]) => void` | — | Upload complete callback |
+| `onUploadError` | `(error: UploadError) => void` | — | Error callback |
+| `onUploadBegin` | `(fileName: string) => void` | — | Upload begin callback |
+| `onUploadProgress` | `(progress: number) => void` | — | Progress callback |
+| `headers` | `HeadersInit \| (() => HeadersInit)` | — | Custom headers |
+
+See [UploadDropzone docs](/components/upload-dropzone/) for full documentation.
+
+---
+
+### FilePreview
+
+Displays a file with thumbnail or icon, name, and size.
+
+```typescript
+import { FilePreview } from "@s3-good/react";
+```
+
+**Props:** `FilePreviewProps`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `file` | `File \| string` | — | File object or URL string |
+| `name` | `string` | — | Override file name |
+| `size` | `number` | — | Override file size (bytes) |
+| `appearance` | `FilePreviewAppearance` | — | Style overrides |
+| `content` | `{ thumbnail?, icon?, fileName?, fileSize? }` | — | Content overrides |
+| `className` | `string` | — | CSS class for the container |
+
+See [FilePreview docs](/components/file-preview/) for full documentation.
+
+---
+
+### ProgressBar
+
+Displays upload progress as a horizontal bar.
+
+```typescript
+import { ProgressBar } from "@s3-good/react";
+```
+
+**Props:** `ProgressBarProps`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `progress` | `number` | — | Progress value (0-100) |
+| `showLabel` | `boolean` | `true` | Show percentage label |
+| `labelFormat` | `(progress: number) => string` | Formats as `"45%"` | Label format function |
+| `indeterminate` | `boolean` | `false` | Indeterminate mode |
+| `appearance` | `ProgressBarAppearance` | — | Style overrides |
+| `content` | `{ label? }` | — | Content overrides |
+| `className` | `string` | — | CSS class for the container |
+
+See [ProgressBar docs](/components/progress-bar/) for full documentation.
+
+---
+
+### FileList
+
+Displays a list of files with status, progress, and remove actions.
+
+```typescript
+import { FileList } from "@s3-good/react";
+```
+
+**Props:** `FileListProps`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `files` | `FileItem[]` | — | Array of file items |
+| `onRemove` | `(id: string) => void` | — | Remove callback |
+| `showProgress` | `boolean` | `true` | Show progress bars |
+| `showRemoveButton` | `boolean` | `true` | Show remove buttons |
+| `appearance` | `FileListAppearance` | — | Style overrides |
+| `content` | `{ itemName?, itemSize?, itemStatus? }` | — | Content overrides |
+| `className` | `string` | — | CSS class for the container |
+
+See [FileList docs](/components/file-list/) for full documentation.
+
+---
+
+### UploadIcon
+
+SVG upload icon used as the default icon in UploadDropzone.
+
+```typescript
+import { UploadIcon } from "@s3-good/react";
+```
+
+---
+
+## Hooks
+
+### useUpload
+
+React hook for file uploads with state management and progress tracking.
+
+```typescript
+import { useUpload } from "@s3-good/react";
+
+function useUpload<TRouter, TEndpoint>(
+  endpoint: TEndpoint,
+  opts?: UseUploadProps,
+  uploaderOpts?: { url?: string },
+): UseUploadReturn
+```
+
+**Options:** `UseUploadProps`
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `onUploadBegin` | `(fileName: string) => void` | Called when each file starts |
+| `onUploadProgress` | `(progress: number) => void` | Called with progress percentage |
+| `onClientUploadComplete` | `(res: UploadFileResponse[]) => void` | Called when all files finish |
+| `onUploadError` | `(error: UploadError) => void` | Called on failure |
+| `headers` | `HeadersInit \| (() => HeadersInit)` | Custom headers |
+
+**Returns:** `UseUploadReturn`
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `startUpload` | `(files: File[], input?) => Promise<UploadFileResponse[] \| undefined>` | Start uploading |
+| `isUploading` | `boolean` | Upload in progress |
+| `progress` | `number` | Progress percentage (0-100) |
+| `abort` | `() => void` | Cancel current upload |
+| `permittedFileInfo` | `PermittedFileInfo \| undefined` | Route config from server |
+
+See [React Hooks docs](/client/hooks/) for full documentation.
+
+---
+
+## Factories
+
+### generateReactHelpers
+
+Creates typed React hooks and upload functions bound to a FileRouter.
+
+```typescript
+import { generateReactHelpers } from "@s3-good/react";
+
+function generateReactHelpers<TRouter extends FileRouter>(
+  opts?: GenerateReactHelpersOptions,
+): {
+  useUpload: TypedUseUpload<TRouter>;
+  uploadFiles: TypedUploadFiles<TRouter>;
+  createUpload: TypedCreateUpload<TRouter>;
+}
+
+interface GenerateReactHelpersOptions {
+  url?: string;  // default: "/api/upload"
+}
+```
+
+---
+
+## Theming utilities
+
+### resolveStyle
+
+Resolves a `StyleField` to a `CSSProperties` object.
+
+```typescript
+import { resolveStyle } from "@s3-good/react";
+
+function resolveStyle<TContentOpts>(
+  field: StyleField<TContentOpts> | undefined,
+  opts: TContentOpts,
+  defaultStyle: CSSProperties,
+): CSSProperties | undefined
+```
+
+### resolveClassName
+
+Resolves a `StyleField` to a CSS class name string.
+
+```typescript
+import { resolveClassName } from "@s3-good/react";
+
+function resolveClassName<TContentOpts>(
+  field: StyleField<TContentOpts> | undefined,
+  opts?: TContentOpts,
+): string | undefined
+```
+
+### renderContent
+
+Resolves content that can be static or a function.
+
+```typescript
+import { renderContent } from "@s3-good/react";
+
+function renderContent<TContentOpts>(
+  content: ReactNode | ((opts: TContentOpts) => ReactNode) | undefined,
+  opts: TContentOpts,
+  defaultContent: ReactNode,
+): ReactNode
+```
+
+---
+
+## Default styles
+
+All default style objects are exported:
+
+```typescript
+import {
+  defaultButtonStyles,
+  defaultDropzoneStyles,
+  defaultFilePreviewStyles,
+  defaultProgressBarStyles,
+  defaultFileListStyles,
+  getDropzoneContainerStyle,
+} from "@s3-good/react";
+```
+
+### defaultButtonStyles
+
+| Key | Description |
+|-----|-------------|
+| `container` | Outer container styles |
+| `button` | Button styles (ready state) |
+| `buttonDisabled` | Button styles (disabled state) |
+| `buttonUploading` | Button styles (uploading state) |
+| `allowedContent` | Allowed content text styles |
+| `uploadButton` | Manual mode upload button styles |
+
+### defaultDropzoneStyles
+
+| Key | Description |
+|-----|-------------|
+| `container` | Base container styles |
+| `containerDragOver` | Overlay styles when dragging over |
+| `containerUploading` | Overlay styles when uploading |
+| `containerDisabled` | Full container styles when disabled |
+| `uploadIcon` | Upload icon styles |
+| `label` | Label text styles |
+| `allowedContent` | Allowed content text styles |
+| `button` | Upload button styles |
+| `progressBar` | Progress bar track styles |
+| `progressFill` | Progress bar fill styles |
+| `previewContainer` | Image preview container styles |
+| `previewImage` | Image preview thumbnail styles |
+| `fileList` | Non-image file list styles |
+
+### defaultFilePreviewStyles
+
+| Key | Description |
+|-----|-------------|
+| `container` | Outer container styles |
+| `thumbnail` | Image thumbnail styles |
+| `icon` | File icon container styles |
+| `fileInfo` | File info wrapper styles |
+| `fileName` | File name text styles |
+| `fileSize` | File size text styles |
+
+### defaultProgressBarStyles
+
+| Key | Description |
+|-----|-------------|
+| `container` | Outer container styles |
+| `track` | Progress track styles |
+| `fill` | Progress fill styles |
+| `fillComplete` | Fill styles at 100% |
+| `label` | Label text styles |
+
+### defaultFileListStyles
+
+| Key | Description |
+|-----|-------------|
+| `container` | List container styles |
+| `item` | Item styles (default state) |
+| `itemError` | Item styles (error state) |
+| `itemComplete` | Item styles (complete state) |
+| `itemInfo` | Item info wrapper styles |
+| `itemName` | Item name text styles |
+| `itemSize` | Item size text styles |
+| `itemStatus` | Item status text styles |
+| `removeButton` | Remove button styles |
+
+---
+
+## Types
+
+### StyleField
+
+```typescript
+type StyleField<TContentOpts> =
+  | string
+  | CSSProperties
+  | ((opts: TContentOpts) => string | CSSProperties);
+```
+
+### FileItem
+
+```typescript
+interface FileItem {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  progress: number;
+  status: FileItemStatus;
+  error?: string;
+  file?: File;
+  url?: string;
+}
+
+type FileItemStatus = "pending" | "uploading" | "complete" | "error";
+```
+
+### Appearance types
+
+| Type | Component |
+|------|-----------|
+| `UploadButtonAppearance` | UploadButton |
+| `UploadDropzoneAppearance` | UploadDropzone |
+| `FilePreviewAppearance` | FilePreview |
+| `ProgressBarAppearance` | ProgressBar |
+| `FileListAppearance` | FileList |
+
+### Content option types
+
+| Type | Component |
+|------|-----------|
+| `ButtonContentOpts` | UploadButton |
+| `DropzoneContentOpts` | UploadDropzone |
+| `FilePreviewContentOpts` | FilePreview |
+| `ProgressBarContentOpts` | ProgressBar |
+| `FileListContentOpts` | FileList (list-level) |
+| `FileListItemContentOpts` | FileList (item-level) |
+
+### Hook types
+
+| Type | Description |
+|------|-------------|
+| `UseUploadProps` | Hook options |
+| `UseUploadReturn` | Hook return value |
+| `GenerateReactHelpersOptions` | Factory options |

@@ -1,0 +1,222 @@
+---
+title: "Next.js"
+description: Integrate @s3-good with Next.js applications.
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+The Next.js adapter provides a `createRouteHandler` for App Router API routes, plus helper functions to generate typed components and hooks bound to your file router.
+
+## Setup
+
+<Steps>
+
+1. **Define your file router**
+
+    ```typescript title="src/server/upload-router.ts"
+    import { createUploader } from "@s3-good/core/server";
+    import type { FileRouter } from "@s3-good/core/server";
+
+    const f = createUploader();
+
+    export const uploadRouter = {
+      imageUploader: f({ image: { maxFileSize: "4MB" } })
+        .middleware(async ({ req }) => {
+          return { userId: "user_123" };
+        })
+        .onUploadComplete(async ({ metadata, file }) => {
+          console.log("Upload complete:", file.url);
+          return { uploadedBy: metadata.userId };
+        }),
+    } satisfies FileRouter;
+
+    export type OurFileRouter = typeof uploadRouter;
+    ```
+
+2. **Create the API route**
+
+    ```typescript title="src/app/api/upload/route.ts"
+    import { createRouteHandler } from "@s3-good/core/next";
+    import { uploadRouter } from "~/server/upload-router";
+
+    export const { GET, POST } = createRouteHandler({
+      router: uploadRouter,
+      config: {
+        region: process.env.AWS_REGION!,
+        bucket: process.env.AWS_BUCKET!,
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+      },
+    });
+    ```
+
+3. **Generate typed components**
+
+    ```typescript title="src/lib/upload.ts"
+    import {
+      generateUploadButton,
+      generateUploadDropzone,
+      generateNextHelpers,
+    } from "@s3-good/core/next";
+    import type { OurFileRouter } from "~/server/upload-router";
+
+    export const UploadButton = generateUploadButton<OurFileRouter>();
+    export const UploadDropzone = generateUploadDropzone<OurFileRouter>();
+    export const { useUpload, uploadFiles } =
+      generateNextHelpers<OurFileRouter>();
+    ```
+
+4. **Use in a client component**
+
+    ```tsx title="src/app/page.tsx"
+    "use client";
+
+    import { UploadButton } from "~/lib/upload";
+
+    export default function Home() {
+      return (
+        <UploadButton
+          endpoint="imageUploader"
+          onClientUploadComplete={(res) => {
+            console.log("Files:", res);
+          }}
+          onUploadError={(error) => {
+            alert(`Error: ${error.message}`);
+          }}
+        />
+      );
+    }
+    ```
+
+</Steps>
+
+## createRouteHandler
+
+Creates `GET` and `POST` handlers for a Next.js App Router API route.
+
+```typescript
+import { createRouteHandler } from "@s3-good/core/next";
+
+export const { GET, POST } = createRouteHandler({
+  router: uploadRouter,
+  config: s3Config,
+});
+```
+
+### Options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `router` | `FileRouter` | Your file router object |
+| `config` | `S3Config` | S3 connection configuration |
+
+### S3Config
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `region` | `string` | Yes | AWS region (e.g. `"us-east-1"`) |
+| `bucket` | `string` | Yes | S3 bucket name |
+| `accessKeyId` | `string` | Yes | AWS access key ID |
+| `secretAccessKey` | `string` | Yes | AWS secret access key |
+| `endpoint` | `string` | No | Custom endpoint for S3-compatible services (MinIO, R2) |
+| `forcePathStyle` | `boolean` | No | Use path-style addressing (required for some S3-compatible services) |
+| `baseUrl` | `string` | No | Base URL for constructing public file URLs |
+
+### How it works
+
+- **GET** — Returns route configuration (allowed file types, size limits) for client discovery. Accepts an optional `?slug=routeName` query parameter to get config for a specific route.
+- **POST** — Processes upload requests: validates files, runs middleware, generates presigned URLs, and handles multipart upload completion.
+
+<Aside>
+  `createRouteHandler` includes a runtime check that throws if called from a browser context. It must only be used in server-side code (API routes, server components).
+</Aside>
+
+## generateUploadButton
+
+Creates a pre-typed `UploadButton` component with the API URL pre-configured:
+
+```typescript
+import { generateUploadButton } from "@s3-good/core/next";
+import type { OurFileRouter } from "~/server/upload-router";
+
+export const UploadButton = generateUploadButton<OurFileRouter>();
+
+// With custom API URL
+export const UploadButton = generateUploadButton<OurFileRouter>({
+  url: "/api/custom-upload",
+});
+```
+
+The returned component has the `endpoint` prop autocompleted with your route names. See [UploadButton](/components/upload-button/) for full props documentation.
+
+## generateUploadDropzone
+
+Creates a pre-typed `UploadDropzone` component with the API URL pre-configured:
+
+```typescript
+import { generateUploadDropzone } from "@s3-good/core/next";
+import type { OurFileRouter } from "~/server/upload-router";
+
+export const UploadDropzone = generateUploadDropzone<OurFileRouter>();
+```
+
+See [UploadDropzone](/components/upload-dropzone/) for full props documentation.
+
+## generateNextHelpers
+
+Creates typed React hooks and upload functions with Next.js defaults (`/api/upload`):
+
+```typescript
+import { generateNextHelpers } from "@s3-good/core/next";
+import type { OurFileRouter } from "~/server/upload-router";
+
+export const { useUpload, uploadFiles, createUpload } =
+  generateNextHelpers<OurFileRouter>();
+```
+
+This is a convenience wrapper around `generateReactHelpers` from `@s3-good/react` with the URL defaulting to `/api/upload`. It returns:
+
+| Export | Type | Description |
+|--------|------|-------------|
+| `useUpload` | Hook | React hook for uploads with progress tracking |
+| `uploadFiles` | Function | Imperative upload function |
+| `createUpload` | Function | Creates a controllable upload handle with `done()` and `abort()` |
+
+See [React Hooks](/client/hooks/) for detailed hook documentation.
+
+## Custom API path
+
+By default, all helpers use `/api/upload` as the API URL. To use a different path:
+
+```typescript
+// API route at a custom path
+// src/app/api/upload/route.ts
+export const { GET, POST } = createRouteHandler({ ... });
+
+// Generate helpers with the custom URL
+export const UploadButton = generateUploadButton<OurFileRouter>({
+  url: "/api/upload",
+});
+
+export const { useUpload } = generateNextHelpers<OurFileRouter>({
+  url: "/api/upload",
+});
+```
+
+## S3-compatible services
+
+Use the `endpoint` and `forcePathStyle` options for S3-compatible services like MinIO, Cloudflare R2, or DigitalOcean Spaces:
+
+```typescript title="src/app/api/upload/route.ts"
+export const { GET, POST } = createRouteHandler({
+  router: uploadRouter,
+  config: {
+    region: "auto",
+    bucket: "my-bucket",
+    accessKeyId: process.env.S3_ACCESS_KEY!,
+    secretAccessKey: process.env.S3_SECRET_KEY!,
+    endpoint: "https://my-minio.example.com",
+    forcePathStyle: true,
+  },
+});
+```

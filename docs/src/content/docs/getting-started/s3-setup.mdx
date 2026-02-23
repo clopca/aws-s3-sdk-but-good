@@ -1,0 +1,491 @@
+---
+title: S3 Setup
+description: Configure your AWS S3 bucket for use with @s3-good.
+---
+
+import { Tabs, TabItem, Aside, Steps } from "@astrojs/starlight/components";
+
+This guide walks you through setting up an AWS S3 bucket for use with `@s3-good/core`. It covers bucket creation, CORS configuration, IAM permissions, and the programmatic setup utility.
+
+<Aside type="tip">
+  **Recommended**: Use the [`setupBucket` utility](#using-the-setup-utility-recommended) to configure CORS and lifecycle rules automatically. Manual steps are documented below for reference or restricted environments.
+</Aside>
+
+## 1. Create an S3 bucket
+
+<Tabs>
+  <TabItem label="AWS Console">
+    <Steps>
+      1. Open the [S3 Console](https://s3.console.aws.amazon.com/s3/buckets).
+      2. Click **Create bucket**.
+      3. Enter a globally unique **Bucket name** (e.g. `myapp-uploads`).
+      4. Select the **AWS Region** closest to your users.
+      5. Under **Object Ownership**, keep "ACLs disabled (recommended)".
+      6. Under **Block Public Access settings**, keep all boxes checked — the SDK uses presigned URLs, so public access is not required.
+      7. Leave **Bucket Versioning** disabled unless you need it.
+      8. Click **Create bucket**.
+    </Steps>
+  </TabItem>
+  <TabItem label="AWS CLI">
+    ```bash
+    # Create the bucket
+    aws s3api create-bucket \
+      --bucket myapp-uploads \
+      --region us-east-1
+
+    # For regions other than us-east-1, add a location constraint:
+    aws s3api create-bucket \
+      --bucket myapp-uploads \
+      --region eu-west-1 \
+      --create-bucket-configuration LocationConstraint=eu-west-1
+    ```
+  </TabItem>
+  <TabItem label="Terraform">
+    ```hcl
+    resource "aws_s3_bucket" "uploads" {
+      bucket = "myapp-uploads"
+    }
+
+    resource "aws_s3_bucket_public_access_block" "uploads" {
+      bucket = aws_s3_bucket.uploads.id
+
+      block_public_acls       = true
+      block_public_policy     = true
+      ignore_public_acls      = true
+      restrict_public_buckets = true
+    }
+    ```
+  </TabItem>
+  <TabItem label="AWS CDK">
+    ```typescript
+    import * as s3 from "aws-cdk-lib/aws-s3";
+
+    const uploadBucket = new s3.Bucket(this, "UploadBucket", {
+      bucketName: "myapp-uploads",
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+## 2. CORS configuration
+
+Your S3 bucket **must** have CORS configured to allow browser-based uploads. Without it, the browser will block upload requests.
+
+### Using the setup utility (recommended)
+
+The `setupBucket` function configures CORS and lifecycle rules in a single call:
+
+```typescript
+import { setupBucket } from "@s3-good/core/sdk";
+
+const result = await setupBucket(
+  {
+    region: "us-east-1",
+    bucket: "myapp-uploads",
+    accessKeyId: "AKIA...",
+    secretAccessKey: "...",
+  },
+  {
+    allowedOrigins: ["https://myapp.com"], // Use ["*"] for development
+    multipartExpiryDays: 1, // Auto-abort incomplete uploads after 1 day
+  },
+);
+
+console.log(result);
+// { cors: true, lifecycle: true }
+```
+
+Or use the class-based API:
+
+```typescript
+import { S3Api } from "@s3-good/core/sdk";
+
+const s3 = new S3Api({
+  region: "us-east-1",
+  bucket: "myapp-uploads",
+  accessKeyId: "AKIA...",
+  secretAccessKey: "...",
+});
+
+await s3.setupBucket({
+  allowedOrigins: ["https://myapp.com"],
+});
+```
+
+<Aside>
+  Run `setupBucket` **once** during project setup, not on every request. It is an idempotent operation that overwrites existing CORS and lifecycle rules.
+</Aside>
+
+### Manual CORS via AWS Console
+
+<Steps>
+  1. Open your bucket in the [S3 Console](https://s3.console.aws.amazon.com/s3/buckets).
+  2. Go to the **Permissions** tab.
+  3. Scroll to **Cross-origin resource sharing (CORS)** and click **Edit**.
+  4. Paste the following JSON:
+
+     ```json
+     [
+       {
+         "AllowedHeaders": ["*"],
+         "AllowedMethods": ["GET", "PUT", "HEAD"],
+         "AllowedOrigins": ["https://myapp.com"],
+         "ExposeHeaders": ["ETag", "Content-Length", "Content-Type"],
+         "MaxAgeSeconds": 3600
+       }
+     ]
+     ```
+
+  5. Click **Save changes**.
+</Steps>
+
+<Aside type="caution">
+  `ETag` **must** be in `ExposeHeaders`. Without it, multipart uploads will fail because the browser cannot read the ETag response header needed to complete each part.
+</Aside>
+
+For development, you can use `"*"` as the allowed origin:
+
+```json
+[
+  {
+    "AllowedHeaders": ["*"],
+    "AllowedMethods": ["GET", "PUT", "HEAD"],
+    "AllowedOrigins": ["*"],
+    "ExposeHeaders": ["ETag", "Content-Length", "Content-Type"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+### Manual CORS via AWS CLI
+
+Save the CORS configuration to a file and apply it:
+
+```bash
+cat > cors.json << 'EOF'
+{
+  "CORSRules": [
+    {
+      "AllowedHeaders": ["*"],
+      "AllowedMethods": ["GET", "PUT", "HEAD"],
+      "AllowedOrigins": ["https://myapp.com"],
+      "ExposeHeaders": ["ETag", "Content-Length", "Content-Type"],
+      "MaxAgeSeconds": 3600
+    }
+  ]
+}
+EOF
+
+aws s3api put-bucket-cors \
+  --bucket myapp-uploads \
+  --cors-configuration file://cors.json
+```
+
+Verify the configuration:
+
+```bash
+aws s3api get-bucket-cors --bucket myapp-uploads
+```
+
+## 3. Lifecycle rules
+
+Incomplete multipart uploads accumulate storage costs. The `setupBucket` utility automatically creates a lifecycle rule to abort them after 1 day. If you're configuring manually:
+
+<Tabs>
+  <TabItem label="AWS CLI">
+    ```bash
+    aws s3api put-bucket-lifecycle-configuration \
+      --bucket myapp-uploads \
+      --lifecycle-configuration '{
+        "Rules": [
+          {
+            "ID": "s3-good-abort-incomplete-multipart",
+            "Status": "Enabled",
+            "Filter": {},
+            "AbortIncompleteMultipartUpload": {
+              "DaysAfterInitiation": 1
+            }
+          }
+        ]
+      }'
+    ```
+  </TabItem>
+  <TabItem label="AWS Console">
+    <Steps>
+      1. Open your bucket in the S3 Console.
+      2. Go to the **Management** tab.
+      3. Click **Create lifecycle rule**.
+      4. Name it `s3-good-abort-incomplete-multipart`.
+      5. Apply to all objects.
+      6. Under **Lifecycle rule actions**, check **Delete expired object delete markers or incomplete multipart uploads**.
+      7. Set **Days after initiation** to `1`.
+      8. Click **Create rule**.
+    </Steps>
+  </TabItem>
+</Tabs>
+
+## 4. IAM policy
+
+Create an IAM user (or role) with the minimum permissions needed for the SDK. This policy grants access to a single bucket.
+
+### Minimum required policy
+
+```json title="policy.json"
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "S3GoodUploadSDK",
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:HeadObject",
+        "s3:DeleteObject",
+        "s3:ListMultipartUploadParts",
+        "s3:AbortMultipartUpload",
+        "s3:ListBucketMultipartUploads"
+      ],
+      "Resource": [
+        "arn:aws:s3:::myapp-uploads",
+        "arn:aws:s3:::myapp-uploads/*"
+      ]
+    }
+  ]
+}
+```
+
+Replace `myapp-uploads` with your bucket name.
+
+### Additional permissions for setup utility
+
+If you use `setupBucket` or `validateBucketCors`, the IAM user also needs these additional actions:
+
+```json
+"s3:PutBucketCors",
+"s3:GetBucketCors",
+"s3:PutLifecycleConfiguration"
+```
+
+<Aside type="tip">
+  The setup permissions (`PutBucketCors`, `GetBucketCors`, `PutLifecycleConfiguration`) are only needed once during initial configuration. You can remove them after running `setupBucket`.
+</Aside>
+
+### Creating the IAM user
+
+<Tabs>
+  <TabItem label="AWS Console">
+    <Steps>
+      1. Open the [IAM Console](https://console.aws.amazon.com/iam/).
+      2. Go to **Users** and click **Create user**.
+      3. Enter a name (e.g. `s3-good-uploads`).
+      4. Select **Attach policies directly**.
+      5. Click **Create policy**, paste the JSON above, and name it `S3GoodUploadPolicy`.
+      6. Attach the policy to the user.
+      7. Under **Security credentials**, create an **Access key** (select "Application running outside AWS").
+      8. Save the **Access Key ID** and **Secret Access Key**.
+    </Steps>
+  </TabItem>
+  <TabItem label="AWS CLI">
+    ```bash
+    # Create the user
+    aws iam create-user --user-name s3-good-uploads
+
+    # Create the policy (save the JSON above as policy.json)
+    aws iam create-policy \
+      --policy-name S3GoodUploadPolicy \
+      --policy-document file://policy.json
+
+    # Attach the policy (replace ACCOUNT_ID with your AWS account ID)
+    aws iam attach-user-policy \
+      --user-name s3-good-uploads \
+      --policy-arn arn:aws:iam::ACCOUNT_ID:policy/S3GoodUploadPolicy
+
+    # Create access keys
+    aws iam create-access-key --user-name s3-good-uploads
+    ```
+  </TabItem>
+</Tabs>
+
+## 5. S3-compatible services
+
+The SDK works with any S3-compatible storage service. Pass the `endpoint` and `forcePathStyle` options in your `S3Config`:
+
+<Tabs>
+  <TabItem label="MinIO">
+    ```typescript
+    import { setupBucket } from "@s3-good/core/sdk";
+
+    await setupBucket(
+      {
+        region: "us-east-1", // Required but ignored by MinIO
+        bucket: "myapp-uploads",
+        accessKeyId: "minioadmin",
+        secretAccessKey: "minioadmin",
+        endpoint: "http://localhost:9000",
+        forcePathStyle: true,
+      },
+    );
+    ```
+  </TabItem>
+  <TabItem label="Cloudflare R2">
+    ```typescript
+    await setupBucket(
+      {
+        region: "auto",
+        bucket: "myapp-uploads",
+        accessKeyId: "...",
+        secretAccessKey: "...",
+        endpoint: "https://<ACCOUNT_ID>.r2.cloudflarestorage.com",
+      },
+    );
+    ```
+
+    <Aside>
+      R2 has built-in CORS support. You may still need to configure CORS via the Cloudflare dashboard depending on your setup.
+    </Aside>
+  </TabItem>
+  <TabItem label="DigitalOcean Spaces">
+    ```typescript
+    await setupBucket(
+      {
+        region: "nyc3",
+        bucket: "myapp-uploads",
+        accessKeyId: "...",
+        secretAccessKey: "...",
+        endpoint: "https://nyc3.digitaloceanspaces.com",
+        forcePathStyle: false,
+      },
+    );
+    ```
+  </TabItem>
+</Tabs>
+
+The `S3Config` type supports these options for compatibility:
+
+```typescript
+interface S3Config {
+  region: string;
+  bucket: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  endpoint?: string;        // Custom endpoint URL
+  forcePathStyle?: boolean;  // Required for some S3-compatible services
+  baseUrl?: string;          // Base URL for constructing public file URLs
+}
+```
+
+## 6. Validate your setup
+
+After configuring your bucket, verify that CORS is set up correctly:
+
+```typescript
+import { validateBucketCors } from "@s3-good/core/sdk";
+
+const result = await validateBucketCors({
+  region: "us-east-1",
+  bucket: "myapp-uploads",
+  accessKeyId: "AKIA...",
+  secretAccessKey: "...",
+});
+
+if (result.isValid) {
+  console.log("Bucket is configured correctly!");
+} else {
+  console.error("CORS issues found:", result.issues);
+}
+```
+
+Or using the class-based API:
+
+```typescript
+import { S3Api } from "@s3-good/core/sdk";
+
+const s3 = new S3Api({
+  region: "us-east-1",
+  bucket: "myapp-uploads",
+  accessKeyId: "AKIA...",
+  secretAccessKey: "...",
+});
+
+const { isValid, issues } = await s3.validateCors();
+if (!isValid) {
+  console.error("CORS issues:", issues);
+}
+```
+
+You can also verify from the command line:
+
+```bash
+# Check CORS configuration
+aws s3api get-bucket-cors --bucket myapp-uploads
+
+# Check lifecycle rules
+aws s3api get-bucket-lifecycle-configuration --bucket myapp-uploads
+```
+
+## 7. Troubleshooting
+
+### CORS errors
+
+**Symptom**: Browser console shows `Access to XMLHttpRequest has been blocked by CORS policy`.
+
+| Cause | Fix |
+|-------|-----|
+| No CORS configuration on bucket | Run `setupBucket` or apply the CORS JSON manually |
+| `AllowedOrigins` doesn't match your domain | Add your exact origin (e.g. `https://myapp.com` — no trailing slash) |
+| Missing `ETag` in `ExposeHeaders` | Add `"ETag"` to the `ExposeHeaders` array |
+| Using `http://` in production | Ensure your origin uses `https://` |
+| Browser caching old CORS preflight | Hard-refresh or wait for `MaxAgeSeconds` to expire |
+
+<Aside type="caution">
+  **Most common issue**: Missing `ETag` in `ExposeHeaders`. The browser silently strips the header, causing multipart uploads to fail with a cryptic error. Always verify `ETag` is exposed.
+</Aside>
+
+### Access denied errors
+
+**Symptom**: `AccessDenied` or `403 Forbidden` responses.
+
+| Cause | Fix |
+|-------|-----|
+| Wrong IAM permissions | Verify the IAM policy includes all required actions (see [IAM Policy](#4-iam-policy)) |
+| Wrong bucket name in policy | Ensure the `Resource` ARN matches your bucket name exactly |
+| Missing bucket-level ARN | Include both `arn:aws:s3:::bucket` and `arn:aws:s3:::bucket/*` |
+| Presigned URL expired | Default expiry is 1 hour — check if the URL is still valid |
+| S3 Block Public Access | This is fine — the SDK uses presigned URLs, not public access |
+
+### Multipart upload failures
+
+**Symptom**: Large file uploads fail partway through or leave incomplete uploads.
+
+| Cause | Fix |
+|-------|-----|
+| Missing `ETag` in CORS `ExposeHeaders` | Add `"ETag"` to `ExposeHeaders` — this is the #1 cause |
+| No lifecycle rule for incomplete uploads | Run `setupBucket` or add a lifecycle rule to abort after 1 day |
+| Missing `s3:ListMultipartUploadParts` permission | Add it to the IAM policy |
+| Missing `s3:AbortMultipartUpload` permission | Add it to the IAM policy |
+| Network interruption | The SDK retries automatically, but very unstable connections may still fail |
+
+### Presigned URL issues
+
+**Symptom**: Presigned URLs return `SignatureDoesNotMatch` or `AccessDenied`.
+
+| Cause | Fix |
+|-------|-----|
+| URL expired | Generate a new URL — default expiry is 1 hour |
+| Region mismatch | Ensure the `region` in your config matches the bucket's actual region |
+| Clock skew | Ensure the server generating URLs has an accurate system clock |
+| URL was modified | Presigned URLs cannot be altered — any change invalidates the signature |
+
+### Setup utility errors
+
+**Symptom**: `setupBucket` throws an error.
+
+| Cause | Fix |
+|-------|-----|
+| Missing `s3:PutBucketCors` permission | Add setup permissions to the IAM policy (see [Additional Permissions](#additional-permissions-for-setup-utility)) |
+| Bucket doesn't exist | Create the bucket first |
+| Wrong region | Ensure the `region` matches where the bucket was created |
+| Invalid credentials | Verify `accessKeyId` and `secretAccessKey` are correct |

@@ -1,0 +1,302 @@
+---
+title: FileList
+description: Display a list of files with status, progress, and remove actions.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+The `FileList` component renders a list of files with their upload status, progress bars, error messages, and optional remove buttons. It's designed to work alongside `useUpload` for building custom upload UIs.
+
+## Basic usage
+
+```tsx
+import { FileList } from "@s3-good/react";
+import type { FileItem } from "@s3-good/react";
+
+function MyFileList() {
+  const files: FileItem[] = [
+    {
+      id: "1",
+      name: "photo.jpg",
+      size: 245000,
+      type: "image/jpeg",
+      progress: 100,
+      status: "complete",
+      url: "https://my-bucket.s3.amazonaws.com/photo.jpg",
+    },
+    {
+      id: "2",
+      name: "document.pdf",
+      size: 1048576,
+      type: "application/pdf",
+      progress: 45,
+      status: "uploading",
+    },
+    {
+      id: "3",
+      name: "video.mp4",
+      size: 52428800,
+      type: "video/mp4",
+      progress: 0,
+      status: "error",
+      error: "File too large",
+    },
+  ];
+
+  return (
+    <FileList
+      files={files}
+      onRemove={(id) => console.log("Remove:", id)}
+    />
+  );
+}
+```
+
+## FileItem type
+
+Each file in the list must conform to the `FileItem` interface:
+
+```typescript
+interface FileItem {
+  id: string;           // Unique identifier
+  name: string;         // File name
+  size: number;         // File size in bytes
+  type: string;         // MIME type
+  progress: number;     // Upload progress (0-100)
+  status: FileItemStatus;  // Current status
+  error?: string;       // Error message (when status is "error")
+  file?: File;          // Original File object (optional)
+  url?: string;         // Uploaded file URL (optional)
+}
+
+type FileItemStatus = "pending" | "uploading" | "complete" | "error";
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `files` | `FileItem[]` | — | **Required.** Array of file items to display |
+| `onRemove` | `(id: string) => void` | — | Called when a file's remove button is clicked |
+| `showProgress` | `boolean` | `true` | Show progress bars for uploading files |
+| `showRemoveButton` | `boolean` | `true` | Show remove buttons |
+| `appearance` | `FileListAppearance` | — | Style overrides |
+| `content` | `object` | — | Content overrides |
+| `className` | `string` | — | CSS class for the container |
+
+## Status styling
+
+Each file item is styled based on its status:
+
+| Status | Border color | Background | Description |
+|--------|-------------|------------|-------------|
+| `pending` | Gray (`#e5e7eb`) | White | Waiting to upload |
+| `uploading` | Gray (`#e5e7eb`) | White | Upload in progress (shows progress bar) |
+| `complete` | Green (`#86efac`) | Light green (`#f0fdf4`) | Upload finished |
+| `error` | Red (`#fca5a5`) | Light red (`#fef2f2`) | Upload failed (shows error message) |
+
+## Custom content
+
+Override the default rendering for file name, size, and status:
+
+```tsx
+<FileList
+  files={files}
+  content={{
+    itemName: ({ file }) => (
+      <a href={file.url}>{file.name}</a>
+    ),
+    itemSize: ({ file }) =>
+      `${(file.size / 1024).toFixed(1)} KB`,
+    itemStatus: ({ file, isComplete, isError }) => {
+      if (isComplete) return "✓ Done";
+      if (isError) return `✗ ${file.error}`;
+      return file.status;
+    },
+  }}
+/>
+```
+
+### FileListContentOpts (list-level)
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `files` | `FileItem[]` | All files in the list |
+| `uploadingCount` | `number` | Number of files currently uploading |
+| `completedCount` | `number` | Number of completed files |
+| `errorCount` | `number` | Number of failed files |
+| `isAllComplete` | `boolean` | Whether all files are complete |
+
+### FileListItemContentOpts (item-level)
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `file` | `FileItem` | The file item |
+| `isUploading` | `boolean` | Whether this file is uploading |
+| `isComplete` | `boolean` | Whether this file is complete |
+| `isError` | `boolean` | Whether this file has an error |
+
+## Theming
+
+```tsx
+// CSS class names
+<FileList
+  files={files}
+  appearance={{
+    container: "space-y-2",
+    item: "flex items-center gap-3 p-3 border rounded-lg",
+    itemName: "font-medium text-sm truncate",
+    itemSize: "text-xs text-gray-500",
+    itemStatus: "text-xs font-medium",
+    removeButton: "text-gray-400 hover:text-red-500",
+  }}
+/>
+
+// Inline styles
+<FileList
+  files={files}
+  appearance={{
+    container: { gap: "12px" },
+    item: { padding: "16px", borderRadius: "12px" },
+  }}
+/>
+
+// Dynamic styles based on item state
+<FileList
+  files={files}
+  appearance={{
+    item: ({ isError, isComplete }) => {
+      if (isError) return { borderColor: "#ef4444" };
+      if (isComplete) return { borderColor: "#22c55e" };
+      return {};
+    },
+  }}
+/>
+```
+
+### Appearance slots
+
+| Slot | Element | Description |
+|------|---------|-------------|
+| `container` | Outer `<div>` | Wraps the entire list |
+| `item` | `<div>` | Individual file item row |
+| `itemInfo` | `<div>` | Wraps name, size, and progress |
+| `itemName` | `<div>` | File name text |
+| `itemSize` | `<div>` | File size text |
+| `itemProgress` | — | Progress bar (uses `ProgressBar` component) |
+| `itemStatus` | `<div>` | Status text (Pending, Uploading, Complete, Error) |
+| `removeButton` | `<button>` | Remove/delete button |
+
+## Data attributes
+
+| Attribute | Values | Element |
+|-----------|--------|---------|
+| `data-status` | `"pending"`, `"uploading"`, `"complete"`, `"error"` | Item |
+
+```css
+[data-status="error"] {
+  border-color: #ef4444;
+}
+
+[data-status="complete"] {
+  border-color: #22c55e;
+}
+```
+
+## Accessibility
+
+- The list container has `role="list"`
+- Each item has `role="listitem"`
+- Remove buttons have `aria-label="Remove {fileName}"`
+- The embedded `ProgressBar` includes proper ARIA progressbar attributes
+- Status text uses semantic color coding
+
+## With useUpload
+
+A complete example combining `FileList` with the upload hook:
+
+```tsx
+"use client";
+
+import { useState, useCallback } from "react";
+import { useUpload } from "~/lib/upload";
+import { FileList } from "@s3-good/react";
+import type { FileItem } from "@s3-good/react";
+
+export function UploadWithFileList() {
+  const [fileItems, setFileItems] = useState<FileItem[]>([]);
+
+  const { startUpload, isUploading } = useUpload("imageUploader", {
+    onUploadBegin: (fileName) => {
+      setFileItems((prev) =>
+        prev.map((f) =>
+          f.name === fileName ? { ...f, status: "uploading" } : f,
+        ),
+      );
+    },
+    onUploadProgress: (progress) => {
+      setFileItems((prev) =>
+        prev.map((f) =>
+          f.status === "uploading" ? { ...f, progress } : f,
+        ),
+      );
+    },
+    onClientUploadComplete: (res) => {
+      setFileItems((prev) =>
+        prev.map((f) => {
+          const match = res.find((r) => r.name === f.name);
+          return match
+            ? { ...f, status: "complete", progress: 100, url: match.url }
+            : f;
+        }),
+      );
+    },
+    onUploadError: (error) => {
+      setFileItems((prev) =>
+        prev.map((f) =>
+          f.status === "uploading"
+            ? { ...f, status: "error", error: error.message }
+            : f,
+        ),
+      );
+    },
+  });
+
+  const handleFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files ?? []);
+      const items: FileItem[] = files.map((f, i) => ({
+        id: `${f.name}-${f.size}-${i}`,
+        name: f.name,
+        size: f.size,
+        type: f.type,
+        progress: 0,
+        status: "pending" as const,
+        file: f,
+      }));
+      setFileItems(items);
+      startUpload(files);
+    },
+    [startUpload],
+  );
+
+  return (
+    <div>
+      <input
+        type="file"
+        multiple
+        onChange={handleFileSelect}
+        disabled={isUploading}
+      />
+      {fileItems.length > 0 && (
+        <FileList
+          files={fileItems}
+          onRemove={(id) =>
+            setFileItems((prev) => prev.filter((f) => f.id !== id))
+          }
+        />
+      )}
+    </div>
+  );
+}
+```

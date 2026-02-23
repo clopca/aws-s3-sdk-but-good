@@ -1,0 +1,246 @@
+---
+title: UploadDropzone
+description: A drag-and-drop zone component for file uploads.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+The `UploadDropzone` is a pre-built drag-and-drop component for file uploads. It supports drag-and-drop, click-to-browse, clipboard paste, image previews, and progress tracking — all with full theming support.
+
+## Basic usage
+
+```tsx
+import { UploadDropzone } from "@s3-good/react";
+
+function MyPage() {
+  return (
+    <UploadDropzone
+      endpoint="imageUploader"
+      onClientUploadComplete={(res) => {
+        console.log("Files:", res);
+      }}
+      onUploadError={(error) => {
+        alert(`Error: ${error.message}`);
+      }}
+    />
+  );
+}
+```
+
+For Next.js, use the generated typed version:
+
+```tsx
+import { UploadDropzone } from "~/lib/upload";
+
+<UploadDropzone
+  endpoint="imageUploader"
+  onClientUploadComplete={(res) => console.log(res)}
+/>
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `endpoint` | `string` | — | **Required.** Route name from your file router |
+| `input` | Inferred | — | Input data for routes with `.input()` schema |
+| `mode` | `"auto" \| "manual"` | `"auto"` | Upload mode |
+| `disabled` | `boolean` | `false` | Disable the dropzone |
+| `className` | `string` | — | CSS class for the container |
+| `appearance` | `UploadDropzoneAppearance` | — | Style overrides |
+| `content` | `object` | — | Content overrides |
+| `onPaste` | `boolean` | `false` | Enable clipboard paste support |
+| `onClientUploadComplete` | `(res: UploadFileResponse[]) => void` | — | Called when upload finishes |
+| `onUploadError` | `(error: UploadError) => void` | — | Called on upload failure |
+| `onUploadBegin` | `(fileName: string) => void` | — | Called when each file starts uploading |
+| `onUploadProgress` | `(progress: number) => void` | — | Called with progress percentage |
+| `headers` | `HeadersInit \| (() => HeadersInit)` | — | Custom headers for the API request |
+
+## Upload modes
+
+### Auto mode (default)
+
+Files are uploaded immediately when dropped or selected:
+
+```tsx
+<UploadDropzone endpoint="imageUploader" mode="auto" />
+```
+
+### Manual mode
+
+Files are staged first, then uploaded when the user clicks the "Upload" button:
+
+```tsx
+<UploadDropzone endpoint="imageUploader" mode="manual" />
+```
+
+In manual mode:
+- Dropped/selected files are shown as previews (images) or file names (other types)
+- A button appears: "Upload N file(s)"
+- Clicking the button triggers the upload
+
+## Clipboard paste
+
+Enable paste support to allow users to paste images from the clipboard:
+
+```tsx
+<UploadDropzone
+  endpoint="imageUploader"
+  onPaste
+/>
+```
+
+When enabled, the component listens for `paste` events on the document. Pasted files are handled the same as dropped files (auto-upload or staged depending on mode).
+
+## Image previews
+
+When image files are selected in manual mode, the dropzone automatically shows thumbnail previews. Non-image files are listed by name and size.
+
+## Custom content
+
+Override the default content for each section:
+
+```tsx
+<UploadDropzone
+  endpoint="imageUploader"
+  content={{
+    uploadIcon: <MyCustomIcon />,
+    label: "Drop your photos here",
+    allowedContent: "PNG, JPG, WebP up to 4MB",
+    button: "Start Upload",
+  }}
+/>
+```
+
+Use functions for dynamic content:
+
+```tsx
+<UploadDropzone
+  endpoint="imageUploader"
+  content={{
+    label: ({ isDragOver, isUploading, uploadProgress }) => {
+      if (isUploading) return `Uploading... ${uploadProgress}%`;
+      if (isDragOver) return "Drop it!";
+      return "Drag & drop files here";
+    },
+    button: ({ files }) =>
+      files.length > 0 ? `Upload ${files.length} file(s)` : "Upload",
+  }}
+/>
+```
+
+### DropzoneContentOpts
+
+The content function receives:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `ready` | `boolean` | Whether the dropzone is ready for interaction |
+| `isUploading` | `boolean` | Whether an upload is in progress |
+| `uploadProgress` | `number` | Upload progress (0-100) |
+| `isDragOver` | `boolean` | Whether files are being dragged over the zone |
+| `fileTypes` | `string[]` | Allowed file type categories |
+| `files` | `File[]` | Currently selected files (manual mode) |
+
+## Theming
+
+Customize the appearance of each element:
+
+```tsx
+// CSS class names
+<UploadDropzone
+  endpoint="imageUploader"
+  appearance={{
+    container: "border-2 border-dashed border-gray-300 rounded-xl p-8",
+    uploadIcon: "text-gray-400",
+    label: "text-lg font-medium",
+    allowedContent: "text-sm text-gray-500",
+    button: "bg-blue-500 text-white px-6 py-2 rounded-lg",
+  }}
+/>
+
+// Inline styles
+<UploadDropzone
+  endpoint="imageUploader"
+  appearance={{
+    container: { borderColor: "#8b5cf6", backgroundColor: "#faf5ff" },
+    button: { backgroundColor: "#8b5cf6" },
+  }}
+/>
+
+// Dynamic styles
+<UploadDropzone
+  endpoint="imageUploader"
+  appearance={{
+    container: ({ isDragOver }) =>
+      isDragOver
+        ? { borderColor: "#22c55e", backgroundColor: "#f0fdf4" }
+        : {},
+  }}
+/>
+```
+
+### Appearance slots
+
+| Slot | Element | Description |
+|------|---------|-------------|
+| `container` | Outer `<div>` | The dropzone container |
+| `uploadIcon` | `<div>` | Wraps the upload icon |
+| `label` | `<div>` | The main label text |
+| `allowedContent` | `<div>` | The allowed file types text |
+| `button` | `<button>` | The upload button (manual mode) |
+
+See [Appearance API](/theming/appearance/) for full theming documentation.
+
+## Data attributes
+
+| Attribute | Values | Element |
+|-----------|--------|---------|
+| `data-state` | `"ready"`, `"uploading"`, `"dragover"`, `"disabled"` | Container |
+
+```css
+[data-state="dragover"] {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+[data-state="uploading"] {
+  cursor: wait;
+}
+```
+
+## Accessibility
+
+- The dropzone has `role="button"` and is keyboard-focusable (`tabIndex={0}`)
+- `Enter` and `Space` keys open the file picker
+- `aria-label="Upload dropzone"` is set on the container
+- `aria-disabled` reflects the disabled state
+- The hidden file input has `accept` and `multiple` attributes set from route config
+
+## Complete example
+
+```tsx
+<UploadDropzone
+  endpoint="imageUploader"
+  mode="manual"
+  onPaste
+  content={{
+    label: ({ isDragOver, files }) => {
+      if (isDragOver) return "Drop to add files";
+      if (files.length > 0) return `${files.length} file(s) selected`;
+      return "Drag & drop images, or click to browse";
+    },
+    allowedContent: "Images up to 4MB each, max 10 files",
+  }}
+  appearance={{
+    container: ({ isDragOver }) =>
+      isDragOver ? { borderColor: "#3b82f6" } : {},
+  }}
+  onClientUploadComplete={(res) => {
+    console.log("Uploaded:", res.map((f) => f.url));
+  }}
+  onUploadError={(error) => {
+    console.error("Failed:", error.message);
+  }}
+/>
+```

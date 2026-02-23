@@ -1,0 +1,140 @@
+---
+title: Installation
+description: Install @s3-good packages in your project.
+---
+
+import { Tabs, TabItem, Aside, Steps } from "@astrojs/starlight/components";
+
+## Prerequisites
+
+- **Node.js** >= 18.0.0
+- **React** >= 18.0.0 (only for `@s3-good/react`)
+- An **AWS S3 bucket** — see the [S3 Setup guide](/getting-started/s3-setup/)
+
+## Install packages
+
+Choose the packages that match your project:
+
+### Next.js (with React components)
+
+<Tabs>
+  <TabItem label="pnpm">
+    ```bash
+    pnpm add @s3-good/core @s3-good/react
+    ```
+  </TabItem>
+  <TabItem label="npm">
+    ```bash
+    npm install @s3-good/core @s3-good/react
+    ```
+  </TabItem>
+  <TabItem label="yarn">
+    ```bash
+    yarn add @s3-good/core @s3-good/react
+    ```
+  </TabItem>
+</Tabs>
+
+### Hono / other server frameworks
+
+<Tabs>
+  <TabItem label="pnpm">
+    ```bash
+    pnpm add @s3-good/core
+    ```
+  </TabItem>
+  <TabItem label="npm">
+    ```bash
+    npm install @s3-good/core
+    ```
+  </TabItem>
+  <TabItem label="yarn">
+    ```bash
+    yarn add @s3-good/core
+    ```
+  </TabItem>
+</Tabs>
+
+<Aside type="tip">
+  `@s3-good/shared` is installed automatically as a dependency of `@s3-good/core` — you don't need to install it separately.
+</Aside>
+
+## Peer dependencies
+
+| Package | Peer dependency | Version |
+|---------|----------------|---------|
+| `@s3-good/core` | `zod` | `>= 3.0.0` |
+| `@s3-good/react` | `react` | `>= 18.0.0` |
+| `@s3-good/react` | `react-dom` | `>= 18.0.0` |
+
+If your project doesn't already include these, install them:
+
+<Tabs>
+  <TabItem label="pnpm">
+    ```bash
+    pnpm add zod react react-dom
+    ```
+  </TabItem>
+  <TabItem label="npm">
+    ```bash
+    npm install zod react react-dom
+    ```
+  </TabItem>
+  <TabItem label="yarn">
+    ```bash
+    yarn add zod react react-dom
+    ```
+  </TabItem>
+</Tabs>
+
+## Environment variables
+
+The SDK needs AWS credentials and bucket information at runtime. Add these to your `.env` file (or your hosting provider's environment settings):
+
+```bash title=".env"
+AWS_REGION=us-east-1
+AWS_BUCKET=myapp-uploads
+AWS_ACCESS_KEY_ID=AKIA...
+AWS_SECRET_ACCESS_KEY=...
+```
+
+<Aside type="caution">
+  Never commit your `.env` file to version control. Add it to `.gitignore`.
+</Aside>
+
+These values are passed to `createRouteHandler` on the server — see the [Quick Start](/getting-started/quick-start/) for a complete example.
+
+## Package overview
+
+| Package | Purpose | Environment |
+|---------|---------|-------------|
+| `@s3-good/core` | File router, route handlers, upload client, S3 setup utilities | Server + Client |
+| `@s3-good/react` | `UploadButton`, `UploadDropzone`, `useUpload` hook, and more | Client (React) |
+| `@s3-good/shared` | Shared types (`S3Config`, `UploadedFile`, etc.) and error classes | Both |
+
+### Import paths
+
+`@s3-good/core` exposes multiple entry points:
+
+```typescript
+// Server — createUploader, createRouteHandler, FileRouter type
+import { createUploader, createRouteHandler } from "@s3-good/core/server";
+
+// Next.js — framework-specific route handler + component generators
+import { createRouteHandler } from "@s3-good/core/next";
+import { generateUploadButton, generateUploadDropzone } from "@s3-good/core/next";
+
+// Hono — framework-specific route handler
+import { createRouteHandler } from "@s3-good/core/hono";
+
+// Client — programmatic upload functions
+import { genUploader } from "@s3-good/core/client";
+
+// SDK utilities — bucket setup and validation
+import { setupBucket, validateBucketCors, S3Api } from "@s3-good/core/sdk";
+```
+
+## Next steps
+
+- [Quick Start](/getting-started/quick-start/) — build a working upload in 5 minutes
+- [S3 Setup](/getting-started/s3-setup/) — configure your AWS S3 bucket

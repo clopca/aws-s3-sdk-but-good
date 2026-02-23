@@ -1,0 +1,341 @@
+---
+title: Appearance API
+description: Customize the look and feel of @s3-good components.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+All `@s3-good/react` components support a unified theming system through the `appearance` prop. You can customize any element using CSS class names, inline styles, or dynamic functions — without fighting default styles.
+
+## StyleField type
+
+Every appearance slot accepts a `StyleField` value:
+
+```typescript
+type StyleField<TContentOpts> =
+  | string                                          // CSS class name
+  | CSSProperties                                   // Inline styles
+  | ((opts: TContentOpts) => string | CSSProperties); // Dynamic function
+```
+
+### CSS class name
+
+Pass a string to apply a CSS class. When a class name is used, **default inline styles are removed** — you have full control:
+
+```tsx
+<UploadButton
+  appearance={{
+    button: "my-upload-btn",
+  }}
+/>
+```
+
+```css
+.my-upload-btn {
+  background-color: #8b5cf6;
+  color: white;
+  padding: 8px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+```
+
+### Inline styles
+
+Pass a `CSSProperties` object to **merge** with the default styles. Your styles take precedence:
+
+```tsx
+<UploadButton
+  appearance={{
+    button: { backgroundColor: "#8b5cf6", borderRadius: "12px" },
+  }}
+/>
+```
+
+This merges with the default button styles, only overriding `backgroundColor` and `borderRadius`.
+
+### Dynamic function
+
+Pass a function that receives the component's content options and returns either a class name or styles:
+
+```tsx
+<UploadDropzone
+  appearance={{
+    container: (opts) => {
+      if (opts.isDragOver) return { borderColor: "#22c55e", backgroundColor: "#f0fdf4" };
+      if (opts.isUploading) return { borderColor: "#3b82f6" };
+      return {};
+    },
+  }}
+/>
+```
+
+If the function returns a string, it's treated as a class name (default styles removed). If it returns a `CSSProperties` object, it's merged with defaults.
+
+## Resolution rules
+
+The `resolveStyle` and `resolveClassName` utilities follow these rules:
+
+| Input | Inline styles | Class name |
+|-------|--------------|------------|
+| `undefined` | Default styles | `undefined` |
+| `string` | `undefined` (removed) | The string value |
+| `CSSProperties` | Merged with defaults | `undefined` |
+| `function → string` | `undefined` (removed) | The returned string |
+| `function → CSSProperties` | Merged with defaults | `undefined` |
+
+<Aside>
+  **Key insight**: Class names and inline styles are mutually exclusive per slot. When you pass a class name, inline styles are completely removed so your CSS has full control. When you pass a style object, it merges with defaults.
+</Aside>
+
+## Content overrides
+
+In addition to `appearance`, components accept a `content` prop for overriding rendered content:
+
+```tsx
+<UploadButton
+  content={{
+    button: "Upload Photo",
+    allowedContent: ({ fileTypes }) =>
+      `Accepts: ${fileTypes.join(", ")}`,
+  }}
+/>
+```
+
+Content values can be:
+- A static `ReactNode` (string, JSX element)
+- A function receiving content options that returns a `ReactNode`
+
+The `renderContent` utility resolves content values:
+
+```typescript
+renderContent(content, opts, defaultContent)
+// If content is undefined → returns defaultContent
+// If content is a function → calls it with opts
+// Otherwise → returns content as-is
+```
+
+## Component appearance slots
+
+### UploadButton
+
+| Slot | Element | Content opts |
+|------|---------|-------------|
+| `container` | Outer `<div>` | `ButtonContentOpts` |
+| `button` | `<label>` | `ButtonContentOpts` |
+| `allowedContent` | `<div>` | `ButtonContentOpts` |
+
+```typescript
+interface ButtonContentOpts {
+  ready: boolean;
+  isUploading: boolean;
+  uploadProgress: number;
+  fileTypes: string[];
+}
+```
+
+### UploadDropzone
+
+| Slot | Element | Content opts |
+|------|---------|-------------|
+| `container` | Outer `<div>` | `DropzoneContentOpts` |
+| `uploadIcon` | `<div>` | `DropzoneContentOpts` |
+| `label` | `<div>` | `DropzoneContentOpts` |
+| `allowedContent` | `<div>` | `DropzoneContentOpts` |
+| `button` | `<button>` | `DropzoneContentOpts` |
+
+```typescript
+interface DropzoneContentOpts {
+  ready: boolean;
+  isUploading: boolean;
+  uploadProgress: number;
+  isDragOver: boolean;
+  fileTypes: string[];
+  files: File[];
+}
+```
+
+### FilePreview
+
+| Slot | Element | Content opts |
+|------|---------|-------------|
+| `container` | Outer `<div>` | `FilePreviewContentOpts` |
+| `thumbnail` | `<img>` | `FilePreviewContentOpts` |
+| `icon` | `<div>` | `FilePreviewContentOpts` |
+| `fileInfo` | `<div>` | `FilePreviewContentOpts` |
+| `fileName` | `<div>` | `FilePreviewContentOpts` |
+| `fileSize` | `<div>` | `FilePreviewContentOpts` |
+
+```typescript
+interface FilePreviewContentOpts {
+  file: File | string;
+  isImage: boolean;
+  fileName: string;
+  fileSize: number | undefined;
+}
+```
+
+### ProgressBar
+
+| Slot | Element | Content opts |
+|------|---------|-------------|
+| `container` | Outer `<div>` | `ProgressBarContentOpts` |
+| `track` | `<div>` | `ProgressBarContentOpts` |
+| `fill` | `<div>` | `ProgressBarContentOpts` |
+| `label` | `<div>` | `ProgressBarContentOpts` |
+
+```typescript
+interface ProgressBarContentOpts {
+  progress: number;
+  isComplete: boolean;
+  isIndeterminate: boolean;
+}
+```
+
+### FileList
+
+| Slot | Element | Content opts |
+|------|---------|-------------|
+| `container` | Outer `<div>` | `FileListContentOpts` |
+| `item` | `<div>` | `FileListItemContentOpts` |
+| `itemInfo` | `<div>` | `FileListItemContentOpts` |
+| `itemName` | `<div>` | `FileListItemContentOpts` |
+| `itemSize` | `<div>` | `FileListItemContentOpts` |
+| `itemStatus` | `<div>` | `FileListItemContentOpts` |
+| `removeButton` | `<button>` | `FileListItemContentOpts` |
+
+```typescript
+interface FileListContentOpts {
+  files: FileItem[];
+  uploadingCount: number;
+  completedCount: number;
+  errorCount: number;
+  isAllComplete: boolean;
+}
+
+interface FileListItemContentOpts {
+  file: FileItem;
+  isUploading: boolean;
+  isComplete: boolean;
+  isError: boolean;
+}
+```
+
+## Utility functions
+
+The theming utilities are exported from `@s3-good/react` for use in custom components:
+
+### resolveStyle
+
+```typescript
+import { resolveStyle } from "@s3-good/react";
+
+const style = resolveStyle(
+  appearance?.button,  // StyleField | undefined
+  contentOpts,         // Content options object
+  defaultStyle,        // Default CSSProperties
+);
+// Returns CSSProperties | undefined
+```
+
+### resolveClassName
+
+```typescript
+import { resolveClassName } from "@s3-good/react";
+
+const className = resolveClassName(
+  appearance?.button,  // StyleField | undefined
+  contentOpts,         // Content options object
+);
+// Returns string | undefined
+```
+
+### renderContent
+
+```typescript
+import { renderContent } from "@s3-good/react";
+
+const node = renderContent(
+  content?.button,     // ReactNode | function | undefined
+  contentOpts,         // Content options object
+  defaultContent,      // Default ReactNode
+);
+// Returns ReactNode
+```
+
+## Default styles
+
+All default styles are exported for reference or extension:
+
+```typescript
+import {
+  defaultButtonStyles,
+  defaultDropzoneStyles,
+  defaultFilePreviewStyles,
+  defaultProgressBarStyles,
+  defaultFileListStyles,
+} from "@s3-good/react";
+
+// Example: extend the default button style
+const customButtonStyle = {
+  ...defaultButtonStyles.button,
+  backgroundColor: "#8b5cf6",
+};
+```
+
+### getDropzoneContainerStyle
+
+A helper that computes the merged container style for the dropzone based on state:
+
+```typescript
+import { getDropzoneContainerStyle } from "@s3-good/react";
+
+const style = getDropzoneContainerStyle({
+  ready: true,
+  isDragOver: false,
+  isUploading: false,
+});
+```
+
+## Tailwind CSS example
+
+Using Tailwind classes with the appearance API:
+
+```tsx
+<UploadDropzone
+  endpoint="imageUploader"
+  appearance={{
+    container:
+      "border-2 border-dashed border-gray-300 rounded-xl p-8 " +
+      "hover:border-blue-400 transition-colors",
+    uploadIcon: "text-gray-400 mb-2",
+    label: "text-lg font-medium text-gray-700",
+    allowedContent: "text-sm text-gray-500 mt-1",
+    button:
+      "bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 " +
+      "rounded-lg font-medium transition-colors mt-4",
+  }}
+/>
+```
+
+## Dark mode example
+
+```tsx
+<UploadButton
+  endpoint="imageUploader"
+  appearance={{
+    container: {
+      backgroundColor: "#1f2937",
+      fontFamily: "system-ui",
+    },
+    button: {
+      backgroundColor: "#6366f1",
+      color: "#f9fafb",
+      borderRadius: "8px",
+    },
+    allowedContent: {
+      color: "#9ca3af",
+    },
+  }}
+/>
+```

@@ -1,0 +1,227 @@
+---
+title: Hono
+description: Integrate @s3-good with Hono applications.
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+The Hono adapter provides a `createRouteHandler` that bridges the core upload handler to Hono's routing system. Since Hono natively uses Web API `Request`/`Response`, this is the simplest possible adapter — `c.req.raw` gives the standard `Request` directly.
+
+## Setup
+
+<Steps>
+
+1. **Define your file router**
+
+    The file router definition is framework-agnostic — it's the same as Next.js:
+
+    ```typescript title="src/server/upload-router.ts"
+    import { createUploader } from "@s3-good/core/server";
+    import type { FileRouter } from "@s3-good/core/server";
+
+    const f = createUploader();
+
+    export const uploadRouter = {
+      imageUploader: f({ image: { maxFileSize: "4MB" } })
+        .middleware(async ({ req }) => {
+          return { userId: "user_123" };
+        })
+        .onUploadComplete(async ({ metadata, file }) => {
+          console.log("Upload complete:", file.url);
+        }),
+    } satisfies FileRouter;
+
+    export type OurFileRouter = typeof uploadRouter;
+    ```
+
+2. **Create the Hono route**
+
+    ```typescript title="src/index.ts"
+    import { Hono } from "hono";
+    import { createRouteHandler } from "@s3-good/core/hono";
+    import { uploadRouter } from "./server/upload-router";
+
+    const app = new Hono();
+
+    const { GET, POST } = createRouteHandler({
+      router: uploadRouter,
+      config: {
+        region: process.env.AWS_REGION!,
+        bucket: process.env.AWS_BUCKET!,
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+      },
+    });
+
+    app.get("/api/upload", (c) => GET(c));
+    app.post("/api/upload", (c) => POST(c));
+
+    export default app;
+    ```
+
+3. **Upload files from the client**
+
+    Use the `genUploader` client to upload files from the browser:
+
+    ```typescript title="src/client.ts"
+    import { genUploader } from "@s3-good/core/client";
+    import type { OurFileRouter } from "./server/upload-router";
+
+    const { uploadFiles } = genUploader<OurFileRouter>({
+      url: "/api/upload",
+    });
+
+    const input = document.querySelector<HTMLInputElement>("#file-input")!;
+    input.addEventListener("change", async () => {
+      const files = Array.from(input.files ?? []);
+      const result = await uploadFiles("imageUploader", { files });
+      console.log("Uploaded:", result);
+    });
+    ```
+
+</Steps>
+
+## createRouteHandler
+
+Creates `GET` and `POST` handlers that accept a Hono `Context` object:
+
+```typescript
+import { createRouteHandler } from "@s3-good/core/hono";
+
+const { GET, POST } = createRouteHandler({
+  router: uploadRouter,
+  config: s3Config,
+});
+
+// Wire into Hono routes
+app.get("/api/upload", (c) => GET(c));
+app.post("/api/upload", (c) => POST(c));
+```
+
+### Options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `router` | `FileRouter` | Your file router object |
+| `config` | `S3Config` | S3 connection configuration |
+
+### Handler signatures
+
+```typescript
+GET(c: Context): Promise<Response>
+POST(c: Context): Promise<Response>
+```
+
+Both handlers accept a Hono `Context` and return a standard `Response`. Internally, they extract the raw `Request` via `c.req.raw` and delegate to the core upload handler.
+
+- **GET** — Returns route configuration for client discovery
+- **POST** — Processes upload requests (presigned URL generation, multipart completion)
+
+## Comparison with Next.js
+
+The Hono adapter is simpler than the Next.js adapter because Hono already uses Web API primitives:
+
+| Feature | Next.js | Hono |
+|---------|---------|------|
+| Import | `@s3-good/core/next` | `@s3-good/core/hono` |
+| Handler args | `Request` | `Context` |
+| Component generators | `generateUploadButton`, `generateUploadDropzone` | Use `@s3-good/react` directly |
+| React helpers | `generateNextHelpers` | Use `generateReactHelpers` from `@s3-good/react` |
+| Default API URL | `/api/upload` | You choose the path |
+
+<Aside>
+  The Hono adapter does not include component generators or React helpers — those are Next.js-specific conveniences. For React apps with a Hono backend, use `@s3-good/react` directly with `generateReactHelpers`.
+</Aside>
+
+## Using with React
+
+If your Hono app serves a React frontend, use `generateReactHelpers` from `@s3-good/react`:
+
+```typescript title="src/lib/upload.ts"
+import { generateReactHelpers } from "@s3-good/react";
+import type { OurFileRouter } from "~/server/upload-router";
+
+export const { useUpload, uploadFiles } =
+  generateReactHelpers<OurFileRouter>({
+    url: "/api/upload",
+  });
+```
+
+Then use the hook or components in your React code:
+
+```tsx title="src/components/Uploader.tsx"
+import { UploadButton } from "@s3-good/react";
+
+export function Uploader() {
+  return (
+    <UploadButton
+      endpoint="imageUploader"
+      __internal={{ url: "/api/upload" }}
+      onClientUploadComplete={(res) => console.log("Done!", res)}
+      onUploadError={(err) => console.error(err)}
+    />
+  );
+}
+```
+
+## Complete example
+
+A full Hono application with file uploads:
+
+```typescript title="src/index.ts"
+import { Hono } from "hono";
+import { cors } from "hono/cors";
+import { createRouteHandler } from "@s3-good/core/hono";
+import { createUploader } from "@s3-good/core/server";
+import type { FileRouter } from "@s3-good/core/server";
+import { UploadError } from "@s3-good/shared";
+
+// Define the file router
+const f = createUploader();
+
+const uploadRouter = {
+  imageUploader: f({ image: { maxFileSize: "4MB", maxFileCount: 5 } })
+    .middleware(async ({ req }) => {
+      const token = req.headers.get("authorization");
+      if (!token) {
+        throw new UploadError({
+          code: "MIDDLEWARE_ERROR",
+          message: "Unauthorized",
+        });
+      }
+      return { userId: "user_123" };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      console.log(`User ${metadata.userId} uploaded ${file.name}`);
+      return { url: file.url };
+    }),
+
+  documentUploader: f({ pdf: { maxFileSize: "16MB" } })
+    .middleware(async ({ req }) => ({ userId: "user_123" }))
+    .onUploadComplete(async ({ metadata, file }) => {
+      console.log("Document uploaded:", file.name);
+    }),
+} satisfies FileRouter;
+
+// Create the Hono app
+const app = new Hono();
+
+// Enable CORS for browser uploads
+app.use("/api/*", cors());
+
+// Mount upload handlers
+const { GET, POST } = createRouteHandler({
+  router: uploadRouter,
+  config: {
+    region: process.env.AWS_REGION!,
+    bucket: process.env.AWS_BUCKET!,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+});
+
+app.get("/api/upload", (c) => GET(c));
+app.post("/api/upload", (c) => POST(c));
+
+export default app;
+```

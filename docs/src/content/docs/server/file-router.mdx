@@ -1,0 +1,302 @@
+---
+title: File Router
+description: Define upload routes with type-safe file routers.
+---
+
+import { Aside, Tabs, TabItem } from "@astrojs/starlight/components";
+
+The **file router** is the core abstraction of `@s3-good`. It defines which upload routes your app supports — including allowed file types, size limits, authentication middleware, and completion callbacks. Everything is fully type-safe from server to client.
+
+## Creating the builder
+
+Use `createUploader()` to get the `f()` builder function:
+
+```typescript title="src/server/upload-router.ts"
+import { createUploader } from "@s3-good/core/server";
+import type { FileRouter } from "@s3-good/core/server";
+
+const f = createUploader();
+```
+
+## Defining routes
+
+Each route is created by calling `f()` with a file type configuration, then chaining `.middleware()` and `.onUploadComplete()`:
+
+```typescript title="src/server/upload-router.ts"
+export const uploadRouter = {
+  imageUploader: f({ image: { maxFileSize: "4MB" } })
+    .middleware(async ({ req }) => {
+      return { userId: "user_123" };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      console.log("Upload complete:", metadata.userId, file.url);
+      return { uploadedBy: metadata.userId };
+    }),
+} satisfies FileRouter;
+
+export type OurFileRouter = typeof uploadRouter;
+```
+
+<Aside>
+  Always export the `FileRouter` type — it's used by client-side helpers to provide autocomplete on endpoint names and type-safe input/output.
+</Aside>
+
+## File type configuration
+
+The `f()` builder accepts a configuration object that maps file type categories to their constraints:
+
+```typescript
+// Single type
+f({ image: { maxFileSize: "4MB" } })
+
+// Multiple types
+f({
+  image: { maxFileSize: "4MB", maxFileCount: 10 },
+  pdf: { maxFileSize: "16MB" },
+})
+
+// Any file type (blob is a catch-all)
+f({ blob: { maxFileSize: "32MB" } })
+```
+
+### Available file types
+
+| Category | Matches | Example MIME types |
+|----------|---------|-------------------|
+| `image` | All image formats | `image/png`, `image/jpeg`, `image/webp` |
+| `video` | All video formats | `video/mp4`, `video/webm` |
+| `audio` | All audio formats | `audio/mpeg`, `audio/wav` |
+| `pdf` | PDF documents | `application/pdf` |
+| `text` | Text files | `text/plain`, `text/csv` |
+| `blob` | Any file type | `*/*` |
+
+### Route config options
+
+Each file type accepts these options:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `maxFileSize` | `FileSize` | — | Maximum file size (e.g. `"4MB"`, `"512KB"`, `"1GB"`) |
+| `maxFileCount` | `number` | `1` | Maximum number of files per upload |
+| `minFileCount` | `number` | — | Minimum number of files required |
+| `contentDisposition` | `"inline" \| "attachment"` | — | How the browser should handle the file |
+
+The `FileSize` type accepts strings like `"4MB"`, `"512KB"`, `"1GB"`, `"2TB"` — a number followed by a unit (`B`, `KB`, `MB`, `GB`, `TB`).
+
+## Middleware
+
+The `.middleware()` method runs before the upload begins. Use it for authentication, authorization, or any server-side validation. Whatever you return becomes the `metadata` available in `.onUploadComplete()`.
+
+```typescript
+imageUploader: f({ image: { maxFileSize: "4MB" } })
+  .middleware(async ({ req }) => {
+    // The `req` is a standard Web API Request object
+    const token = req.headers.get("authorization");
+    if (!token) {
+      throw new UploadError({
+        code: "MIDDLEWARE_ERROR",
+        message: "Unauthorized",
+      });
+    }
+
+    const user = await verifyToken(token);
+    return { userId: user.id, email: user.email };
+  })
+  .onUploadComplete(async ({ metadata, file }) => {
+    // metadata is fully typed: { userId: string; email: string }
+    console.log(`${metadata.email} uploaded ${file.name}`);
+  }),
+```
+
+### Middleware helpers
+
+`@s3-good/core/server` exports convenience functions for common auth patterns:
+
+```typescript
+import {
+  getCookie,
+  getBearerToken,
+  getHeader,
+} from "@s3-good/core/server";
+
+.middleware(async ({ req }) => {
+  // Extract a cookie value
+  const session = getCookie(req, "session-token");
+
+  // Extract a Bearer token from the Authorization header
+  const jwt = getBearerToken(req);
+
+  // Extract any header
+  const apiKey = getHeader(req, "x-api-key");
+
+  // ...validate and return metadata
+})
+```
+
+### Throwing errors
+
+Throw `UploadError` from middleware to reject the upload with a structured error:
+
+```typescript
+import { UploadError } from "@s3-good/shared";
+
+.middleware(async ({ req }) => {
+  const user = await getUser(req);
+  if (!user) {
+    throw new UploadError({
+      code: "MIDDLEWARE_ERROR",
+      message: "You must be logged in to upload",
+    });
+  }
+  return { userId: user.id };
+})
+```
+
+## Input validation
+
+Use `.input()` with a Zod schema to accept and validate client-provided data alongside the upload:
+
+```typescript
+import { z } from "zod";
+
+imageUploader: f({ image: { maxFileSize: "4MB" } })
+  .input(z.object({
+    category: z.enum(["avatar", "banner", "gallery"]),
+    description: z.string().max(200).optional(),
+  }))
+  .middleware(async ({ req, input }) => {
+    // `input` is typed as { category: "avatar" | "banner" | "gallery"; description?: string }
+    return { userId: "user_123", category: input.category };
+  })
+  .onUploadComplete(async ({ metadata, file }) => {
+    console.log(`Uploaded to ${metadata.category}: ${file.url}`);
+  }),
+```
+
+<Aside type="caution">
+  `.input()` must be called **before** `.middleware()`. After calling `.middleware()`, the `.input()` method is no longer available on the builder chain (enforced by TypeScript).
+</Aside>
+
+The client passes input when calling `startUpload` or `uploadFiles`:
+
+```tsx
+<UploadButton
+  endpoint="imageUploader"
+  input={{ category: "avatar" }}
+/>
+```
+
+## onUploadComplete
+
+The `.onUploadComplete()` callback runs after the file has been successfully uploaded to S3. It receives the metadata from middleware and the uploaded file info:
+
+```typescript
+.onUploadComplete(async ({ metadata, file }) => {
+  // metadata — whatever your middleware returned
+  // file — { key, url, name, size, type }
+
+  // Save to your database
+  await db.files.create({
+    userId: metadata.userId,
+    url: file.url,
+    name: file.name,
+    size: file.size,
+  });
+
+  // Return data to the client (available in onClientUploadComplete)
+  return { fileId: "abc123", url: file.url };
+}),
+```
+
+The `file` object has this shape:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `key` | `string` | The S3 object key |
+| `url` | `string` | The public URL of the uploaded file |
+| `name` | `string` | Original file name |
+| `size` | `number` | File size in bytes |
+| `type` | `string` | MIME type |
+
+Whatever you return from `onUploadComplete` is sent back to the client as `serverData` in the upload response.
+
+## Error handling
+
+Use `.onUploadError()` to handle upload failures for a specific route:
+
+```typescript
+imageUploader: f({ image: { maxFileSize: "4MB" } })
+  .middleware(async ({ req }) => ({ userId: "user_123" }))
+  .onUploadError(({ error, fileKey }) => {
+    console.error(`Upload failed for ${fileKey}:`, error.message);
+    // Clean up, notify, etc.
+  })
+  .onUploadComplete(async ({ metadata, file }) => {
+    // ...
+  }),
+```
+
+## Complete example
+
+```typescript title="src/server/upload-router.ts"
+import { createUploader } from "@s3-good/core/server";
+import type { FileRouter } from "@s3-good/core/server";
+import { UploadError } from "@s3-good/shared";
+import { z } from "zod";
+
+const f = createUploader();
+
+export const uploadRouter = {
+  // Profile avatar — single image, 4MB max
+  avatar: f({ image: { maxFileSize: "4MB" } })
+    .middleware(async ({ req }) => {
+      const user = await getUser(req);
+      if (!user) throw new UploadError({
+        code: "MIDDLEWARE_ERROR",
+        message: "Unauthorized",
+      });
+      return { userId: user.id };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      await db.users.update(metadata.userId, { avatarUrl: file.url });
+      return { url: file.url };
+    }),
+
+  // Document upload — PDFs with metadata
+  document: f({ pdf: { maxFileSize: "16MB", maxFileCount: 5 } })
+    .input(z.object({
+      projectId: z.string(),
+      tags: z.array(z.string()).optional(),
+    }))
+    .middleware(async ({ req, input }) => {
+      const user = await getUser(req);
+      if (!user) throw new UploadError({
+        code: "MIDDLEWARE_ERROR",
+        message: "Unauthorized",
+      });
+      return { userId: user.id, projectId: input.projectId };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      await db.documents.create({
+        projectId: metadata.projectId,
+        userId: metadata.userId,
+        url: file.url,
+        name: file.name,
+      });
+    }),
+
+  // Media upload — images and videos
+  media: f({
+    image: { maxFileSize: "8MB", maxFileCount: 20 },
+    video: { maxFileSize: "256MB", maxFileCount: 5 },
+  })
+    .middleware(async ({ req }) => {
+      return { userId: "user_123" };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      console.log("Media uploaded:", file.url);
+    }),
+} satisfies FileRouter;
+
+export type OurFileRouter = typeof uploadRouter;
+```

@@ -1,0 +1,345 @@
+import {
+  AbortMultipartUploadCommand,
+  CompleteMultipartUploadCommand,
+  CreateMultipartUploadCommand,
+  PutObjectCommand,
+  S3Client,
+  UploadPartCommand,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { S3Error } from "@s3-good/shared";
+import type { S3Config } from "@s3-good/shared";
+
+// ---------------------------------------------------------------------------
+// S3 Client Factory — lazy initialization with singleton caching per config
+// ---------------------------------------------------------------------------
+
+const clientCache = new Map<string, S3Client>();
+
+function configToKey(config: S3Config): string {
+  return `${config.region}:${config.bucket}:${config.accessKeyId}:${config.endpoint ?? "default"}`;
+}
+
+/**
+ * Returns a cached {@link S3Client} for the given config.
+ *
+ * The client is created lazily on first call and reused for subsequent calls
+ * with the same config (keyed by region + bucket + accessKeyId + endpoint).
+ */
+export function getS3Client(config: S3Config): S3Client {
+  const key = configToKey(config);
+  let client = clientCache.get(key);
+  if (!client) {
+    client = new S3Client({
+      region: config.region,
+      credentials: {
+        accessKeyId: config.accessKeyId,
+        secretAccessKey: config.secretAccessKey,
+      },
+      ...(config.endpoint && { endpoint: config.endpoint }),
+      forcePathStyle: config.forcePathStyle ?? false,
+    });
+    clientCache.set(key, client);
+  }
+  return client;
+}
+
+// ---------------------------------------------------------------------------
+// File URL Construction
+// ---------------------------------------------------------------------------
+
+/**
+ * Constructs the public URL for a file stored in S3.
+ *
+ * Resolution order:
+ * 1. If `config.baseUrl` is set, use it as the prefix.
+ * 2. If `config.forcePathStyle` is true, use path-style addressing.
+ * 3. Otherwise, use virtual-hosted-style addressing.
+ */
+export function getFileUrl(config: S3Config, key: string): string {
+  if (config.baseUrl) {
+    return `${config.baseUrl.replace(/\/$/, "")}/${key}`;
+  }
+  if (config.forcePathStyle) {
+    const endpoint =
+      config.endpoint ?? `https://s3.${config.region}.amazonaws.com`;
+    return `${endpoint}/${config.bucket}/${key}`;
+  }
+  return `https://${config.bucket}.s3.${config.region}.amazonaws.com/${key}`;
+}
+
+// ---------------------------------------------------------------------------
+// Content Disposition
+// ---------------------------------------------------------------------------
+
+/**
+ * Determines the Content-Disposition for a file based on its MIME type.
+ *
+ * - Images and videos default to `"inline"` (rendered in the browser).
+ * - Everything else defaults to `"attachment"` (triggers download).
+ * - An explicit override always takes precedence.
+ */
+export function getContentDisposition(
+  contentType: string,
+  configDisposition?: "inline" | "attachment",
+): "inline" | "attachment" {
+  if (configDisposition) return configDisposition;
+  // Default: inline for images/videos, attachment for others
+  if (contentType.startsWith("image/") || contentType.startsWith("video/")) {
+    return "inline";
+  }
+  return "attachment";
+}
+
+// ---------------------------------------------------------------------------
+// Presigned URL Generation
+// ---------------------------------------------------------------------------
+
+export interface PresignedUrlOptions {
+  bucket: string;
+  key: string;
+  contentType: string;
+  contentDisposition?: "inline" | "attachment";
+  /** URL expiry in seconds. Defaults to 3600 (1 hour). */
+  expiresIn?: number;
+}
+
+/**
+ * Generates a presigned PUT URL for uploading a single file to S3.
+ *
+ * The `ContentType` is included in the signature to prevent MIME-type spoofing.
+ */
+export async function generatePresignedPutUrl(
+  s3: S3Client,
+  opts: PresignedUrlOptions,
+): Promise<string> {
+  const command = new PutObjectCommand({
+    Bucket: opts.bucket,
+    Key: opts.key,
+    ContentType: opts.contentType,
+    ...(opts.contentDisposition && {
+      ContentDisposition: opts.contentDisposition,
+    }),
+  });
+
+  return getSignedUrl(s3, command, {
+    expiresIn: opts.expiresIn ?? 3600,
+  });
+}
+
+export interface FilePresignedUrl {
+  key: string;
+  url: string;
+  name: string;
+  fileType: string;
+}
+
+/**
+ * Generates presigned PUT URLs for a batch of files in parallel.
+ */
+export async function generatePresignedUrls(
+  s3: S3Client,
+  files: Array<{
+    key: string;
+    name: string;
+    contentType: string;
+    contentDisposition?: "inline" | "attachment";
+  }>,
+  bucket: string,
+): Promise<FilePresignedUrl[]> {
+  return Promise.all(
+    files.map(async (file) => ({
+      key: file.key,
+      url: await generatePresignedPutUrl(s3, {
+        bucket,
+        key: file.key,
+        contentType: file.contentType,
+        contentDisposition: file.contentDisposition,
+      }),
+      name: file.name,
+      fileType: file.contentType,
+    })),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Multipart Upload — Part Size Calculation
+// ---------------------------------------------------------------------------
+
+/** Files ≥ 50 MB use multipart upload. */
+export const MULTIPART_THRESHOLD = 50 * 1024 * 1024; // 50 MB
+const DEFAULT_PART_SIZE = 10 * 1024 * 1024; // 10 MB
+const MIN_PART_SIZE = 5 * 1024 * 1024; // 5 MB (AWS minimum)
+const MAX_PARTS = 10_000; // AWS limit
+
+/**
+ * Determines whether a file should use multipart upload and calculates the
+ * optimal part size and count.
+ *
+ * - Files below {@link MULTIPART_THRESHOLD} (50 MB) are uploaded as a single
+ *   PUT and return `isMultipart: false`.
+ * - The default part size is 10 MB. If a custom `partSize` is provided it is
+ *   clamped to the AWS minimum of 5 MB.
+ * - If the resulting part count exceeds the AWS limit of 10 000 parts the part
+ *   size is automatically increased.
+ */
+export function calculateParts(
+  fileSize: number,
+  partSize?: number,
+): { isMultipart: boolean; partSize: number; partCount: number } {
+  if (fileSize < MULTIPART_THRESHOLD) {
+    return { isMultipart: false, partSize: fileSize, partCount: 1 };
+  }
+
+  const size = Math.max(partSize ?? DEFAULT_PART_SIZE, MIN_PART_SIZE);
+  const count = Math.ceil(fileSize / size);
+
+  if (count > MAX_PARTS) {
+    // Increase part size to fit within MAX_PARTS
+    const adjustedSize = Math.ceil(fileSize / MAX_PARTS);
+    return {
+      isMultipart: true,
+      partSize: adjustedSize,
+      partCount: Math.ceil(fileSize / adjustedSize),
+    };
+  }
+
+  return { isMultipart: true, partSize: size, partCount: count };
+}
+
+// ---------------------------------------------------------------------------
+// Multipart Upload — S3 Operations
+// ---------------------------------------------------------------------------
+
+/**
+ * Initiates a multipart upload and returns the upload ID assigned by S3.
+ *
+ * @throws {S3Error} If S3 does not return an UploadId.
+ */
+export async function createMultipartUpload(
+  s3: S3Client,
+  opts: { bucket: string; key: string; contentType: string },
+): Promise<{ uploadId: string }> {
+  const command = new CreateMultipartUploadCommand({
+    Bucket: opts.bucket,
+    Key: opts.key,
+    ContentType: opts.contentType,
+  });
+  const response = await s3.send(command);
+  if (!response.UploadId) {
+    throw new S3Error(
+      "Failed to create multipart upload: no UploadId returned",
+    );
+  }
+  return { uploadId: response.UploadId };
+}
+
+/** A presigned URL for uploading a single part of a multipart upload. */
+export interface MultipartPresignedUrl {
+  partNumber: number;
+  url: string;
+}
+
+/**
+ * Generates presigned PUT URLs for every part of a multipart upload.
+ *
+ * Part numbers are 1-indexed (as required by S3). All URLs are generated in
+ * parallel for maximum throughput.
+ */
+export async function generatePresignedPartUrls(
+  s3: S3Client,
+  opts: {
+    bucket: string;
+    key: string;
+    uploadId: string;
+    partCount: number;
+    expiresIn?: number;
+  },
+): Promise<MultipartPresignedUrl[]> {
+  const urls = await Promise.all(
+    Array.from({ length: opts.partCount }, async (_, i) => {
+      const command = new UploadPartCommand({
+        Bucket: opts.bucket,
+        Key: opts.key,
+        UploadId: opts.uploadId,
+        PartNumber: i + 1,
+      });
+      const url = await getSignedUrl(s3, command, {
+        expiresIn: opts.expiresIn ?? 3600,
+      });
+      return { partNumber: i + 1, url };
+    }),
+  );
+  return urls;
+}
+
+/** A completed part with its ETag (as returned by S3 after upload). */
+export interface CompletedPart {
+  partNumber: number;
+  etag: string;
+}
+
+/**
+ * Completes a multipart upload by assembling the uploaded parts.
+ *
+ * Parts are sorted by `partNumber` before being sent to S3 (an AWS
+ * requirement). ETags should be preserved exactly as returned by S3 (including
+ * surrounding quotes).
+ */
+export async function completeMultipartUpload(
+  s3: S3Client,
+  opts: {
+    bucket: string;
+    key: string;
+    uploadId: string;
+    parts: CompletedPart[];
+  },
+): Promise<{ location: string }> {
+  // Sort parts by partNumber (AWS requirement)
+  const sortedParts = [...opts.parts].sort(
+    (a, b) => a.partNumber - b.partNumber,
+  );
+
+  const command = new CompleteMultipartUploadCommand({
+    Bucket: opts.bucket,
+    Key: opts.key,
+    UploadId: opts.uploadId,
+    MultipartUpload: {
+      Parts: sortedParts.map((p) => ({
+        PartNumber: p.partNumber,
+        ETag: p.etag,
+      })),
+    },
+  });
+  const response = await s3.send(command);
+  return { location: response.Location ?? "" };
+}
+
+/**
+ * Aborts an in-progress multipart upload, releasing all uploaded parts.
+ *
+ * This should be called when an upload is cancelled or fails irrecoverably to
+ * avoid orphaned parts incurring storage costs.
+ */
+export async function abortMultipartUpload(
+  s3: S3Client,
+  opts: { bucket: string; key: string; uploadId: string },
+): Promise<void> {
+  const command = new AbortMultipartUploadCommand({
+    Bucket: opts.bucket,
+    Key: opts.key,
+    UploadId: opts.uploadId,
+  });
+  await s3.send(command);
+}
+
+// ---------------------------------------------------------------------------
+// Cache Management (testing utility)
+// ---------------------------------------------------------------------------
+
+/**
+ * Clears the internal S3 client cache. Intended for testing only.
+ */
+export function clearS3ClientCache(): void {
+  clientCache.clear();
+}
