@@ -112,12 +112,10 @@ export function S3Browser({ url, headers, config, className }: S3BrowserProps) {
   };
 
   return (
-    <div className={`space-y-3 ${className ?? ""}`.trim()}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className={`space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5 ${className ?? ""}`.trim()}>
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-center">
         <Breadcrumbs segments={breadcrumbs} onNavigate={browser.navigateTo} />
-        <div className="w-full max-w-xs">
-          <SearchBar value={search.inputValue} onChange={search.handleChange} onClear={search.clear} />
-        </div>
+        <SearchBar value={search.inputValue} onChange={search.handleChange} onClear={search.clear} />
       </div>
 
       <Toolbar
@@ -135,7 +133,7 @@ export function S3Browser({ url, headers, config, className }: S3BrowserProps) {
       />
 
       {browser.error ? (
-        <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
           {browser.error}
         </div>
       ) : null}
