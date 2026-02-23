@@ -137,7 +137,7 @@ describe("FilePreview", () => {
 
     const root = container.firstElementChild as HTMLElement;
     expect(root.style.border).toBe("2px solid red");
-    // Default styles should still be merged
-    expect(root.style.display).toBe("flex");
+    // Default classes are still applied in Tailwind-first mode
+    expect(root.className).toContain("flex");
   });
 });

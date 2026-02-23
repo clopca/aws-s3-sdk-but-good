@@ -15,11 +15,10 @@ import {
   generateAcceptString,
   generateAllowedContentText,
   UploadIcon,
+  cx,
 } from "./shared";
 import type { StyleField } from "./shared";
-import { defaultDropzoneStyles, getDropzoneContainerStyle } from "../styles";
-
-// ─── Content Options ────────────────────────────────────────────────────────
+import { defaultDropzoneClasses, getDropzoneContainerClass } from "../styles";
 
 export interface DropzoneContentOpts {
   ready: boolean;
@@ -30,8 +29,6 @@ export interface DropzoneContentOpts {
   files: File[];
 }
 
-// ─── Appearance ─────────────────────────────────────────────────────────────
-
 export interface UploadDropzoneAppearance {
   container?: StyleField<DropzoneContentOpts>;
   uploadIcon?: StyleField<DropzoneContentOpts>;
@@ -39,8 +36,6 @@ export interface UploadDropzoneAppearance {
   allowedContent?: StyleField<DropzoneContentOpts>;
   button?: StyleField<DropzoneContentOpts>;
 }
-
-// ─── Props ──────────────────────────────────────────────────────────────────
 
 export interface UploadDropzoneProps<
   TRouter extends FileRouter,
@@ -72,11 +67,8 @@ export interface UploadDropzoneProps<
   onUploadProgress?: (progress: number) => void;
   onPaste?: boolean;
   headers?: HeadersInit | (() => Promise<HeadersInit> | HeadersInit);
-  /** @internal Used by generateReactHelpers to pass the configured URL */
   __internal?: { url?: string };
 }
-
-// ─── Drag & Drop Hook ───────────────────────────────────────────────────────
 
 function useDragDrop(opts: {
   onDrop: (files: File[]) => void;
@@ -114,8 +106,6 @@ function useDragDrop(opts: {
   return { isDragOver, handleDragOver, handleDragLeave, handleDrop };
 }
 
-// ─── Paste Hook ─────────────────────────────────────────────────────────────
-
 function usePaste(opts: {
   enabled: boolean;
   onPaste: (files: File[]) => void;
@@ -136,8 +126,6 @@ function usePaste(opts: {
   }, [opts.enabled, opts.onPaste]);
 }
 
-// ─── Image Preview Hook ─────────────────────────────────────────────────────
-
 function useImagePreviews(files: File[]): string[] {
   const [previews, setPreviews] = useState<string[]>([]);
 
@@ -157,8 +145,6 @@ function useImagePreviews(files: File[]): string[] {
   return previews;
 }
 
-// ─── Default Content Helpers ────────────────────────────────────────────────
-
 function getDefaultLabel(opts: DropzoneContentOpts): string {
   if (opts.isUploading) return `Uploading... ${opts.uploadProgress}%`;
   if (opts.isDragOver) return "Drop files here";
@@ -169,8 +155,6 @@ function getDefaultAllowedText(opts: DropzoneContentOpts): string {
   if (opts.fileTypes.length === 0) return "";
   return `Allowed: ${generateAllowedContentText(opts.fileTypes)}`;
 }
-
-// ─── Component ──────────────────────────────────────────────────────────────
 
 export function UploadDropzone<
   TRouter extends FileRouter,
@@ -248,18 +232,13 @@ export function UploadDropzone<
   };
 
   const handleContainerClick = () => {
-    if (ready) {
-      fileInputRef.current?.click();
-    }
+    if (ready) fileInputRef.current?.click();
   };
 
-  const handleFileInputChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) return;
     void handleFiles(files);
-    // Reset input so the same file can be selected again
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -271,12 +250,11 @@ export function UploadDropzone<
     }
   };
 
-  const containerStyle = resolveStyle(
-    appearance?.container,
-    contentOpts,
-    getDropzoneContainerStyle(contentOpts),
+  const containerStyle = resolveStyle(appearance?.container, contentOpts);
+  const containerClassName = cx(
+    getDropzoneContainerClass(contentOpts),
+    resolveClassName(appearance?.container, contentOpts),
   );
-  const containerClassName = resolveClassName(appearance?.container, contentOpts);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
@@ -285,9 +263,7 @@ export function UploadDropzone<
     }
   };
 
-  const nonImageFiles = selectedFiles.filter(
-    (f) => !f.type.startsWith("image/"),
-  );
+  const nonImageFiles = selectedFiles.filter((f) => !f.type.startsWith("image/"));
 
   const dataState = isUploading
     ? "uploading"
@@ -303,10 +279,7 @@ export function UploadDropzone<
       tabIndex={ready ? 0 : -1}
       aria-label="Upload dropzone"
       aria-disabled={!ready}
-      className={
-        [className, containerClassName].filter(Boolean).join(" ") ||
-        undefined
-      }
+      className={cx(className, containerClassName)}
       style={containerStyle}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -318,62 +291,48 @@ export function UploadDropzone<
       <input
         ref={fileInputRef}
         type="file"
-        style={{ display: "none" }}
+        className={defaultDropzoneClasses.input}
         onChange={handleFileInputChange}
         disabled={!ready}
         accept={acceptString}
-        multiple={
-          permittedFileInfo
-            ? permittedFileInfo.maxFileCount > 1
-            : undefined
-        }
+        multiple={permittedFileInfo ? permittedFileInfo.maxFileCount > 1 : undefined}
       />
 
-      {/* Upload icon */}
       <div
-        className={resolveClassName(appearance?.uploadIcon, contentOpts)}
-        style={resolveStyle(
-          appearance?.uploadIcon,
-          contentOpts,
-          defaultDropzoneStyles.uploadIcon,
+        className={cx(
+          defaultDropzoneClasses.uploadIcon,
+          resolveClassName(appearance?.uploadIcon, contentOpts),
         )}
+        style={resolveStyle(appearance?.uploadIcon, contentOpts)}
       >
         {renderContent(content?.uploadIcon, contentOpts, <UploadIcon />)}
       </div>
 
-      {/* Label */}
       <div
-        className={resolveClassName(appearance?.label, contentOpts)}
-        style={resolveStyle(
-          appearance?.label,
-          contentOpts,
-          defaultDropzoneStyles.label,
+        className={cx(
+          defaultDropzoneClasses.label,
+          resolveClassName(appearance?.label, contentOpts),
         )}
+        style={resolveStyle(appearance?.label, contentOpts)}
       >
-        {renderContent(
-          content?.label,
-          contentOpts,
-          getDefaultLabel(contentOpts),
-        )}
+        {renderContent(content?.label, contentOpts, getDefaultLabel(contentOpts))}
       </div>
 
-      {/* Image previews */}
       {previews.length > 0 && (
-        <div style={defaultDropzoneStyles.previewContainer}>
+        <div className={defaultDropzoneClasses.previewContainer}>
           {previews.map((url, i) => (
             <img
               key={url}
               src={url}
               alt={`Preview ${String(i + 1)}`}
-              style={defaultDropzoneStyles.previewImage}
+              className={defaultDropzoneClasses.previewImage}
             />
           ))}
         </div>
       )}
 
-      {/* File list (non-image) */}
       {nonImageFiles.length > 0 && (
-        <div style={defaultDropzoneStyles.fileList}>
+        <div className={defaultDropzoneClasses.fileList}>
           {nonImageFiles.map((f) => (
             <div key={`${f.name}-${String(f.size)}`}>
               {f.name} ({formatFileSize(f.size)})
@@ -382,26 +341,21 @@ export function UploadDropzone<
         </div>
       )}
 
-      {/* Progress bar */}
       {isUploading && (
-        <div style={defaultDropzoneStyles.progressBar}>
+        <div className={defaultDropzoneClasses.progressBar}>
           <div
-            style={{
-              ...defaultDropzoneStyles.progressFill,
-              width: `${String(progress)}%`,
-            }}
+            className={defaultDropzoneClasses.progressFill}
+            style={{ width: `${String(progress)}%` }}
           />
         </div>
       )}
 
-      {/* Allowed content */}
       <div
-        className={resolveClassName(appearance?.allowedContent, contentOpts)}
-        style={resolveStyle(
-          appearance?.allowedContent,
-          contentOpts,
-          defaultDropzoneStyles.allowedContent,
+        className={cx(
+          defaultDropzoneClasses.allowedContent,
+          resolveClassName(appearance?.allowedContent, contentOpts),
         )}
+        style={resolveStyle(appearance?.allowedContent, contentOpts)}
       >
         {renderContent(
           content?.allowedContent,
@@ -410,17 +364,15 @@ export function UploadDropzone<
         )}
       </div>
 
-      {/* Manual upload button */}
       {mode === "manual" && selectedFiles.length > 0 && !isUploading && (
         <button
           type="button"
           onClick={handleManualUpload}
-          className={resolveClassName(appearance?.button, contentOpts)}
-          style={resolveStyle(
-            appearance?.button,
-            contentOpts,
-            defaultDropzoneStyles.button,
+          className={cx(
+            defaultDropzoneClasses.button,
+            resolveClassName(appearance?.button, contentOpts),
           )}
+          style={resolveStyle(appearance?.button, contentOpts)}
         >
           {renderContent(
             content?.button,

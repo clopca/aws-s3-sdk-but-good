@@ -83,6 +83,12 @@ export {
   defaultProgressBarStyles,
   defaultFileListStyles,
   getDropzoneContainerStyle,
+  defaultButtonClasses,
+  defaultDropzoneClasses,
+  defaultProgressBarClasses,
+  defaultFilePreviewClasses,
+  defaultFileListClasses,
+  getDropzoneContainerClass,
 } from "./styles";
 
 // ─── Type exports ───────────────────────────────────────────────────────────

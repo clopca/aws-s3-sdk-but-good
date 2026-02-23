@@ -1,8 +1,8 @@
 import { createElement } from "react";
 import { formatFileSize } from "@s3-good/shared";
-import { resolveStyle, resolveClassName, renderContent } from "./shared";
+import { resolveStyle, resolveClassName, renderContent, cx } from "./shared";
 import type { StyleField } from "./shared";
-import { defaultFileListStyles } from "../styles";
+import { defaultFileListClasses } from "../styles";
 import { ProgressBar } from "./progress-bar";
 
 // ─── FileItem Types ─────────────────────────────────────────────────────────
@@ -75,12 +75,12 @@ export interface FileListProps {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function getStatusColor(status: FileItemStatus): string {
+function getStatusClass(status: FileItemStatus): string {
   switch (status) {
-    case "pending": return "#6b7280";
-    case "uploading": return "#3b82f6";
-    case "complete": return "#10b981";
-    case "error": return "#ef4444";
+    case "pending": return defaultFileListClasses.itemStatusPending;
+    case "uploading": return defaultFileListClasses.itemStatusUploading;
+    case "complete": return defaultFileListClasses.itemStatusComplete;
+    case "error": return defaultFileListClasses.itemStatusError;
   }
 }
 
@@ -132,53 +132,48 @@ function FileListItem(props: {
   };
 
   // Resolve item style based on status
-  const defaultItemStyle = isError
-    ? defaultFileListStyles.itemError
+  const itemBaseClass = isError
+    ? defaultFileListClasses.itemError
     : isComplete
-      ? defaultFileListStyles.itemComplete
-      : defaultFileListStyles.item;
+      ? defaultFileListClasses.itemComplete
+      : defaultFileListClasses.item;
 
-  const itemStyle = resolveStyle(
-    appearance?.item,
-    itemContentOpts,
-    defaultItemStyle,
+  const itemStyle = resolveStyle(appearance?.item, itemContentOpts);
+  const itemClassName = cx(
+    itemBaseClass,
+    resolveClassName(appearance?.item, itemContentOpts),
   );
-  const itemClassName = resolveClassName(appearance?.item, itemContentOpts);
 
-  const itemInfoStyle = resolveStyle(
-    appearance?.itemInfo,
-    itemContentOpts,
-    defaultFileListStyles.itemInfo,
+  const itemInfoStyle = resolveStyle(appearance?.itemInfo, itemContentOpts);
+  const itemInfoClassName = cx(
+    defaultFileListClasses.itemInfo,
+    resolveClassName(appearance?.itemInfo, itemContentOpts),
   );
-  const itemInfoClassName = resolveClassName(appearance?.itemInfo, itemContentOpts);
 
-  const itemNameStyle = resolveStyle(
-    appearance?.itemName,
-    itemContentOpts,
-    defaultFileListStyles.itemName,
+  const itemNameStyle = resolveStyle(appearance?.itemName, itemContentOpts);
+  const itemNameClassName = cx(
+    defaultFileListClasses.itemName,
+    resolveClassName(appearance?.itemName, itemContentOpts),
   );
-  const itemNameClassName = resolveClassName(appearance?.itemName, itemContentOpts);
 
-  const itemSizeStyle = resolveStyle(
-    appearance?.itemSize,
-    itemContentOpts,
-    defaultFileListStyles.itemSize,
+  const itemSizeStyle = resolveStyle(appearance?.itemSize, itemContentOpts);
+  const itemSizeClassName = cx(
+    defaultFileListClasses.itemSize,
+    resolveClassName(appearance?.itemSize, itemContentOpts),
   );
-  const itemSizeClassName = resolveClassName(appearance?.itemSize, itemContentOpts);
 
-  const itemStatusStyle = resolveStyle(
-    appearance?.itemStatus,
-    itemContentOpts,
-    defaultFileListStyles.itemStatus,
+  const itemStatusStyle = resolveStyle(appearance?.itemStatus, itemContentOpts);
+  const itemStatusClassName = cx(
+    defaultFileListClasses.itemStatus,
+    getStatusClass(file.status),
+    resolveClassName(appearance?.itemStatus, itemContentOpts),
   );
-  const itemStatusClassName = resolveClassName(appearance?.itemStatus, itemContentOpts);
 
-  const removeButtonStyle = resolveStyle(
-    appearance?.removeButton,
-    itemContentOpts,
-    defaultFileListStyles.removeButton,
+  const removeButtonStyle = resolveStyle(appearance?.removeButton, itemContentOpts);
+  const removeButtonClassName = cx(
+    defaultFileListClasses.removeButton,
+    resolveClassName(appearance?.removeButton, itemContentOpts),
   );
-  const removeButtonClassName = resolveClassName(appearance?.removeButton, itemContentOpts);
 
   return (
     <div
@@ -216,7 +211,7 @@ function FileListItem(props: {
 
         {/* Error message */}
         {isError && file.error && (
-          <div style={{ fontSize: "12px", color: "#ef4444" }}>
+          <div className={defaultFileListClasses.errorText}>
             {file.error}
           </div>
         )}
@@ -225,10 +220,7 @@ function FileListItem(props: {
       {/* Status text */}
       <div
         className={itemStatusClassName}
-        style={{
-          ...itemStatusStyle,
-          color: getStatusColor(file.status),
-        }}
+        style={itemStatusStyle}
       >
         {renderContent(content?.itemStatus, itemContentOpts, getStatusText(file.status))}
       </div>
@@ -276,17 +268,16 @@ export function FileList(props: FileListProps) {
     isAllComplete,
   };
 
-  const containerStyle = resolveStyle(
-    appearance?.container,
-    contentOpts,
-    defaultFileListStyles.container,
+  const containerStyle = resolveStyle(appearance?.container, contentOpts);
+  const containerClassName = cx(
+    defaultFileListClasses.container,
+    resolveClassName(appearance?.container, contentOpts),
   );
-  const containerClassName = resolveClassName(appearance?.container, contentOpts);
 
   return (
     <div
       role="list"
-      className={[className, containerClassName].filter(Boolean).join(" ") || undefined}
+      className={cx(className, containerClassName)}
       style={containerStyle}
     >
       {files.map((file) => (

@@ -1,8 +1,8 @@
 import { useState, useEffect, createElement } from "react";
 import { formatFileSize } from "@s3-good/shared";
-import { resolveStyle, resolveClassName, renderContent } from "./shared";
+import { resolveStyle, resolveClassName, renderContent, cx } from "./shared";
 import type { StyleField } from "./shared";
-import { defaultFilePreviewStyles } from "../styles";
+import { defaultFilePreviewClasses } from "../styles";
 
 // ─── Content Options ────────────────────────────────────────────────────────
 
@@ -138,51 +138,45 @@ export function FilePreview(props: FilePreviewProps) {
   };
 
   // Resolve styles
-  const containerStyle = resolveStyle(
-    appearance?.container,
-    contentOpts,
-    defaultFilePreviewStyles.container,
+  const containerStyle = resolveStyle(appearance?.container, contentOpts);
+  const containerClassName = cx(
+    defaultFilePreviewClasses.container,
+    resolveClassName(appearance?.container, contentOpts),
   );
-  const containerClassName = resolveClassName(appearance?.container, contentOpts);
 
-  const thumbnailStyle = resolveStyle(
-    appearance?.thumbnail,
-    contentOpts,
-    defaultFilePreviewStyles.thumbnail,
+  const thumbnailStyle = resolveStyle(appearance?.thumbnail, contentOpts);
+  const thumbnailClassName = cx(
+    defaultFilePreviewClasses.thumbnail,
+    resolveClassName(appearance?.thumbnail, contentOpts),
   );
-  const thumbnailClassName = resolveClassName(appearance?.thumbnail, contentOpts);
 
-  const iconStyle = resolveStyle(
-    appearance?.icon,
-    contentOpts,
-    defaultFilePreviewStyles.icon,
+  const iconStyle = resolveStyle(appearance?.icon, contentOpts);
+  const iconClassName = cx(
+    defaultFilePreviewClasses.icon,
+    resolveClassName(appearance?.icon, contentOpts),
   );
-  const iconClassName = resolveClassName(appearance?.icon, contentOpts);
 
-  const fileInfoStyle = resolveStyle(
-    appearance?.fileInfo,
-    contentOpts,
-    defaultFilePreviewStyles.fileInfo,
+  const fileInfoStyle = resolveStyle(appearance?.fileInfo, contentOpts);
+  const fileInfoClassName = cx(
+    defaultFilePreviewClasses.fileInfo,
+    resolveClassName(appearance?.fileInfo, contentOpts),
   );
-  const fileInfoClassName = resolveClassName(appearance?.fileInfo, contentOpts);
 
-  const fileNameStyle = resolveStyle(
-    appearance?.fileName,
-    contentOpts,
-    defaultFilePreviewStyles.fileName,
+  const fileNameStyle = resolveStyle(appearance?.fileName, contentOpts);
+  const fileNameClassName = cx(
+    defaultFilePreviewClasses.fileName,
+    resolveClassName(appearance?.fileName, contentOpts),
   );
-  const fileNameClassName = resolveClassName(appearance?.fileName, contentOpts);
 
-  const fileSizeStyle = resolveStyle(
-    appearance?.fileSize,
-    contentOpts,
-    defaultFilePreviewStyles.fileSize,
+  const fileSizeStyle = resolveStyle(appearance?.fileSize, contentOpts);
+  const fileSizeClassName = cx(
+    defaultFilePreviewClasses.fileSize,
+    resolveClassName(appearance?.fileSize, contentOpts),
   );
-  const fileSizeClassName = resolveClassName(appearance?.fileSize, contentOpts);
 
   return (
     <div
-      className={[className, containerClassName].filter(Boolean).join(" ") || undefined}
+      className={cx(className, containerClassName)}
       style={containerStyle}
       data-state={isImage ? "image" : "file"}
     >

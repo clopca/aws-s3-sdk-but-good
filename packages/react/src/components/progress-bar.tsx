@@ -1,6 +1,6 @@
-import { resolveStyle, resolveClassName, renderContent } from "./shared";
+import { resolveStyle, resolveClassName, renderContent, cx } from "./shared";
 import type { StyleField } from "./shared";
-import { defaultProgressBarStyles } from "../styles";
+import { defaultProgressBarClasses } from "../styles";
 
 // ─── Content Options ────────────────────────────────────────────────────────
 
@@ -63,36 +63,31 @@ export function ProgressBar(props: ProgressBarProps) {
   };
 
   // Resolve styles
-  const containerStyle = resolveStyle(
-    appearance?.container,
-    contentOpts,
-    defaultProgressBarStyles.container,
+  const containerStyle = resolveStyle(appearance?.container, contentOpts);
+  const containerClassName = cx(
+    defaultProgressBarClasses.container,
+    resolveClassName(appearance?.container, contentOpts),
   );
-  const containerClassName = resolveClassName(appearance?.container, contentOpts);
 
-  const trackStyle = resolveStyle(
-    appearance?.track,
-    contentOpts,
-    defaultProgressBarStyles.track,
+  const trackStyle = resolveStyle(appearance?.track, contentOpts);
+  const trackClassName = cx(
+    defaultProgressBarClasses.track,
+    resolveClassName(appearance?.track, contentOpts),
   );
-  const trackClassName = resolveClassName(appearance?.track, contentOpts);
 
-  const fillDefaultStyle = isComplete
-    ? defaultProgressBarStyles.fillComplete
-    : defaultProgressBarStyles.fill;
-  const fillStyle = resolveStyle(
-    appearance?.fill,
-    contentOpts,
-    fillDefaultStyle,
+  const fillStyle = resolveStyle(appearance?.fill, contentOpts);
+  const fillClassName = cx(
+    isComplete
+      ? defaultProgressBarClasses.fillComplete
+      : defaultProgressBarClasses.fill,
+    resolveClassName(appearance?.fill, contentOpts),
   );
-  const fillClassName = resolveClassName(appearance?.fill, contentOpts);
 
-  const labelStyle = resolveStyle(
-    appearance?.label,
-    contentOpts,
-    defaultProgressBarStyles.label,
+  const labelStyle = resolveStyle(appearance?.label, contentOpts);
+  const labelClassName = cx(
+    defaultProgressBarClasses.label,
+    resolveClassName(appearance?.label, contentOpts),
   );
-  const labelClassName = resolveClassName(appearance?.label, contentOpts);
 
   const dataState = isComplete
     ? "complete"
@@ -113,7 +108,7 @@ export function ProgressBar(props: ProgressBarProps) {
 
   return (
     <div
-      className={[className, containerClassName].filter(Boolean).join(" ") || undefined}
+      className={cx(className, containerClassName)}
       style={containerStyle}
       data-state={dataState}
     >

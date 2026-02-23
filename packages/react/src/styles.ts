@@ -396,3 +396,80 @@ export function getDropzoneContainerStyle(opts: {
     ...(opts.isUploading ? defaultDropzoneStyles.containerUploading : {}),
   };
 }
+
+// ─── Tailwind Default Classes ───────────────────────────────────────────────
+
+export const defaultButtonClasses = {
+  container: "flex flex-col items-center gap-1",
+  button: "inline-flex min-w-[120px] items-center justify-center gap-2 rounded-lg border-0 bg-blue-500 px-5 py-2 text-sm font-medium text-white transition-colors",
+  buttonDisabled: "inline-flex min-w-[120px] items-center justify-center gap-2 rounded-lg border-0 bg-blue-300 px-5 py-2 text-sm font-medium text-white transition-colors cursor-not-allowed",
+  buttonUploading: "inline-flex min-w-[120px] items-center justify-center gap-2 rounded-lg border-0 bg-blue-600 px-5 py-2 text-sm font-medium text-white transition-colors cursor-default",
+  allowedContent: "mt-0.5 text-xs text-slate-500",
+  uploadButton: "mt-1 rounded-md border-0 bg-emerald-500 px-4 py-1.5 text-[13px] text-white",
+  input: "hidden",
+} as const;
+
+export const defaultDropzoneClasses = {
+  container: "flex min-h-[200px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-6 py-8 transition-colors",
+  containerDragOver: "border-blue-500 bg-blue-50",
+  containerUploading: "border-blue-300 cursor-default",
+  containerDisabled: "flex min-h-[200px] cursor-not-allowed flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 px-6 py-8 opacity-60 transition-colors",
+  uploadIcon: "mb-1 text-slate-400",
+  label: "text-center text-sm text-slate-700",
+  allowedContent: "text-xs text-slate-400",
+  button: "mt-2 rounded-lg border-0 bg-blue-500 px-5 py-2 text-sm font-medium text-white",
+  progressBar: "mt-2 h-1.5 w-full max-w-[300px] overflow-hidden rounded bg-slate-200",
+  progressFill: "h-full rounded bg-blue-500 transition-[width] duration-300 ease-in-out",
+  previewContainer: "mt-2 flex flex-wrap justify-center gap-2",
+  previewImage: "h-16 w-16 rounded-md border border-slate-200 object-cover",
+  fileList: "mt-1 text-center text-xs text-slate-500",
+  input: "hidden",
+} as const;
+
+export function getDropzoneContainerClass(opts: {
+  ready: boolean;
+  isDragOver: boolean;
+  isUploading: boolean;
+}): string {
+  if (!opts.ready) return defaultDropzoneClasses.containerDisabled;
+
+  return [
+    defaultDropzoneClasses.container,
+    opts.isDragOver ? defaultDropzoneClasses.containerDragOver : "",
+    opts.isUploading ? defaultDropzoneClasses.containerUploading : "",
+  ].filter(Boolean).join(" ");
+}
+
+export const defaultProgressBarClasses = {
+  container: "flex w-full flex-col gap-1",
+  track: "h-2 w-full overflow-hidden rounded bg-slate-200",
+  fill: "h-full rounded bg-blue-500 transition-[width] duration-300 ease-in-out",
+  fillComplete: "h-full rounded bg-emerald-500 transition-[width] duration-300 ease-in-out",
+  label: "text-right text-xs text-slate-500",
+} as const;
+
+export const defaultFilePreviewClasses = {
+  container: "flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2",
+  thumbnail: "h-12 w-12 shrink-0 rounded-md border border-slate-200 object-cover",
+  icon: "flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-500",
+  fileInfo: "flex min-w-0 flex-1 flex-col gap-0.5",
+  fileName: "truncate text-sm font-medium text-slate-900",
+  fileSize: "text-xs text-slate-500",
+} as const;
+
+export const defaultFileListClasses = {
+  container: "flex w-full flex-col gap-2",
+  item: "flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5",
+  itemError: "flex items-center gap-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2.5",
+  itemComplete: "flex items-center gap-3 rounded-lg border border-green-300 bg-green-50 px-3 py-2.5",
+  itemInfo: "flex min-w-0 flex-1 flex-col gap-1",
+  itemName: "truncate text-sm font-medium text-slate-900",
+  itemSize: "text-xs text-slate-500",
+  itemStatus: "shrink-0 text-xs font-medium",
+  itemStatusPending: "text-slate-500",
+  itemStatusUploading: "text-blue-500",
+  itemStatusComplete: "text-emerald-500",
+  itemStatusError: "text-red-500",
+  removeButton: "flex shrink-0 items-center justify-center rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600",
+  errorText: "text-xs text-red-500",
+} as const;

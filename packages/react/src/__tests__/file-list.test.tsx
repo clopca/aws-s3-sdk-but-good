@@ -120,18 +120,17 @@ describe("FileList", () => {
 
     render(<FileList files={files} />);
 
-    // Check status text colors (jsdom converts hex to rgb)
     const pendingStatus = screen.getByText("Pending");
-    expect(pendingStatus.style.color).toBe("rgb(107, 114, 128)"); // #6b7280
+    expect(pendingStatus.className).toContain("text-slate-500");
 
     const uploadingStatus = screen.getByText("Uploading");
-    expect(uploadingStatus.style.color).toBe("rgb(59, 130, 246)"); // #3b82f6
+    expect(uploadingStatus.className).toContain("text-blue-500");
 
     const completeStatus = screen.getByText("Complete");
-    expect(completeStatus.style.color).toBe("rgb(16, 185, 129)"); // #10b981
+    expect(completeStatus.className).toContain("text-emerald-500");
 
     const errorStatus = screen.getByText("Error");
-    expect(errorStatus.style.color).toBe("rgb(239, 68, 68)"); // #ef4444
+    expect(errorStatus.className).toContain("text-red-500");
   });
 
   // ─── Progress Bar ───────────────────────────────────────────────────────
@@ -274,9 +273,8 @@ describe("FileList", () => {
     render(<FileList files={files} />);
 
     const item = screen.getByRole("listitem");
-    // Error items have red border and background (jsdom converts hex to rgb)
-    expect(item.style.borderColor).toBe("rgb(252, 165, 165)"); // #fca5a5
-    expect(item.style.backgroundColor).toBe("rgb(254, 242, 242)"); // #fef2f2
+    expect(item.className).toContain("border-red-300");
+    expect(item.className).toContain("bg-red-50");
   });
 
   it("test_complete_item_has_complete_styling", () => {
@@ -285,8 +283,8 @@ describe("FileList", () => {
     render(<FileList files={files} />);
 
     const item = screen.getByRole("listitem");
-    expect(item.style.borderColor).toBe("rgb(134, 239, 172)"); // #86efac
-    expect(item.style.backgroundColor).toBe("rgb(240, 253, 244)"); // #f0fdf4
+    expect(item.className).toContain("border-green-300");
+    expect(item.className).toContain("bg-green-50");
   });
 
   // ─── Theming Support ──────────────────────────────────────────────────

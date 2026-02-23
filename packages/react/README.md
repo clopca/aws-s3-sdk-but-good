@@ -10,6 +10,12 @@ pnpm add @s3-good/react @s3-good/core zod
 
 **Peer dependencies**: `react >= 18.0.0`, `react-dom >= 18.0.0`
 
+Import the default component styles once in your app:
+
+```tsx
+import "@s3-good/react/styles.css";
+```
+
 ---
 
 ## `generateReactHelpers<TRouter>(opts?)`
@@ -329,6 +335,11 @@ import {
   defaultButtonStyles,
   defaultDropzoneStyles,
   getDropzoneContainerStyle,
+
+  // Tailwind-first class presets
+  defaultButtonClasses,
+  defaultDropzoneClasses,
+  getDropzoneContainerClass,
 } from "@s3-good/react";
 ```
 

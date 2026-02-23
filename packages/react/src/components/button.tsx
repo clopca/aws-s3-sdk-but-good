@@ -7,9 +7,9 @@ import type {
 import type { UploadFileResponse } from "@s3-good/shared";
 import type { UploadError } from "@s3-good/shared";
 import { useUpload } from "../use-upload";
-import { resolveStyle, resolveClassName, renderContent, generateAcceptString } from "./shared";
+import { resolveStyle, resolveClassName, renderContent, generateAcceptString, cx } from "./shared";
 import type { StyleField } from "./shared";
-import { defaultButtonStyles } from "../styles";
+import { defaultButtonClasses } from "../styles";
 
 // ─── Content Options ────────────────────────────────────────────────────────
 
@@ -166,35 +166,32 @@ export function UploadButton<
     fileTypes,
   };
 
-  const containerStyle = resolveStyle(
-    appearance?.container,
-    contentOpts,
-    defaultButtonStyles.container,
+  const containerStyle = resolveStyle(appearance?.container, contentOpts);
+  const containerClassName = cx(
+    defaultButtonClasses.container,
+    resolveClassName(appearance?.container, contentOpts),
   );
-  const containerClassName = resolveClassName(appearance?.container, contentOpts);
 
-  const buttonBaseStyle = isUploading
-    ? defaultButtonStyles.buttonUploading
+  const buttonBaseClass = isUploading
+    ? defaultButtonClasses.buttonUploading
     : ready
-      ? defaultButtonStyles.button
-      : defaultButtonStyles.buttonDisabled;
-  const buttonStyle = resolveStyle(
-    appearance?.button,
-    contentOpts,
-    buttonBaseStyle,
+      ? defaultButtonClasses.button
+      : defaultButtonClasses.buttonDisabled;
+  const buttonStyle = resolveStyle(appearance?.button, contentOpts);
+  const buttonClassName = cx(
+    buttonBaseClass,
+    resolveClassName(appearance?.button, contentOpts),
   );
-  const buttonClassName = resolveClassName(appearance?.button, contentOpts);
 
-  const allowedContentStyle = resolveStyle(
-    appearance?.allowedContent,
-    contentOpts,
-    defaultButtonStyles.allowedContent,
+  const allowedContentStyle = resolveStyle(appearance?.allowedContent, contentOpts);
+  const allowedContentClassName = cx(
+    defaultButtonClasses.allowedContent,
+    resolveClassName(appearance?.allowedContent, contentOpts),
   );
-  const allowedContentClassName = resolveClassName(appearance?.allowedContent, contentOpts);
 
   return (
     <div
-      className={[className, containerClassName].filter(Boolean).join(" ") || undefined}
+      className={cx(className, containerClassName)}
       style={containerStyle}
       data-state={isUploading ? "uploading" : ready ? "ready" : "disabled"}
     >
@@ -209,7 +206,7 @@ export function UploadButton<
         <input
           ref={fileInputRef}
           type="file"
-          style={{ display: "none" }}
+          className={defaultButtonClasses.input}
           onChange={handleFileChange}
           disabled={!ready}
           accept={acceptString}
@@ -231,7 +228,7 @@ export function UploadButton<
           type="button"
           onClick={handleManualUpload}
           disabled={isUploading}
-          style={defaultButtonStyles.uploadButton}
+          className={defaultButtonClasses.uploadButton}
         >
           Upload {selectedFiles.length} file
           {selectedFiles.length > 1 ? "s" : ""}

@@ -39,7 +39,7 @@ export type StyleField<TContentOpts> =
 export function resolveStyle<TContentOpts>(
   field: StyleField<TContentOpts> | undefined,
   opts: TContentOpts,
-  defaultStyle: CSSProperties,
+  defaultStyle?: CSSProperties,
 ): CSSProperties | undefined {
   if (field === undefined) return defaultStyle;
 
@@ -51,11 +51,11 @@ export function resolveStyle<TContentOpts>(
   if (typeof field === "function") {
     const result = field(opts);
     if (typeof result === "string") return undefined;
-    return { ...defaultStyle, ...result };
+    return defaultStyle ? { ...defaultStyle, ...result } : result;
   }
 
   // CSSProperties object — merge with defaults
-  return { ...defaultStyle, ...field };
+  return defaultStyle ? { ...defaultStyle, ...field } : field;
 }
 
 /**
@@ -75,6 +75,16 @@ export function resolveClassName<TContentOpts>(
     if (typeof result === "string") return result;
   }
   return undefined;
+}
+
+/**
+ * Joins class names, skipping empty values.
+ */
+export function cx(
+  ...parts: Array<string | undefined | null | false>
+): string | undefined {
+  const className = parts.filter(Boolean).join(" ");
+  return className || undefined;
 }
 
 /**

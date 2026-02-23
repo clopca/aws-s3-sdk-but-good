@@ -93,8 +93,7 @@ describe("ProgressBar", () => {
 
     const progressbar = screen.getByRole("progressbar");
     const fill = progressbar.firstElementChild as HTMLElement;
-    // jsdom converts hex to rgb
-    expect(fill.style.backgroundColor).toBe("rgb(16, 185, 129)");
+    expect(fill.className).toContain("bg-emerald-500");
   });
 
   it("test_incomplete_state_uses_blue_color", () => {
@@ -102,8 +101,7 @@ describe("ProgressBar", () => {
 
     const progressbar = screen.getByRole("progressbar");
     const fill = progressbar.firstElementChild as HTMLElement;
-    // jsdom converts hex to rgb
-    expect(fill.style.backgroundColor).toBe("rgb(59, 130, 246)");
+    expect(fill.className).toContain("bg-blue-500");
   });
 
   it("test_data_state_complete", () => {
