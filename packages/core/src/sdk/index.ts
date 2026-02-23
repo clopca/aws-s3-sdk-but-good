@@ -1,5 +1,15 @@
 import type { S3Config } from "@s3-good/shared";
-import { getFileUrl, getS3Client } from "../_internal/s3";
+import {
+  copyObject,
+  deleteObject,
+  deleteObjects,
+  generatePresignedGetUrl,
+  getFileUrl,
+  getS3Client,
+  listObjects,
+  putEmptyObject,
+} from "../_internal/s3";
+import type { ListObjectsResult } from "../_internal/s3";
 import { setupBucket, validateBucketCors } from "./setup";
 import type { SetupOptions } from "./setup";
 
@@ -9,8 +19,7 @@ export type { SetupOptions } from "./setup";
 /**
  * High-level API for interacting with S3.
  *
- * Wraps the low-level S3 client operations behind a simple interface.
- * Upload / delete / list methods will be added in subsequent tasks.
+ * Wraps low-level S3 client operations behind a simple interface.
  */
 export class S3Api {
   private config: S3Config;
@@ -61,5 +70,97 @@ export class S3Api {
     return validateBucketCors(this.config);
   }
 
-  // Other methods (upload, delete, list) will be added in tasks 16+
+  /**
+   * Lists objects and folders under an optional prefix.
+   */
+  async list(opts?: {
+    prefix?: string;
+    maxKeys?: number;
+    continuationToken?: string;
+  }): Promise<ListObjectsResult> {
+    const s3 = getS3Client(this.config);
+    return listObjects(s3, {
+      bucket: this.config.bucket,
+      ...opts,
+    });
+  }
+
+  /**
+   * Deletes a single object by key.
+   */
+  async delete(key: string): Promise<void> {
+    const s3 = getS3Client(this.config);
+    await deleteObject(s3, { bucket: this.config.bucket, key });
+  }
+
+  /**
+   * Deletes multiple objects by key.
+   */
+  async deleteMany(keys: string[]): Promise<{
+    deleted: string[];
+    errors: Array<{ key: string; message: string }>;
+  }> {
+    const s3 = getS3Client(this.config);
+    return deleteObjects(s3, { bucket: this.config.bucket, keys });
+  }
+
+  /**
+   * Copies an object to a destination key in the same bucket.
+   */
+  async copy(sourceKey: string, destinationKey: string): Promise<void> {
+    const s3 = getS3Client(this.config);
+    await copyObject(s3, {
+      bucket: this.config.bucket,
+      sourceKey,
+      destinationKey,
+    });
+  }
+
+  /**
+   * Moves an object (copy + delete source).
+   */
+  async move(sourceKey: string, destinationKey: string): Promise<void> {
+    await this.copy(sourceKey, destinationKey);
+    await this.delete(sourceKey);
+  }
+
+  /**
+   * Renames an object while preserving its parent prefix.
+   */
+  async rename(key: string, newName: string): Promise<void> {
+    const lastSlash = key.lastIndexOf("/");
+    const prefix = lastSlash >= 0 ? key.slice(0, lastSlash + 1) : "";
+    await this.move(key, `${prefix}${newName}`);
+  }
+
+  /**
+   * Creates a folder marker key ending in `/`.
+   */
+  async createFolder(prefix: string, name: string): Promise<void> {
+    const s3 = getS3Client(this.config);
+    const normalizedPrefix = prefix === "" || prefix.endsWith("/")
+      ? prefix
+      : `${prefix}/`;
+    await putEmptyObject(s3, {
+      bucket: this.config.bucket,
+      key: `${normalizedPrefix}${name}/`,
+    });
+  }
+
+  /**
+   * Returns a presigned GET URL configured for file download.
+   */
+  async getDownloadUrl(
+    key: string,
+    opts?: { expiresIn?: number; filename?: string },
+  ): Promise<string> {
+    const s3 = getS3Client(this.config);
+    return generatePresignedGetUrl(s3, {
+      bucket: this.config.bucket,
+      key,
+      expiresIn: opts?.expiresIn,
+      forceDownload: true,
+      downloadFilename: opts?.filename,
+    });
+  }
 }

@@ -12,6 +12,9 @@ import type { FileRouter } from "./_internal/types";
 import type { S3Config } from "@s3-good/shared";
 import { handleUploadAction } from "./_internal/handler";
 import { UploadError } from "@s3-good/shared";
+import type { BrowserBuilder } from "./_internal/browser-builder";
+import { handleBrowserAction } from "./_internal/browser-handler";
+export { createBrowser } from "./server";
 
 // Import Hono types only — no runtime dependency
 import type { Context } from "hono";
@@ -20,6 +23,11 @@ import type { Context } from "hono";
 
 export interface HonoRouteHandlerOptions {
   router: FileRouter;
+  config: S3Config;
+}
+
+export interface HonoBrowserRouteHandlerOptions {
+  browser: BrowserBuilder<unknown>;
   config: S3Config;
 }
 
@@ -130,3 +138,43 @@ export function createRouteHandler(opts: HonoRouteHandlerOptions) {
   return { GET, POST };
 }
 
+/**
+ * Creates a Hono route handler for browser actions.
+ */
+export function createBrowserRouteHandler(opts: HonoBrowserRouteHandlerOptions) {
+  assertServerEnvironment();
+
+  const routeConfig = opts.browser._build();
+
+  async function GET(c: Context): Promise<Response> {
+    try {
+      return await handleBrowserAction(c.req.raw, {
+        route: routeConfig,
+        config: opts.config,
+      });
+    } catch (error) {
+      console.error("[s3-good/browser] Internal error:", error);
+      return Response.json(
+        { success: false, error: "Internal server error", action: "unknown" },
+        { status: 500 },
+      );
+    }
+  }
+
+  async function POST(c: Context): Promise<Response> {
+    try {
+      return await handleBrowserAction(c.req.raw, {
+        route: routeConfig,
+        config: opts.config,
+      });
+    } catch (error) {
+      console.error("[s3-good/browser] Internal error:", error);
+      return Response.json(
+        { success: false, error: "Internal server error", action: "unknown" },
+        { status: 500 },
+      );
+    }
+  }
+
+  return { GET, POST };
+}

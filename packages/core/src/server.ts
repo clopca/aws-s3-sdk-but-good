@@ -3,6 +3,8 @@ import type { UploadBuilderParams, FileRouter } from "./_internal/types";
 import type { ExpandedRouteConfig, S3Config } from "@s3-good/shared";
 import { UploadError } from "@s3-good/shared";
 import { handleUploadAction } from "./_internal/handler";
+import { BrowserBuilder } from "./_internal/browser-builder";
+import { handleBrowserAction } from "./_internal/browser-handler";
 
 export interface CreateUploaderOptions {
   /**
@@ -53,6 +55,11 @@ export interface RouteHandlerOptions {
   config: S3Config;
 }
 
+export interface BrowserRouteHandlerOptions {
+  browser: BrowserBuilder<unknown>;
+  config: S3Config;
+}
+
 /**
  * Creates a framework-agnostic route handler for upload operations.
  *
@@ -91,6 +98,29 @@ export function createRouteHandler(opts: RouteHandlerOptions) {
         { status: 500 },
       );
     }
+  };
+
+  return { GET: handler, POST: handler };
+}
+
+/**
+ * Creates a browser route builder for configuring S3 browser behavior.
+ */
+export function createBrowser(): BrowserBuilder<unknown> {
+  return new BrowserBuilder();
+}
+
+/**
+ * Creates a framework-agnostic route handler for browser actions.
+ */
+export function createBrowserRouteHandler(opts: BrowserRouteHandlerOptions) {
+  const route = opts.browser._build();
+
+  const handler = async (req: Request): Promise<Response> => {
+    return handleBrowserAction(req, {
+      route,
+      config: opts.config,
+    });
   };
 
   return { GET: handler, POST: handler };

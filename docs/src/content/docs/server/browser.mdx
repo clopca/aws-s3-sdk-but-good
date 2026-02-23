@@ -1,0 +1,46 @@
+---
+title: Browser Routes
+description: Configure S3 browser routes, bucket selection, and search behavior.
+---
+
+The browser route handler supports listing and file operations over S3 with optional bucket whitelisting.
+
+## Multi-bucket configuration
+
+Use `createBrowser().buckets(...)` to allow a fixed list of buckets and set a default one.
+
+```ts title="src/server/browser-route.ts"
+import { createBrowser, createBrowserRouteHandler } from "@s3-good/core/server";
+
+const browser = createBrowser()
+  .rootPrefix("uploads/")
+  .buckets(["bucket-a", "bucket-b"], "bucket-a");
+
+export const { GET, POST } = createBrowserRouteHandler({
+  browser,
+  config: {
+    region: process.env.AWS_REGION!,
+    bucket: process.env.AWS_BUCKET!,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+});
+```
+
+If a request sends a bucket outside the configured list, the API returns `403`.
+
+## Search capabilities without Athena
+
+Current `s3-list` mode supports:
+
+- Active bucket selection
+- Prefix/path listing
+- Text search by file/folder name
+
+Not supported in this phase:
+
+- S3 object tag filtering (`filters.tags`)
+
+If `filters.tags` is sent, the API returns `400` with:
+
+`Tag filtering is not available without Athena`

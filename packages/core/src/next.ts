@@ -2,6 +2,9 @@ import type { FileRouter } from "./_internal/types";
 import type { S3Config } from "@s3-good/shared";
 import { handleUploadAction } from "./_internal/handler";
 import { UploadError } from "@s3-good/shared";
+import type { BrowserBuilder } from "./_internal/browser-builder";
+import { handleBrowserAction } from "./_internal/browser-handler";
+export { createBrowser } from "./server";
 
 // ─── Local Type Mirrors ─────────────────────────────────────────────────────
 // These duplicate the minimal prop shapes needed for component generation.
@@ -153,6 +156,11 @@ export interface NextRouteHandlerOptions {
   config: S3Config;
 }
 
+export interface NextBrowserRouteHandlerOptions {
+  browser: BrowserBuilder<unknown>;
+  config: S3Config;
+}
+
 type NextRequest = Request;
 type NextResponse = Response;
 
@@ -241,6 +249,40 @@ export function createRouteHandler(opts: NextRouteHandlerOptions) {
   }
 
   // POST handler — processes upload requests
+  async function POST(req: NextRequest): Promise<NextResponse> {
+    return handleRequest(req);
+  }
+
+  return { GET, POST };
+}
+
+/**
+ * Creates a Next.js App Router route handler for browser actions.
+ */
+export function createBrowserRouteHandler(opts: NextBrowserRouteHandlerOptions) {
+  assertServerEnvironment();
+
+  const routeConfig = opts.browser._build();
+
+  async function handleRequest(req: NextRequest): Promise<NextResponse> {
+    try {
+      return await handleBrowserAction(req, {
+        route: routeConfig,
+        config: opts.config,
+      });
+    } catch (error) {
+      console.error("[s3-good/browser] Internal error:", error);
+      return Response.json(
+        { success: false, error: "Internal server error", action: "unknown" },
+        { status: 500 },
+      );
+    }
+  }
+
+  async function GET(req: NextRequest): Promise<NextResponse> {
+    return handleRequest(req);
+  }
+
   async function POST(req: NextRequest): Promise<NextResponse> {
     return handleRequest(req);
   }

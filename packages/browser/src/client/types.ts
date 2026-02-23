@@ -1,0 +1,34 @@
+import type { BrowserListFilters, BrowserItem } from "@s3-good/shared";
+
+export interface BrowserClientOptions {
+  url?: string;
+  headers?: HeadersInit | (() => Promise<HeadersInit> | HeadersInit);
+}
+
+export interface ListResult {
+  items: BrowserItem[];
+  hasMore: boolean;
+  nextCursor?: string;
+  continuationToken?: string;
+  meta?: {
+    mode: "s3-list";
+    bucket: string;
+  };
+}
+
+export interface ListParams {
+  bucket?: string;
+  prefix?: string;
+  filters?: BrowserListFilters;
+  continuationToken?: string;
+  cursor?: string;
+}
+
+export interface DeleteResult {
+  deleted: string[];
+}
+
+export interface BrowserClientError extends Error {
+  status: number;
+  action: string;
+}

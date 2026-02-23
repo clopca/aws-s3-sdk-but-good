@@ -19,6 +19,18 @@ export type {
   AllowedFileType,
   ExpandedRouteConfig,
   FileRouteConfig,
+  BrowserAction,
+  BrowserActionPayload,
+  BrowserActionResponse,
+  BrowserConfig,
+  BrowserFile,
+  BrowserFolder,
+  BrowserItem,
+  PreviewType,
+  SortConfig,
+  SortDirection,
+  SortField,
+  ViewMode,
 } from "@s3-good/shared";
 
 export { UploadError, S3Error } from "@s3-good/shared";

@@ -1,0 +1,116 @@
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import type { BrowserItem } from "@s3-good/shared";
+import {
+  EmptyState,
+  FileGrid,
+  FileListView,
+  SearchBar,
+  Toolbar,
+} from "../components";
+
+const items: BrowserItem[] = [
+  { kind: "folder", key: "photos/", name: "photos" },
+  {
+    kind: "file",
+    key: "notes.txt",
+    name: "notes.txt",
+    size: 128,
+    lastModified: new Date("2026-01-01T00:00:00.000Z"),
+    contentType: "text/plain",
+  },
+];
+
+describe("file views components", () => {
+  it("test_FileGrid_renders_items_and_callbacks", () => {
+    const onItemClick = vi.fn();
+    const onItemDoubleClick = vi.fn();
+    const onItemContextMenu = vi.fn();
+
+    render(
+      <FileGrid
+        items={items}
+        selectedKeys={new Set()}
+        onItemClick={onItemClick}
+        onItemDoubleClick={onItemDoubleClick}
+        onItemContextMenu={onItemContextMenu}
+        isLoading={false}
+      />,
+    );
+
+    const folder = screen.getByText("photos");
+    fireEvent.click(folder);
+    expect(onItemClick).toHaveBeenCalled();
+  });
+
+  it("test_FileListView_renders_headers_and_sort", () => {
+    const onSort = vi.fn();
+
+    render(
+      <FileListView
+        items={items}
+        selectedKeys={new Set()}
+        sort={{ field: "name", direction: "asc" }}
+        onSort={onSort}
+        onItemClick={vi.fn()}
+        onItemDoubleClick={vi.fn()}
+        onItemContextMenu={vi.fn()}
+        isLoading={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Name/i }));
+    expect(onSort).toHaveBeenCalledWith("name");
+  });
+
+  it("test_EmptyState_messages", () => {
+    const { rerender } = render(<EmptyState />);
+    expect(screen.getByText("This folder is empty")).toBeTruthy();
+
+    rerender(<EmptyState isSearching />);
+    expect(screen.getByText("No files match your search")).toBeTruthy();
+  });
+
+  it("test_Toolbar_and_SearchBar_actions", () => {
+    const onViewModeChange = vi.fn();
+    const onSortChange = vi.fn();
+    const onCreateFolder = vi.fn();
+    const onDeleteSelected = vi.fn();
+    const onRefresh = vi.fn();
+    const onSearch = vi.fn();
+
+    render(
+      <>
+        <Toolbar
+          viewMode="grid"
+          sort={{ field: "name", direction: "asc" }}
+          selectedCount={1}
+          onViewModeChange={onViewModeChange}
+          onSortChange={onSortChange}
+          onCreateFolder={onCreateFolder}
+          onDeleteSelected={onDeleteSelected}
+          onRefresh={onRefresh}
+        />
+        <SearchBar value="" onChange={onSearch} />
+      </>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "List" }));
+    expect(onViewModeChange).toHaveBeenCalledWith("list");
+
+    fireEvent.click(screen.getByRole("combobox"));
+    const sizeOption = screen.getByRole("option", { name: "Size" });
+    fireEvent.pointerDown(sizeOption);
+    fireEvent.click(sizeOption);
+    expect(onSortChange).toHaveBeenCalledWith("size");
+
+    fireEvent.click(screen.getByRole("button", { name: "New Folder" }));
+    expect(onCreateFolder).toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: /Delete/i }));
+    expect(onDeleteSelected).toHaveBeenCalled();
+
+    fireEvent.change(screen.getByPlaceholderText("Search files..."), { target: { value: "cat" } });
+    expect(onSearch).toHaveBeenCalledWith("cat");
+  });
+});

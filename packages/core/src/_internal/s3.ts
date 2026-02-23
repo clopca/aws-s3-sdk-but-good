@@ -1,7 +1,12 @@
 import {
   AbortMultipartUploadCommand,
   CompleteMultipartUploadCommand,
+  CopyObjectCommand,
   CreateMultipartUploadCommand,
+  DeleteObjectCommand,
+  DeleteObjectsCommand,
+  GetObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
   UploadPartCommand,
@@ -193,6 +198,194 @@ export async function generatePresignedUrls(
       ...(file.checksumSHA256 && { checksumSHA256: file.checksumSHA256 }),
     })),
   );
+}
+
+// ---------------------------------------------------------------------------
+// Browser Operations
+// ---------------------------------------------------------------------------
+
+export interface ListObjectsOptions {
+  bucket: string;
+  /** Prefix to filter objects (acts as "folder path"). */
+  prefix?: string;
+  /** Delimiter for folder grouping. Defaults to `/`. */
+  delimiter?: string;
+  /** Maximum number of keys to return. Defaults to 1000. */
+  maxKeys?: number;
+  /** Continuation token for pagination. */
+  continuationToken?: string;
+}
+
+export interface ListObjectsResult {
+  objects: Array<{
+    key: string;
+    size: number;
+    lastModified: Date;
+    etag?: string;
+  }>;
+  folders: string[];
+  nextContinuationToken?: string;
+  isTruncated: boolean;
+}
+
+/**
+ * Lists objects and common prefixes from a bucket prefix.
+ */
+export async function listObjects(
+  s3: S3Client,
+  opts: ListObjectsOptions,
+): Promise<ListObjectsResult> {
+  const command = new ListObjectsV2Command({
+    Bucket: opts.bucket,
+    Prefix: opts.prefix,
+    Delimiter: opts.delimiter ?? "/",
+    MaxKeys: opts.maxKeys ?? 1000,
+    ContinuationToken: opts.continuationToken,
+  });
+
+  const response = await s3.send(command);
+
+  return {
+    objects: (response.Contents ?? [])
+      .filter((obj) => obj.Key && obj.Key !== opts.prefix)
+      .map((obj) => ({
+        key: obj.Key!,
+        size: obj.Size ?? 0,
+        lastModified: obj.LastModified ?? new Date(0),
+        etag: obj.ETag,
+      })),
+    folders: (response.CommonPrefixes ?? [])
+      .map((cp) => cp.Prefix)
+      .filter((prefix): prefix is string => Boolean(prefix)),
+    nextContinuationToken: response.NextContinuationToken,
+    isTruncated: response.IsTruncated ?? false,
+  };
+}
+
+/**
+ * Deletes a single object by key.
+ */
+export async function deleteObject(
+  s3: S3Client,
+  opts: { bucket: string; key: string },
+): Promise<void> {
+  const command = new DeleteObjectCommand({
+    Bucket: opts.bucket,
+    Key: opts.key,
+  });
+  await s3.send(command);
+}
+
+/**
+ * Deletes multiple objects, automatically batching into chunks of 1000.
+ */
+export async function deleteObjects(
+  s3: S3Client,
+  opts: { bucket: string; keys: string[] },
+): Promise<{ deleted: string[]; errors: Array<{ key: string; message: string }> }> {
+  if (opts.keys.length === 0) {
+    return { deleted: [], errors: [] };
+  }
+
+  const allDeleted: string[] = [];
+  const allErrors: Array<{ key: string; message: string }> = [];
+
+  for (let i = 0; i < opts.keys.length; i += 1000) {
+    const batch = opts.keys.slice(i, i + 1000);
+    const command = new DeleteObjectsCommand({
+      Bucket: opts.bucket,
+      Delete: {
+        Objects: batch.map((key) => ({ Key: key })),
+        Quiet: false,
+      },
+    });
+
+    const response = await s3.send(command);
+    allDeleted.push(
+      ...(response.Deleted ?? [])
+        .map((item) => item.Key)
+        .filter((key): key is string => Boolean(key)),
+    );
+    allErrors.push(
+      ...(response.Errors ?? []).map((item) => ({
+        key: item.Key ?? "unknown",
+        message: item.Message ?? "Unknown error",
+      })),
+    );
+  }
+
+  return { deleted: allDeleted, errors: allErrors };
+}
+
+function encodeCopySource(bucket: string, key: string): string {
+  const encodedKey = encodeURIComponent(key).replace(/%2F/g, "/");
+  return `${bucket}/${encodedKey}`;
+}
+
+/**
+ * Copies an object to a destination key in the same bucket.
+ */
+export async function copyObject(
+  s3: S3Client,
+  opts: { bucket: string; sourceKey: string; destinationKey: string },
+): Promise<void> {
+  const command = new CopyObjectCommand({
+    Bucket: opts.bucket,
+    CopySource: encodeCopySource(opts.bucket, opts.sourceKey),
+    Key: opts.destinationKey,
+  });
+  await s3.send(command);
+}
+
+export interface PresignedGetUrlOptions {
+  bucket: string;
+  key: string;
+  /** URL expiry in seconds. Defaults to 3600 (1 hour). */
+  expiresIn?: number;
+  /** Force download with Content-Disposition: attachment */
+  forceDownload?: boolean;
+  /** Override filename in Content-Disposition if forceDownload=true */
+  downloadFilename?: string;
+}
+
+/**
+ * Generates a presigned GET URL for download or preview.
+ */
+export async function generatePresignedGetUrl(
+  s3: S3Client,
+  opts: PresignedGetUrlOptions,
+): Promise<string> {
+  const command = new GetObjectCommand({
+    Bucket: opts.bucket,
+    Key: opts.key,
+    ...(opts.forceDownload && {
+      ResponseContentDisposition: opts.downloadFilename
+        ? `attachment; filename="${opts.downloadFilename}"`
+        : "attachment",
+    }),
+  });
+
+  return getSignedUrl(s3, command, {
+    expiresIn: opts.expiresIn ?? 3600,
+  });
+}
+
+/**
+ * Creates a folder marker object (0-byte object ending with `/`).
+ */
+export async function putEmptyObject(
+  s3: S3Client,
+  opts: { bucket: string; key: string },
+): Promise<void> {
+  const key = opts.key.endsWith("/") ? opts.key : `${opts.key}/`;
+  const command = new PutObjectCommand({
+    Bucket: opts.bucket,
+    Key: key,
+    Body: "",
+    ContentLength: 0,
+    ContentType: "application/x-directory",
+  });
+  await s3.send(command);
 }
 
 // ---------------------------------------------------------------------------

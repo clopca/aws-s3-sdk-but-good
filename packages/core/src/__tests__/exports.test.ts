@@ -14,6 +14,12 @@ describe("server exports", () => {
     expect(serverModule).toHaveProperty("createRouteHandler");
     expect(typeof serverModule.createRouteHandler).toBe("function");
 
+    expect(serverModule).toHaveProperty("createBrowser");
+    expect(typeof serverModule.createBrowser).toBe("function");
+
+    expect(serverModule).toHaveProperty("createBrowserRouteHandler");
+    expect(typeof serverModule.createBrowserRouteHandler).toBe("function");
+
     expect(serverModule).toHaveProperty("createRouteRegistry");
     expect(typeof serverModule.createRouteRegistry).toBe("function");
 
