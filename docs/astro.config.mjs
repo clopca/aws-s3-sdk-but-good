@@ -1,10 +1,15 @@
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
+import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
+  vite: {
+    plugins: [tailwindcss()],
+  },
   integrations: [
     starlight({
       title: "@s3-good",
+      customCss: ["./src/styles/tailwind.css"],
       social: {
         github: "https://github.com/clopca/aws-s3-sdk-but-good",
       },

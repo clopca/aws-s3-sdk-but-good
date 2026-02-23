@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "@s3-good Example — Next.js Upload Patterns",
@@ -13,58 +14,28 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body
-        style={{
-          margin: 0,
-          fontFamily:
-            '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-          backgroundColor: "#fafafa",
-          color: "#111",
-        }}
-      >
-        <header
-          style={{
-            padding: "16px 24px",
-            borderBottom: "1px solid #e5e5e5",
-            backgroundColor: "#fff",
-          }}
-        >
-          <nav style={{ display: "flex", gap: 16, alignItems: "center" }}>
-            <a
-              href="/"
-              style={{
-                fontWeight: 700,
-                fontSize: 18,
-                textDecoration: "none",
-                color: "#111",
-              }}
-            >
+      <body className="m-0 bg-slate-50 text-slate-900 antialiased">
+        <header className="border-b border-slate-200 bg-white px-6 py-4">
+          <nav className="mx-auto flex max-w-5xl items-center gap-4">
+            <a href="/" className="text-lg font-bold text-slate-900 no-underline">
               @s3-good
             </a>
-            <a href="/button-demo" style={navLinkStyle}>
+            <a href="/button-demo" className="text-sm text-slate-600 no-underline hover:text-slate-900">
               Button
             </a>
-            <a href="/dropzone-demo" style={navLinkStyle}>
+            <a href="/dropzone-demo" className="text-sm text-slate-600 no-underline hover:text-slate-900">
               Dropzone
             </a>
-            <a href="/custom-hook" style={navLinkStyle}>
+            <a href="/custom-hook" className="text-sm text-slate-600 no-underline hover:text-slate-900">
               Custom Hook
             </a>
-            <a href="/themed" style={navLinkStyle}>
+            <a href="/themed" className="text-sm text-slate-600 no-underline hover:text-slate-900">
               Themed
             </a>
           </nav>
         </header>
-        <main style={{ maxWidth: 800, margin: "0 auto", padding: "32px 24px" }}>
-          {children}
-        </main>
+        <main className="mx-auto w-full max-w-4xl px-6 py-10">{children}</main>
       </body>
     </html>
   );
 }
-
-const navLinkStyle: React.CSSProperties = {
-  color: "#666",
-  textDecoration: "none",
-  fontSize: 14,
-};

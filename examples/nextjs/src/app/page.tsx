@@ -1,15 +1,15 @@
 export default function HomePage() {
   return (
     <div>
-      <h1 style={{ fontSize: 28, marginBottom: 8 }}>
+      <h1 className="mb-2 text-3xl font-semibold tracking-tight">
         @s3-good Upload SDK — Example App
       </h1>
-      <p style={{ color: "#666", marginBottom: 32 }}>
+      <p className="mb-8 text-slate-600">
         This app demonstrates every upload pattern supported by the SDK.
         Choose a demo from the navigation above.
       </p>
 
-      <div style={{ display: "grid", gap: 16 }}>
+      <div className="grid gap-4">
         <DemoCard
           href="/button-demo"
           title="UploadButton"
@@ -32,13 +32,13 @@ export default function HomePage() {
         />
       </div>
 
-      <section style={{ marginTop: 48 }}>
-        <h2 style={{ fontSize: 20, marginBottom: 12 }}>Server Routes</h2>
-        <p style={{ color: "#666", fontSize: 14, marginBottom: 16 }}>
+      <section className="mt-12">
+        <h2 className="mb-3 text-xl font-semibold">Server Routes</h2>
+        <p className="mb-4 text-sm text-slate-600">
           Defined in <code>src/server/upload-router.ts</code> — four endpoints
           demonstrating different configurations:
         </p>
-        <ul style={{ lineHeight: 1.8, fontSize: 14, color: "#444" }}>
+        <ul className="list-disc space-y-1 pl-5 text-sm leading-7 text-slate-700">
           <li>
             <strong>imageUploader</strong> — up to 4 images (4MB each),
             middleware with auth extraction
@@ -72,18 +72,10 @@ function DemoCard({
   return (
     <a
       href={href}
-      style={{
-        display: "block",
-        padding: "20px 24px",
-        border: "1px solid #e5e5e5",
-        borderRadius: 8,
-        backgroundColor: "#fff",
-        textDecoration: "none",
-        color: "inherit",
-      }}
+      className="block rounded-lg border border-slate-200 bg-white px-6 py-5 text-inherit no-underline shadow-xs transition hover:border-slate-300 hover:shadow-sm"
     >
-      <h3 style={{ margin: "0 0 4px", fontSize: 16 }}>{title}</h3>
-      <p style={{ margin: 0, color: "#666", fontSize: 14 }}>{description}</p>
+      <h3 className="mb-1 text-base font-medium">{title}</h3>
+      <p className="m-0 text-sm text-slate-600">{description}</p>
     </a>
   );
 }

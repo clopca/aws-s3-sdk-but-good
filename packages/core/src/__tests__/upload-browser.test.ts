@@ -111,27 +111,7 @@ describe("uploadFileViaXhr", () => {
     expect(xhr.setRequestHeader).toHaveBeenCalledWith("Content-Type", "text/plain");
   });
 
-  it("test_uploadFileViaXhr_sends_checksum_header", async () => {
-    const file = new Blob(["hello"], { type: "text/plain" });
-    const promise = uploadFileViaXhr({
-      url: "https://s3.example.com/presigned",
-      file,
-      contentType: "text/plain",
-      checksumSHA256: "LPJNul+wow4m6DsqxbninhsWHlwfp0JecwQzYpOLmCQ=",
-    });
-
-    const xhr = mockXhrInstances[0]!;
-    xhr._triggerLoad(200, '"etag-456"');
-
-    await promise;
-    expect(xhr.setRequestHeader).toHaveBeenCalledWith("Content-Type", "text/plain");
-    expect(xhr.setRequestHeader).toHaveBeenCalledWith(
-      "x-amz-checksum-sha256",
-      "LPJNul+wow4m6DsqxbninhsWHlwfp0JecwQzYpOLmCQ=",
-    );
-  });
-
-  it("test_uploadFileViaXhr_no_checksum_header_when_not_provided", async () => {
+  it("test_uploadFileViaXhr_no_checksum_header_sent", async () => {
     const file = new Blob(["hello"], { type: "text/plain" });
     const promise = uploadFileViaXhr({
       url: "https://s3.example.com/presigned",
@@ -338,7 +318,7 @@ describe("uploadFile (unified)", () => {
     expect(result.etags).toBeUndefined();
   });
 
-  it("test_uploadFile_simple_with_checksum", async () => {
+  it("test_uploadFile_simple_with_checksum_does_not_send_header", async () => {
     const file = new File(["hello"], "test.txt", { type: "text/plain" });
 
     const promise = uploadFile({
@@ -359,11 +339,14 @@ describe("uploadFile (unified)", () => {
 
     const result = await promise;
     expect(result.key).toBe("abc123.txt");
-    // Verify the checksum header was sent
-    expect(xhr.setRequestHeader).toHaveBeenCalledWith(
+    // Verify the checksum header is NOT sent (it's not part of the presigned URL)
+    expect(xhr.setRequestHeader).not.toHaveBeenCalledWith(
       "x-amz-checksum-sha256",
-      "LPJNul+wow4m6DsqxbninhsWHlwfp0JecwQzYpOLmCQ=",
+      expect.anything(),
     );
+    // Only Content-Type should be set
+    expect(xhr.setRequestHeader).toHaveBeenCalledTimes(1);
+    expect(xhr.setRequestHeader).toHaveBeenCalledWith("Content-Type", "text/plain");
   });
 
   it("test_uploadFile_multipart", async () => {

@@ -14,8 +14,6 @@ export interface XhrUploadOptions {
   url: string;
   file: File | Blob;
   contentType: string;
-  /** Base64-encoded SHA-256 checksum to send as x-amz-checksum-sha256 header. */
-  checksumSHA256?: string;
   onProgress?: (event: UploadProgressEvent) => void;
   signal?: AbortSignal;
 }
@@ -100,9 +98,6 @@ export function uploadFileViaXhr(
 
     xhr.open("PUT", opts.url);
     xhr.setRequestHeader("Content-Type", opts.contentType);
-    if (opts.checksumSHA256) {
-      xhr.setRequestHeader("x-amz-checksum-sha256", opts.checksumSHA256);
-    }
     xhr.send(opts.file);
   });
 }
@@ -426,7 +421,6 @@ export async function uploadFile(
       url: opts.presignedData.url,
       file: opts.file,
       contentType: opts.file.type,
-      checksumSHA256: opts.presignedData.checksumSHA256,
       onProgress: opts.onProgress,
       signal: opts.signal,
     });
