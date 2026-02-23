@@ -1,89 +1,136 @@
 "use client";
 
+import { toast } from "sonner";
+import { Badge } from "~/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card";
 import { UploadDropzone } from "~/utils/upload";
 
-/**
- * Dropzone Demo — demonstrates UploadDropzone with drag & drop,
- * image previews, and progress tracking.
- *
- * - **Auto mode**: files upload on drop or selection.
- * - **Manual mode**: files are staged, then uploaded on button click.
- */
 export default function DropzoneDemoPage() {
   return (
-    <div>
-      <h1 style={{ fontSize: 24, marginBottom: 8 }}>UploadDropzone Demo</h1>
-      <p style={{ color: "#666", marginBottom: 32 }}>
-        The <code>UploadDropzone</code> component provides a drag-and-drop
-        area with image previews and a progress bar.
-      </p>
-
-      {/* ── Auto mode ────────────────────────────────────────────────── */}
-      <section style={{ marginBottom: 48 }}>
-        <h2 style={{ fontSize: 18, marginBottom: 8 }}>
-          Auto Mode — Image Upload
-        </h2>
-        <p style={{ color: "#666", fontSize: 14, marginBottom: 16 }}>
-          Drag images into the zone or click to browse. Upload starts
-          immediately.
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Dropzone</h1>
+        <p className="mt-2 text-muted-foreground">
+          The{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5 font-[family-name:var(--font-geist-mono)] text-xs">
+            UploadDropzone
+          </code>{" "}
+          component provides a drag-and-drop area with image previews and a
+          progress bar.
         </p>
-        <UploadDropzone
-          endpoint="imageUploader"
-          onClientUploadComplete={(res) => {
-            console.log("Dropzone upload complete:", res);
-            alert(`Uploaded ${String(res.length)} image(s)!`);
-          }}
-          onUploadError={(error) => {
-            alert(`Upload failed: ${error.message}`);
-          }}
-          onUploadProgress={(progress) => {
-            console.log("Dropzone progress:", progress);
-          }}
-        />
-      </section>
+      </div>
 
-      {/* ── Manual mode ──────────────────────────────────────────────── */}
-      <section style={{ marginBottom: 48 }}>
-        <h2 style={{ fontSize: 18, marginBottom: 8 }}>
-          Manual Mode — Any File
-        </h2>
-        <p style={{ color: "#666", fontSize: 14, marginBottom: 16 }}>
-          Drop or select files to stage them, then click &quot;Upload&quot; to
-          send. Uses the <code>anyFileUploader</code> endpoint (up to 10
-          files).
-        </p>
-        <UploadDropzone
-          endpoint="anyFileUploader"
-          mode="manual"
-          onClientUploadComplete={(res) => {
-            alert(`Uploaded ${String(res.length)} file(s)!`);
-          }}
-          onUploadError={(error) => {
-            alert(`Upload failed: ${error.message}`);
-          }}
-        />
-      </section>
+      {/* Auto Mode */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Auto Mode — Image Upload</CardTitle>
+            <Badge variant="secondary">imageUploader</Badge>
+          </div>
+          <CardDescription>
+            Drag images into the zone or click to browse. Upload starts
+            immediately.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <UploadDropzone
+            endpoint="imageUploader"
+            onClientUploadComplete={(res: unknown[]) => {
+              toast.success(`Uploaded ${String(res.length)} image(s)`, {
+                description: "Images uploaded successfully to S3.",
+              });
+            }}
+            onUploadError={(error: Error) => {
+              toast.error("Upload failed", {
+                description: error.message,
+              });
+            }}
+            onUploadProgress={(progress: number) => {
+              console.log("Dropzone progress:", progress);
+            }}
+          />
+          <div className="mt-4 flex justify-center gap-2">
+            <Badge variant="outline" className="text-xs">
+              image/*
+            </Badge>
+            <Badge variant="outline" className="text-xs">
+              4 MB max
+            </Badge>
+            <Badge variant="outline" className="text-xs">
+              4 files
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* ── With paste support ────────────────────────────────────────── */}
-      <section>
-        <h2 style={{ fontSize: 18, marginBottom: 8 }}>
-          With Paste Support
-        </h2>
-        <p style={{ color: "#666", fontSize: 14, marginBottom: 16 }}>
-          Paste images from your clipboard (Ctrl/Cmd+V) anywhere on the page.
-          The <code>onPaste</code> prop enables this behavior.
-        </p>
-        <UploadDropzone
-          endpoint="imageUploader"
-          onPaste
-          onClientUploadComplete={(res) => {
-            alert(`Pasted & uploaded ${String(res.length)} file(s)!`);
-          }}
-          onUploadError={(error) => {
-            alert(`Upload failed: ${error.message}`);
-          }}
-        />
-      </section>
+      {/* Manual Mode */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Manual Mode — Any File</CardTitle>
+            <Badge variant="secondary">mode=&quot;manual&quot;</Badge>
+          </div>
+          <CardDescription>
+            Drop or select files to stage them, then click &quot;Upload&quot; to
+            send. Uses the anyFileUploader endpoint (up to 10 files).
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <UploadDropzone
+            endpoint="anyFileUploader"
+            mode="manual"
+            onClientUploadComplete={(res: unknown[]) => {
+              toast.success(`Uploaded ${String(res.length)} file(s)`, {
+                description: "Files uploaded via manual mode.",
+              });
+            }}
+            onUploadError={(error: Error) => {
+              toast.error("Upload failed", {
+                description: error.message,
+              });
+            }}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Paste Support */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>With Paste Support</CardTitle>
+            <Badge variant="secondary">onPaste</Badge>
+          </div>
+          <CardDescription>
+            Paste images from your clipboard (Ctrl/Cmd+V) anywhere on the page.
+            The onPaste prop enables this behavior.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <UploadDropzone
+            endpoint="imageUploader"
+            onPaste
+            onClientUploadComplete={(res: unknown[]) => {
+              toast.success(
+                `Pasted & uploaded ${String(res.length)} file(s)`,
+                {
+                  description: "Clipboard images uploaded successfully.",
+                },
+              );
+            }}
+            onUploadError={(error: Error) => {
+              toast.error("Upload failed", {
+                description: error.message,
+              });
+            }}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }

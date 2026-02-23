@@ -1,81 +1,145 @@
+import Link from "next/link";
+import { Badge } from "~/components/ui/badge";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card";
+
+const demos = [
+  {
+    href: "/button-demo",
+    icon: "🔘",
+    title: "Upload Button",
+    description:
+      "Simple file picker button with auto and manual upload modes.",
+  },
+  {
+    href: "/dropzone-demo",
+    icon: "📥",
+    title: "Dropzone",
+    description:
+      "Drag-and-drop zone with image previews and progress tracking.",
+  },
+  {
+    href: "/custom-hook",
+    icon: "🪝",
+    title: "Custom Hook",
+    description:
+      "Build a fully custom upload UI with the useUpload hook.",
+  },
+  {
+    href: "/themed",
+    icon: "🎨",
+    title: "Themed Components",
+    description:
+      "Customize appearance and content of built-in components.",
+  },
+  {
+    href: "/browser",
+    icon: "📂",
+    title: "S3 Browser",
+    description:
+      "Modern file browser for listing, previewing, and managing S3 files.",
+  },
+];
+
+const routes = [
+  {
+    name: "imageUploader",
+    description: "Up to 4 images (4 MB each), middleware with auth extraction",
+  },
+  {
+    name: "documentUploader",
+    description: "PDF + text files, with .input() Zod validation",
+  },
+  {
+    name: "videoUploader",
+    description: "Videos up to 256 MB",
+  },
+  {
+    name: "anyFileUploader",
+    description: "Any file type (blob), up to 10 files (32 MB each)",
+  },
+];
+
 export default function HomePage() {
   return (
-    <div>
-      <h1 className="mb-2 text-3xl font-semibold tracking-tight">
-        @s3-good Upload SDK — Example App
-      </h1>
-      <p className="mb-8 text-slate-600">
-        This app demonstrates every upload pattern supported by the SDK.
-        Choose a demo from the navigation above.
-      </p>
-
-      <div className="grid gap-4">
-        <DemoCard
-          href="/button-demo"
-          title="UploadButton"
-          description="Simple file picker button with auto and manual upload modes."
-        />
-        <DemoCard
-          href="/dropzone-demo"
-          title="UploadDropzone"
-          description="Drag-and-drop zone with image previews and progress bar."
-        />
-        <DemoCard
-          href="/custom-hook"
-          title="Custom Hook"
-          description="Build a fully custom upload UI with the useUpload hook."
-        />
-        <DemoCard
-          href="/themed"
-          title="Themed Components"
-          description="Customize appearance and content of built-in components."
-        />
-      </div>
-
-      <section className="mt-12">
-        <h2 className="mb-3 text-xl font-semibold">Server Routes</h2>
-        <p className="mb-4 text-sm text-slate-600">
-          Defined in <code>src/server/upload-router.ts</code> — four endpoints
-          demonstrating different configurations:
+    <div className="space-y-16">
+      {/* Hero */}
+      <section className="space-y-4 pt-6">
+        <div className="flex items-center gap-3">
+          <h1 className="text-4xl font-bold tracking-tight">s3-good</h1>
+          <Badge variant="secondary" className="text-xs">
+            v0.1
+          </Badge>
+        </div>
+        <p className="max-w-2xl text-lg text-muted-foreground">
+          Type-safe, direct-to-S3 file uploads for React and Next.js.
+          Drop-in components, hooks, and a server router — everything you need
+          to ship uploads fast.
         </p>
-        <ul className="list-disc space-y-1 pl-5 text-sm leading-7 text-slate-700">
-          <li>
-            <strong>imageUploader</strong> — up to 4 images (4MB each),
-            middleware with auth extraction
-          </li>
-          <li>
-            <strong>documentUploader</strong> — PDF + text files, with{" "}
-            <code>.input()</code> Zod validation
-          </li>
-          <li>
-            <strong>videoUploader</strong> — videos up to 256MB
-          </li>
-          <li>
-            <strong>anyFileUploader</strong> — any file type (blob), up to 10
-            files (32MB each)
-          </li>
-        </ul>
+        <div className="flex flex-wrap gap-2 pt-1">
+          <Badge variant="outline">Type-safe</Badge>
+          <Badge variant="outline">Direct-to-S3</Badge>
+          <Badge variant="outline">React Components</Badge>
+          <Badge variant="outline">Presigned URLs</Badge>
+          <Badge variant="outline">Progress Tracking</Badge>
+        </div>
+      </section>
+
+      {/* Demo Cards */}
+      <section className="space-y-4">
+        <h2 className="text-xl font-semibold tracking-tight">Demos</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {demos.map((demo) => (
+            <Link
+              key={demo.href}
+              href={demo.href}
+              className="group no-underline"
+            >
+              <Card className="h-full transition-colors hover:border-foreground/20 hover:bg-accent/50">
+                <CardHeader>
+                  <div className="mb-1 text-2xl">{demo.icon}</div>
+                  <CardTitle className="text-base group-hover:text-foreground">
+                    {demo.title}
+                  </CardTitle>
+                  <CardDescription>{demo.description}</CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* Server Routes */}
+      <section className="space-y-4">
+        <h2 className="text-xl font-semibold tracking-tight">
+          Server Routes
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Defined in{" "}
+          <code className="rounded bg-muted px-1.5 py-0.5 font-[family-name:var(--font-geist-mono)] text-xs">
+            src/server/upload-router.ts
+          </code>{" "}
+          — four endpoints demonstrating different configurations.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {routes.map((route) => (
+            <Card key={route.name} className="bg-muted/30">
+              <CardHeader className="p-4">
+                <CardTitle className="font-[family-name:var(--font-geist-mono)] text-sm font-medium">
+                  {route.name}
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {route.description}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          ))}
+        </div>
       </section>
     </div>
-  );
-}
-
-function DemoCard({
-  href,
-  title,
-  description,
-}: {
-  href: string;
-  title: string;
-  description: string;
-}) {
-  return (
-    <a
-      href={href}
-      className="block rounded-lg border border-slate-200 bg-white px-6 py-5 text-inherit no-underline shadow-xs transition hover:border-slate-300 hover:shadow-sm"
-    >
-      <h3 className="mb-1 text-base font-medium">{title}</h3>
-      <p className="m-0 text-sm text-slate-600">{description}</p>
-    </a>
   );
 }

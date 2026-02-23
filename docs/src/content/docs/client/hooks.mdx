@@ -165,15 +165,10 @@ function UploadWithProgress() {
         }}
       />
       {isUploading && (
-        <div style={{ width: "200px", background: "#e5e7eb", borderRadius: "4px" }}>
+        <div className="w-[200px] rounded bg-slate-200">
           <div
-            style={{
-              width: `${progress}%`,
-              height: "8px",
-              background: "#3b82f6",
-              borderRadius: "4px",
-              transition: "width 0.3s ease",
-            }}
+            className="h-2 rounded bg-blue-500 transition-[width] duration-300 ease-in-out"
+            style={{ width: `${progress}%` }}
           />
         </div>
       )}

@@ -112,6 +112,23 @@ These values are passed to `createRouteHandler` on the server — see the [Quick
 | `@s3-good/react` | `UploadButton`, `UploadDropzone`, `useUpload` hook, and more | Client (React) |
 | `@s3-good/shared` | Shared types (`S3Config`, `UploadedFile`, etc.) and error classes | Both |
 
+## Styles (`@s3-good/react`)
+
+`@s3-good/react` is Tailwind v4-first.
+
+- If your app already uses Tailwind v4, include the package components as a source so utility classes are generated:
+
+```css title="src/app/globals.css"
+@import "tailwindcss";
+@source "../node_modules/@s3-good/react/dist/**/*.{js,mjs}";
+```
+
+- If your app does **not** use Tailwind, import the prebuilt stylesheet:
+
+```tsx
+import "@s3-good/react/styles.css";
+```
+
 ### Import paths
 
 `@s3-good/core` exposes multiple entry points:

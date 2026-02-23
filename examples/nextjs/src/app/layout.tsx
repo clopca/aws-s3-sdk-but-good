@@ -1,11 +1,32 @@
 import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import Link from "next/link";
+import { Toaster } from "~/components/ui/sonner";
 import "./globals.css";
 
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
-  title: "@s3-good Example — Next.js Upload Patterns",
+  title: "s3-good — Upload SDK Examples",
   description:
     "Demonstrates UploadButton, UploadDropzone, custom hook usage, and theming with @s3-good SDK.",
 };
+
+const navLinks = [
+  { href: "/button-demo", label: "Button" },
+  { href: "/dropzone-demo", label: "Dropzone" },
+  { href: "/custom-hook", label: "Custom Hook" },
+  { href: "/themed", label: "Themed" },
+  { href: "/browser", label: "Browser" },
+];
 
 export default function RootLayout({
   children,
@@ -14,27 +35,37 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="m-0 bg-slate-50 text-slate-900 antialiased">
-        <header className="border-b border-slate-200 bg-white px-6 py-4">
-          <nav className="mx-auto flex max-w-5xl items-center gap-4">
-            <a href="/" className="text-lg font-bold text-slate-900 no-underline">
-              @s3-good
-            </a>
-            <a href="/button-demo" className="text-sm text-slate-600 no-underline hover:text-slate-900">
-              Button
-            </a>
-            <a href="/dropzone-demo" className="text-sm text-slate-600 no-underline hover:text-slate-900">
-              Dropzone
-            </a>
-            <a href="/custom-hook" className="text-sm text-slate-600 no-underline hover:text-slate-900">
-              Custom Hook
-            </a>
-            <a href="/themed" className="text-sm text-slate-600 no-underline hover:text-slate-900">
-              Themed
-            </a>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-background font-[family-name:var(--font-geist-sans)] text-foreground antialiased`}
+      >
+        <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-sm">
+          <nav className="mx-auto flex h-14 max-w-5xl items-center gap-6 px-6">
+            <Link
+              href="/"
+              className="flex items-center gap-2 text-sm font-semibold tracking-tight text-foreground no-underline"
+            >
+              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-foreground text-[10px] font-bold text-background">
+                S3
+              </span>
+              s3-good
+            </Link>
+            <div className="hidden items-center gap-1 sm:flex">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="rounded-md px-3 py-1.5 text-sm text-muted-foreground no-underline transition-colors hover:bg-accent hover:text-foreground"
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
           </nav>
         </header>
-        <main className="mx-auto w-full max-w-4xl px-6 py-10">{children}</main>
+        <main className="mx-auto w-full max-w-5xl px-6 py-10">
+          {children}
+        </main>
+        <Toaster richColors closeButton />
       </body>
     </html>
   );
