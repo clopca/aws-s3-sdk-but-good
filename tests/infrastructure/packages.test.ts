@@ -20,6 +20,7 @@ describe("Publish Readiness (Task 18)", () => {
     { name: "core", scope: "@s3-good/core" },
     { name: "react", scope: "@s3-good/react" },
     { name: "shared", scope: "@s3-good/shared" },
+    { name: "browser", scope: "@s3-good/browser" },
   ] as const;
 
   describe("All packages have publishConfig", () => {
@@ -50,13 +51,27 @@ describe("Publish Readiness (Task 18)", () => {
     for (const pkg of packages) {
       it(`${pkg.scope} exports all have import and types fields`, () => {
         const pkgJson = readJson(`packages/${pkg.name}/package.json`);
-        const exports = pkgJson.exports as Record<string, Record<string, string>>;
+        const exports = pkgJson.exports as Record<
+          string,
+          Record<string, string>
+        >;
 
         expect(exports).toBeDefined();
         for (const [entryPoint, config] of Object.entries(exports)) {
-          expect(config.import, `${pkg.scope} ${entryPoint} should have "import" field`).toBeDefined();
+          // CSS exports are plain strings (e.g. "./styles.css": "./dist/styles.css")
+          if (typeof config === "string") {
+            expect(config).toMatch(/\.css$/);
+            continue;
+          }
+          expect(
+            config.import,
+            `${pkg.scope} ${entryPoint} should have "import" field`,
+          ).toBeDefined();
           expect(config.import).toMatch(/\.js$/);
-          expect(config.types, `${pkg.scope} ${entryPoint} should have "types" field`).toBeDefined();
+          expect(
+            config.types,
+            `${pkg.scope} ${entryPoint} should have "types" field`,
+          ).toBeDefined();
           expect(config.types).toMatch(/\.d\.ts$/);
         }
       });
@@ -142,13 +157,13 @@ describe("Package Scaffolds (Tasks 03-05)", () => {
 
     it("each export has a types field for TypeScript support", () => {
       const pkg = readJson("packages/core/package.json");
-      const exports = pkg.exports as Record<
-        string,
-        Record<string, string>
-      >;
+      const exports = pkg.exports as Record<string, Record<string, string>>;
 
       for (const [entryPoint, config] of Object.entries(exports)) {
-        expect(config.types, `${entryPoint} should have a "types" field`).toBeDefined();
+        expect(
+          config.types,
+          `${entryPoint} should have a "types" field`,
+        ).toBeDefined();
         expect(config.types).toMatch(/\.d\.ts$/);
       }
     });
@@ -175,7 +190,10 @@ describe("Package Scaffolds (Tasks 03-05)", () => {
     it("test_hono_is_optional_peer_dep", () => {
       const pkg = readJson("packages/core/package.json");
       const peerDeps = pkg.peerDependencies as Record<string, string>;
-      const peerDepsMeta = pkg.peerDependenciesMeta as Record<string, { optional?: boolean }>;
+      const peerDepsMeta = pkg.peerDependenciesMeta as Record<
+        string,
+        { optional?: boolean }
+      >;
 
       expect(peerDeps.hono).toBeDefined();
       expect(peerDepsMeta.hono).toBeDefined();
@@ -234,7 +252,10 @@ describe("Package Scaffolds (Tasks 03-05)", () => {
         const pkgJson = readJson(`packages/${pkg}/package.json`);
         const scripts = pkgJson.scripts as Record<string, string>;
 
-        expect(scripts.build, `packages/${pkg} should have a build script`).toBeDefined();
+        expect(
+          scripts.build,
+          `packages/${pkg} should have a build script`,
+        ).toBeDefined();
       }
     });
 
@@ -243,7 +264,10 @@ describe("Package Scaffolds (Tasks 03-05)", () => {
         const pkgJson = readJson(`packages/${pkg}/package.json`);
         const scripts = pkgJson.scripts as Record<string, string>;
 
-        expect(scripts.typecheck, `packages/${pkg} should have a typecheck script`).toBeDefined();
+        expect(
+          scripts.typecheck,
+          `packages/${pkg} should have a typecheck script`,
+        ).toBeDefined();
       }
     });
   });
