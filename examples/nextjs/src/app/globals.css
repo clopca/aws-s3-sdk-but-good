@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 @source "../../../../packages/react/src/components/**/*.{ts,tsx}";
+@source "../../../../packages/browser/src/**/*.{ts,tsx}";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -63,7 +64,7 @@
   --accent: oklch(0.967 0.001 286.375);
   --accent-foreground: oklch(0.205 0.006 285.885);
   --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(0.922 0.004 286.032);
   --input: oklch(0.922 0.004 286.032);
   --ring: oklch(0.87 0.006 286.286);
@@ -98,7 +99,7 @@
   --accent: oklch(0.269 0.006 286.033);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(0.269 0.006 286.033);
   --input: oklch(0.269 0.006 286.033);
   --ring: oklch(0.369 0.007 285.885);
