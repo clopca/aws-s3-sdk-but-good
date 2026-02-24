@@ -35,10 +35,17 @@ export interface S3BrowserProps {
     onUploadError?: (error: Error) => void;
   };
   children?: (ctx: S3BrowserRenderContext) => ReactNode;
+  /**
+   * Optional virtualization controls for large directories.
+   * Keep disabled for small folders and enable where item counts are high.
+   */
   virtualization?: Partial<{
     grid: FileGridVirtualizationOptions;
     list: FileListVirtualizationOptions;
   }>;
+  /**
+   * Optional style slots to integrate with host app theming.
+   */
   appearance?: Partial<{
     container: string;
     header: string;

@@ -82,10 +82,17 @@ Use `appearance` to style specific areas without replacing behavior:
     container: "rounded-3xl",
     toolbar: "bg-muted/30",
     grid: "p-2",
+    loadMoreButton: "min-w-40",
     error: "text-sm",
   }}
 />
 ```
+
+Notable slots include `grid`, `list`, `loadMoreContainer`, `loadMoreButton`, and dialog slots.
+
+## Pagination
+
+When the backend returns truncated list results, the browser shows a `Load more` control and requests the next page with the continuation token.
 
 ## Main Exports
 
