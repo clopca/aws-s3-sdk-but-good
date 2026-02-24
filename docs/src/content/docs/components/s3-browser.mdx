@@ -1,0 +1,363 @@
+---
+title: S3 Browser
+description: A full-featured file browser component for S3 buckets.
+---
+
+import { Aside, Tabs, TabItem } from "@astrojs/starlight/components";
+
+The `S3Browser` component is a drop-in file browser for your S3 buckets. It provides grid and list views, file previews, search, folder navigation, multi-select, uploads, and keyboard shortcuts — all wired up and ready to go.
+
+## Installation
+
+<Tabs>
+  <TabItem label="pnpm">
+    ```bash
+    pnpm add @s3-good/browser
+    ```
+  </TabItem>
+  <TabItem label="npm">
+    ```bash
+    npm install @s3-good/browser
+    ```
+  </TabItem>
+  <TabItem label="yarn">
+    ```bash
+    yarn add @s3-good/browser
+    ```
+  </TabItem>
+</Tabs>
+
+## Quick start
+
+```tsx title="app/files/page.tsx"
+"use client";
+
+import { S3Browser } from "@s3-good/browser";
+import "@s3-good/browser/styles.css";
+
+export default function FilesPage() {
+  return (
+    <S3Browser
+      url="/api/browser"
+      onNotify={(n) => console.log(n.type, n.message)}
+    />
+  );
+}
+```
+
+That's it — the component fetches files from your browser API route and renders a fully interactive file manager.
+
+<Aside type="tip">
+  You need a server-side browser route to back this component. See [Browser Routes](/server/browser/) for setup instructions.
+</Aside>
+
+## Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `url` | `string` | `"/api/browser"` | API endpoint for browser actions |
+| `headers` | `HeadersInit \| (() => HeadersInit \| Promise<HeadersInit>)` | — | Custom headers sent with every request |
+| `config` | `BrowserConfig` | — | Client-side configuration (buckets, root prefix, defaults) |
+| `className` | `string` | — | CSS class for the outer container |
+| `onNotify` | `(notification: S3BrowserNotification) => void` | — | Callback for toast notifications |
+| `upload` | `object` | — | Upload configuration (see [Upload integration](#upload-integration)) |
+| `children` | `(ctx: S3BrowserRenderContext) => ReactNode` | — | Render prop for custom layouts (see [Headless Browser](/components/headless-browser/)) |
+| `pagination` | `S3BrowserPaginationOptions` | — | Pagination mode and infinite scroll settings |
+| `virtualization` | `{ grid?, list? }` | — | Virtualization options for large directories |
+| `appearance` | `object` | — | CSS class overrides per slot (see [Theming](#theming)) |
+
+### BrowserConfig
+
+Pass `config` to control client-side defaults:
+
+```tsx
+<S3Browser
+  url="/api/browser"
+  config={{
+    buckets: ["media", "documents"],
+    defaultBucket: "media",
+    rootPrefix: "uploads/",
+    defaultView: "grid",
+    defaultSort: { field: "lastModified", direction: "desc" },
+    pageSize: 50,
+  }}
+/>
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `url` | `string` | — | API endpoint (overridden by the top-level `url` prop) |
+| `buckets` | `string[]` | — | Allowed bucket names |
+| `defaultBucket` | `string` | — | Initially active bucket |
+| `defaultView` | `"grid" \| "list"` | `"grid"` | Initial view mode |
+| `defaultSort` | `SortConfig` | `{ field: "name", direction: "asc" }` | Initial sort order |
+| `showHidden` | `boolean` | `false` | Show dot-prefixed files and folders |
+| `pageSize` | `number` | — | Client-side page size hint |
+| `rootPrefix` | `string` | — | Lock navigation to a prefix (e.g. `"uploads/"`) |
+
+## Server setup
+
+The `S3Browser` component talks to a server-side route handler. Set one up with `createBrowserRouteHandler`:
+
+```ts title="app/api/browser/route.ts"
+import { createBrowser, createBrowserRouteHandler } from "@s3-good/core/server";
+
+const browser = createBrowser().rootPrefix("uploads/");
+
+export const { GET, POST } = createBrowserRouteHandler({
+  browser,
+  config: {
+    region: process.env.AWS_REGION!,
+    bucket: process.env.AWS_BUCKET!,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+});
+```
+
+See [Browser Routes](/server/browser/) for multi-bucket configuration and search options.
+
+## Features
+
+### Grid and list views
+
+Toggle between a thumbnail grid and a detailed list. The toolbar provides a view mode switcher, and the active mode persists across navigations.
+
+```tsx
+<S3Browser
+  url="/api/browser"
+  config={{ defaultView: "list" }}
+/>
+```
+
+### Search and sort
+
+The built-in search bar filters files by name with debounced input. Sorting is available by name, size, and last modified date — click column headers in list view or use the toolbar dropdown.
+
+### File previews
+
+Double-click any file to open a full-screen preview modal. Supported preview types:
+
+| Type | Extensions |
+|------|-----------|
+| Image | `.jpg`, `.png`, `.gif`, `.webp`, `.svg`, `.avif` |
+| Video | `.mp4`, `.webm`, `.mov` |
+| Audio | `.mp3`, `.wav`, `.ogg`, `.m4a` |
+| PDF | `.pdf` |
+| Code | `.js`, `.ts`, `.py`, `.go`, `.rs`, `.html`, `.css`, and more |
+| Text | `.txt`, `.md`, `.log` |
+| CSV | `.csv` |
+| JSON | `.json` |
+
+Navigate between files with arrow keys or the prev/next buttons in the modal.
+
+### Folder navigation
+
+Click a folder to navigate into it. Breadcrumbs at the top show the current path and let you jump to any parent. The browser maintains a navigation history — use `goBack()` and `goForward()` programmatically.
+
+### Multi-select
+
+Select files and folders with standard desktop conventions:
+
+- **Click** — select a single item
+- **Ctrl/⌘ + Click** — toggle an item in the selection
+- **Shift + Click** — select a range of items
+
+The selection bar appears at the bottom showing the count and bulk actions (delete).
+
+### Context menu
+
+Right-click any item to open a context menu with:
+
+- **Open** — open folder or preview file
+- **Rename** — rename the item (opens a dialog)
+- **Download** — download the file (files only)
+- **Delete** — delete the item (with confirmation)
+
+### Keyboard shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Delete` / `Backspace` | Delete selected items |
+| `F2` | Rename selected item (single selection) |
+| `Ctrl/⌘ + A` | Select all items |
+| `Escape` | Clear selection |
+
+<Aside>
+  Keyboard shortcuts are disabled when an input or textarea is focused.
+</Aside>
+
+### Drag-and-drop upload
+
+When upload is configured, you can drag files directly onto the browser to upload them to the current folder.
+
+## Upload integration
+
+Wire up file uploads by passing the `upload` prop:
+
+### Using a FileRouter endpoint
+
+```tsx
+<S3Browser
+  url="/api/browser"
+  upload={{
+    endpoint: "fileUploader",
+    url: "/api/upload",
+    accept: "image/*,application/pdf",
+    multiple: true,
+    label: "Upload files",
+    onUploadComplete: () => console.log("Done!"),
+    onUploadError: (err) => console.error(err),
+  }}
+/>
+```
+
+### Using a custom upload handler
+
+```tsx
+<S3Browser
+  url="/api/browser"
+  upload={{
+    onUploadFiles: async (files, ctx) => {
+      const formData = new FormData();
+      files.forEach((f) => formData.append("files", f));
+      formData.append("path", ctx.currentPath);
+      await fetch("/api/custom-upload", { method: "POST", body: formData });
+    },
+    accept: "*/*",
+    multiple: true,
+  }}
+/>
+```
+
+### Upload prop reference
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `endpoint` | `string` | FileRouter endpoint name |
+| `url` | `string` | Upload API URL (for FileRouter mode) |
+| `input` | `unknown \| ((ctx) => unknown)` | Input data for the FileRouter endpoint |
+| `headers` | `HeadersInit \| (() => HeadersInit \| Promise<HeadersInit>)` | Custom headers for upload requests |
+| `accept` | `string` | Accepted file types (e.g. `"image/*"`) |
+| `multiple` | `boolean` | Allow multiple file selection |
+| `label` | `string` | Upload button label |
+| `onUploadFiles` | `(files: File[], ctx) => void \| Promise<void>` | Custom upload handler (overrides `endpoint`) |
+| `onUploadComplete` | `() => void` | Called after successful upload |
+| `onUploadError` | `(error: Error) => void` | Called on upload failure |
+
+## Pagination
+
+Control how additional pages of results are loaded:
+
+```tsx
+// Manual "Load more" button (default)
+<S3Browser url="/api/browser" pagination={{ mode: "manual" }} />
+
+// Infinite scroll
+<S3Browser
+  url="/api/browser"
+  pagination={{
+    mode: "infinite",
+    rootMargin: "200px 0px",
+    threshold: 0,
+  }}
+/>
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `mode` | `"manual" \| "infinite"` | `"manual"` | Pagination strategy |
+| `rootMargin` | `string` | `"200px 0px"` | IntersectionObserver root margin (infinite mode) |
+| `threshold` | `number` | `0` | IntersectionObserver threshold (infinite mode) |
+
+## Toast notifications
+
+The `onNotify` callback fires after create, rename, and delete operations. Use it to wire up your app's toast system:
+
+```tsx
+import { toast } from "sonner";
+
+<S3Browser
+  url="/api/browser"
+  onNotify={(notification) => {
+    if (notification.type === "error") {
+      toast.error(notification.message);
+    } else {
+      toast.success(notification.message);
+    }
+  }}
+/>
+```
+
+The `S3BrowserNotification` type:
+
+```typescript
+interface S3BrowserNotification {
+  type: "success" | "error" | "info";
+  message: string;
+}
+```
+
+## Theming
+
+### Styles setup
+
+`@s3-good/browser` is Tailwind v4-first, just like `@s3-good/react`.
+
+If your app uses Tailwind v4, add the package as a source:
+
+```css title="src/app/globals.css"
+@import "tailwindcss";
+@source "../node_modules/@s3-good/browser/dist/**/*.{js,mjs}";
+```
+
+If your app does **not** use Tailwind, import the prebuilt stylesheet:
+
+```tsx
+import "@s3-good/browser/styles.css";
+```
+
+### Appearance slots
+
+Pass CSS class names to individual slots via the `appearance` prop:
+
+```tsx
+<S3Browser
+  url="/api/browser"
+  appearance={{
+    container: "max-w-5xl mx-auto",
+    toolbar: "bg-gray-50 rounded-lg p-2",
+    grid: "gap-3",
+    list: "divide-y",
+    searchBar: "max-w-xs",
+  }}
+/>
+```
+
+| Slot | Description |
+|------|-------------|
+| `container` | Outer wrapper |
+| `header` | Breadcrumbs + search row |
+| `searchBar` | Search input |
+| `toolbar` | Toolbar row (view toggle, sort, actions) |
+| `grid` | Grid view container |
+| `list` | List view container |
+| `loadMoreContainer` | Load more button wrapper |
+| `loadMoreButton` | Load more button |
+| `selectionBar` | Bottom selection bar |
+| `createFolderDialog` | Create folder dialog |
+| `renameDialog` | Rename dialog |
+| `confirmDialog` | Confirm delete dialog |
+| `error` | Error alert |
+
+### Dark mode
+
+The component uses CSS custom properties (`--border`, `--card`, `--card-foreground`, `--destructive`, etc.) that follow your app's color scheme. If you use a standard dark mode setup with Tailwind or CSS variables, the browser adapts automatically.
+
+## Accessibility
+
+- All dialogs trap focus and are dismissible with `Escape`
+- Keyboard shortcuts respect input focus (disabled inside text fields)
+- Error messages use `role="alert"` and `aria-live="assertive"`
+- The load-more sentinel has an `aria-label` for screen readers
+- Context menus are keyboard-navigable

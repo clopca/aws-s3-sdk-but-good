@@ -1,0 +1,328 @@
+---
+title: Headless Browser
+description: Build custom file browser UIs using the headless hooks and primitives.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+The `@s3-good/browser` package exposes all of its internal hooks and components individually, so you can build a completely custom file browser UI while reusing the data-fetching, state management, and S3 integration logic.
+
+## Two approaches
+
+### Render prop on S3Browser
+
+The simplest way to customize the layout is the `children` render prop on `S3Browser`. You get the full render context — browser state, search, breadcrumbs, dialogs, upload — and return your own JSX:
+
+```tsx
+import { S3Browser } from "@s3-good/browser";
+import "@s3-good/browser/styles.css";
+
+function CustomBrowser() {
+  return (
+    <S3Browser url="/api/browser">
+      {(ctx) => (
+        <div className="flex flex-col gap-4">
+          <header className="flex items-center justify-between">
+            <h2>Files in: {ctx.browser.currentPath || "/"}</h2>
+            <span>{ctx.browser.items.length} items</span>
+          </header>
+
+          {ctx.browser.items.map((item) => (
+            <div
+              key={item.key}
+              onClick={() => ctx.openPreview(item)}
+              className="cursor-pointer p-2 hover:bg-gray-100 rounded"
+            >
+              {item.kind === "folder" ? "📁" : "📄"} {item.name}
+            </div>
+          ))}
+        </div>
+      )}
+    </S3Browser>
+  );
+}
+```
+
+The render context (`S3BrowserRenderContext`) gives you everything the default UI uses:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `browser` | `UseBrowserReturn` | Full browser state and actions |
+| `breadcrumbs` | `BreadcrumbSegment[]` | Path segments for navigation |
+| `search` | `UseSearchReturn` | Search input state and handlers |
+| `files` | `BrowserFile[]` | Files only (folders filtered out) |
+| `previewFile` | `BrowserFile \| null` | Currently previewed file |
+| `previewUrl` | `string \| null` | Signed URL for the preview |
+| `previewLoading` | `boolean` | Whether the preview URL is loading |
+| `canUpload` | `boolean` | Whether upload is configured |
+| `isUploading` | `boolean` | Whether an upload is in progress |
+| `confirmDeleteOpen` | `boolean` | Delete confirmation dialog state |
+| `createFolderOpen` | `boolean` | Create folder dialog state |
+| `renameTarget` | `BrowserItem \| null` | Item being renamed |
+| `openPreview` | `(item) => Promise<void>` | Open a file preview or navigate into a folder |
+| `navigatePreview` | `(offset) => Promise<void>` | Navigate between previews |
+| `handleUploadFiles` | `(files) => Promise<void>` | Upload files to the current folder |
+| `getContextMenuItems` | `(item) => ContextMenuItem[]` | Get context menu items for an item |
+| `clearPreview` | `() => void` | Close the preview modal |
+
+### S3BrowserRoot + context
+
+For full control, use `S3BrowserRoot` as a context provider and `useS3BrowserContext` to access the browser state from any descendant:
+
+```tsx
+import {
+  S3BrowserRoot,
+  useS3BrowserContext,
+  Breadcrumbs,
+  FileGrid,
+  SearchBar,
+  useBreadcrumbs,
+  useSearch,
+} from "@s3-good/browser";
+import "@s3-good/browser/styles.css";
+
+function CustomBrowser() {
+  return (
+    <S3BrowserRoot url="/api/browser">
+      <div className="space-y-4 p-4">
+        <CustomToolbar />
+        <CustomFileArea />
+      </div>
+    </S3BrowserRoot>
+  );
+}
+
+function CustomToolbar() {
+  const browser = useS3BrowserContext();
+  const breadcrumbs = useBreadcrumbs(browser.currentPath);
+  const search = useSearch(browser.store);
+
+  return (
+    <div className="flex items-center justify-between">
+      <Breadcrumbs segments={breadcrumbs} onNavigate={browser.navigateTo} />
+      <SearchBar
+        value={search.inputValue}
+        onChange={search.handleChange}
+        onClear={search.clear}
+      />
+    </div>
+  );
+}
+
+function CustomFileArea() {
+  const browser = useS3BrowserContext();
+
+  return (
+    <FileGrid
+      items={browser.items}
+      selectedKeys={browser.selectedKeys}
+      onItemClick={(key, event) => {
+        if (event.ctrlKey || event.metaKey) {
+          browser.toggleSelect(key);
+        } else {
+          browser.deselectAll();
+          browser.select(key);
+        }
+      }}
+      onItemDoubleClick={(item) => {
+        if (item.kind === "folder") {
+          browser.openFolder(item);
+        }
+      }}
+      isLoading={browser.isLoading}
+    />
+  );
+}
+```
+
+<Aside type="caution">
+  `useS3BrowserContext` must be called inside a `<S3BrowserRoot>`. It throws if used outside the provider.
+</Aside>
+
+## S3BrowserRoot with render prop
+
+`S3BrowserRoot` also accepts a render prop, which is useful when you don't need the context pattern:
+
+```tsx
+<S3BrowserRoot url="/api/browser" config={{ rootPrefix: "uploads/" }}>
+  {(browser) => (
+    <div>
+      <p>Path: {browser.currentPath}</p>
+      <p>Items: {browser.items.length}</p>
+      <button onClick={() => browser.refresh()}>Refresh</button>
+    </div>
+  )}
+</S3BrowserRoot>
+```
+
+## Custom toolbar example
+
+Build a toolbar that matches your app's design system:
+
+```tsx
+import { useS3BrowserContext } from "@s3-good/browser";
+
+function MyToolbar() {
+  const browser = useS3BrowserContext();
+
+  return (
+    <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+      <button
+        onClick={() => browser.setViewMode("grid")}
+        className={browser.viewMode === "grid" ? "font-bold" : ""}
+      >
+        Grid
+      </button>
+      <button
+        onClick={() => browser.setViewMode("list")}
+        className={browser.viewMode === "list" ? "font-bold" : ""}
+      >
+        List
+      </button>
+
+      <div className="ml-auto flex items-center gap-2">
+        <select
+          value={browser.sort.field}
+          onChange={(e) => browser.setSort(e.target.value as "name" | "size" | "lastModified")}
+        >
+          <option value="name">Name</option>
+          <option value="size">Size</option>
+          <option value="lastModified">Date</option>
+        </select>
+
+        <button onClick={() => browser.refresh()}>↻ Refresh</button>
+      </div>
+    </div>
+  );
+}
+```
+
+## Custom file item rendering
+
+Use the raw `items` array to render files however you want:
+
+```tsx
+import { useS3BrowserContext, FileIcon, FolderIcon } from "@s3-good/browser";
+
+function CustomFileList() {
+  const browser = useS3BrowserContext();
+
+  if (browser.isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (browser.items.length === 0) {
+    return <div className="text-center text-gray-500 py-8">No files here</div>;
+  }
+
+  return (
+    <ul className="divide-y">
+      {browser.items.map((item) => (
+        <li
+          key={item.key}
+          className={`flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50 ${
+            browser.selectedKeys.has(item.key) ? "bg-blue-50" : ""
+          }`}
+          onClick={() => {
+            browser.deselectAll();
+            browser.select(item.key);
+          }}
+          onDoubleClick={() => {
+            if (item.kind === "folder") {
+              browser.openFolder(item);
+            }
+          }}
+        >
+          {item.kind === "folder" ? <FolderIcon /> : <FileIcon />}
+          <span className="flex-1 truncate">{item.name}</span>
+          {item.kind === "file" && (
+            <span className="text-sm text-gray-500">
+              {(item.size / 1024).toFixed(1)} KB
+            </span>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+## Combining with your own UI library
+
+Since the hooks return plain state and callbacks, you can use any UI library:
+
+```tsx
+import { useBrowser, useBreadcrumbs, useSearch } from "@s3-good/browser";
+import { Table, Button, Breadcrumb, Input } from "your-ui-library";
+
+function MyFileBrowser() {
+  const browser = useBrowser({ url: "/api/browser" });
+  const breadcrumbs = useBreadcrumbs(browser.currentPath);
+  const search = useSearch(browser.store);
+
+  return (
+    <div>
+      <Breadcrumb>
+        {breadcrumbs.map((segment) => (
+          <Breadcrumb.Item
+            key={segment.path}
+            onClick={() => browser.navigateTo(segment.path)}
+          >
+            {segment.label}
+          </Breadcrumb.Item>
+        ))}
+      </Breadcrumb>
+
+      <Input
+        placeholder="Search files..."
+        value={search.inputValue}
+        onChange={(e) => search.handleChange(e.target.value)}
+      />
+
+      <Table
+        data={browser.items}
+        columns={[
+          { key: "name", title: "Name" },
+          {
+            key: "size",
+            title: "Size",
+            render: (item) =>
+              item.kind === "file" ? `${(item.size / 1024).toFixed(1)} KB` : "—",
+          },
+        ]}
+        onRowClick={(item) => {
+          if (item.kind === "folder") browser.openFolder(item);
+        }}
+        loading={browser.isLoading}
+      />
+
+      {browser.hasMore && (
+        <Button onClick={() => browser.loadMore()}>Load more</Button>
+      )}
+    </div>
+  );
+}
+```
+
+## Pre-configured helpers
+
+Use `generateBrowserHelpers` to create a `useBrowser` hook with baked-in configuration:
+
+```tsx title="lib/browser.ts"
+import { generateBrowserHelpers } from "@s3-good/browser";
+
+export const { useBrowser } = generateBrowserHelpers({
+  url: "/api/browser",
+  headers: () => ({ Authorization: `Bearer ${getToken()}` }),
+});
+```
+
+```tsx title="components/my-browser.tsx"
+import { useBrowser } from "~/lib/browser";
+
+function MyBrowser() {
+  const browser = useBrowser();
+  // browser is fully configured — no need to pass url/headers
+  return <div>{browser.items.length} files</div>;
+}
+```

@@ -1,0 +1,597 @@
+---
+title: "@s3-good/browser"
+description: API reference for the @s3-good/browser package.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Complete API reference for the `@s3-good/browser` package. This package provides a full-featured S3 file browser with React components, hooks, and a client-side API layer.
+
+## Components
+
+### S3Browser
+
+The all-in-one file browser component. Renders a toolbar, file grid/list, search, breadcrumbs, dialogs, and preview modal.
+
+```typescript
+import { S3Browser } from "@s3-good/browser";
+```
+
+**Props:** `S3BrowserProps`
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `url` | `string` | `"/api/browser"` | API endpoint URL |
+| `headers` | `HeadersInit \| (() => HeadersInit \| Promise<HeadersInit>)` | — | Custom request headers |
+| `config` | `BrowserConfig` | — | Client-side configuration |
+| `className` | `string` | — | CSS class for the container |
+| `onNotify` | `(notification: S3BrowserNotification) => void` | — | Toast notification callback |
+| `upload` | `object` | — | Upload configuration |
+| `children` | `(ctx: S3BrowserRenderContext) => ReactNode` | — | Render prop for custom layouts |
+| `pagination` | `S3BrowserPaginationOptions` | — | Pagination settings |
+| `virtualization` | `{ grid?, list? }` | — | Virtualization options |
+| `appearance` | `object` | — | CSS class overrides per slot |
+
+See [S3 Browser docs](/components/s3-browser/) for full documentation.
+
+---
+
+### S3BrowserRoot
+
+A headless context provider that runs `useBrowser` and exposes the result via React context. Use this to build custom browser UIs.
+
+```typescript
+import { S3BrowserRoot, useS3BrowserContext } from "@s3-good/browser";
+```
+
+**Props:** `S3BrowserRootProps`
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `url` | `string` | API endpoint URL |
+| `headers` | `HeadersInit \| (() => HeadersInit \| Promise<HeadersInit>)` | Custom request headers |
+| `config` | `BrowserConfig` | Client-side configuration |
+| `children` | `ReactNode \| ((browser: UseBrowserReturn) => ReactNode)` | Children or render prop |
+
+See [Headless Browser docs](/components/headless-browser/) for usage patterns.
+
+---
+
+### Breadcrumbs
+
+Renders the current path as clickable breadcrumb segments.
+
+```typescript
+import { Breadcrumbs } from "@s3-good/browser";
+```
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `segments` | `BreadcrumbSegment[]` | Array of `{ label, path }` objects |
+| `onNavigate` | `(path: string) => void` | Called when a segment is clicked |
+
+---
+
+### Toolbar
+
+Renders the action bar with view mode toggle, sort controls, bucket selector, create folder, delete, upload, and refresh buttons.
+
+```typescript
+import { Toolbar } from "@s3-good/browser";
+```
+
+---
+
+### SearchBar
+
+A search input with clear button, designed for the browser header.
+
+```typescript
+import { SearchBar } from "@s3-good/browser";
+```
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `value` | `string` | Current input value |
+| `onChange` | `(value: string) => void` | Input change handler |
+| `onClear` | `() => void` | Clear button handler |
+| `className` | `string` | CSS class override |
+
+---
+
+### FileGrid
+
+Renders items in a responsive thumbnail grid. Supports virtualization for large directories.
+
+```typescript
+import { FileGrid } from "@s3-good/browser";
+```
+
+---
+
+### FileListView
+
+Renders items in a sortable table with columns for name, size, and last modified. Supports virtualization.
+
+```typescript
+import { FileListView } from "@s3-good/browser";
+```
+
+---
+
+### FileItem
+
+Renders a single file or folder item with icon, name, size, and selection state.
+
+```typescript
+import { FileItem } from "@s3-good/browser";
+```
+
+---
+
+### FileThumbnail
+
+Renders an image thumbnail for a file, loading the preview URL lazily.
+
+```typescript
+import { FileThumbnail } from "@s3-good/browser";
+```
+
+---
+
+### FileIcon / FolderIcon
+
+SVG icons for files and folders.
+
+```typescript
+import { FileIcon, FolderIcon } from "@s3-good/browser";
+```
+
+---
+
+### SelectionBar
+
+A floating bar that appears when items are selected, showing the count and bulk actions.
+
+```typescript
+import { SelectionBar } from "@s3-good/browser";
+```
+
+---
+
+### ContextMenu
+
+A right-click context menu for file/folder actions.
+
+```typescript
+import { ContextMenu } from "@s3-good/browser";
+```
+
+---
+
+### EmptyState
+
+Displayed when a folder has no items.
+
+```typescript
+import { EmptyState } from "@s3-good/browser";
+```
+
+---
+
+### PreviewModal
+
+A full-screen modal for previewing files with prev/next navigation and download.
+
+```typescript
+import { PreviewModal } from "@s3-good/browser";
+```
+
+---
+
+### Skeleton / FileGridSkeleton / FileListSkeleton
+
+Loading skeletons for the grid and list views.
+
+```typescript
+import { Skeleton, FileGridSkeleton, FileListSkeleton } from "@s3-good/browser";
+```
+
+---
+
+### Dialogs
+
+Pre-built dialogs for browser actions.
+
+```typescript
+import { ConfirmDialog, CreateFolderDialog, RenameDialog } from "@s3-good/browser";
+```
+
+| Component | Purpose |
+|-----------|---------|
+| `ConfirmDialog` | Confirmation prompt (used for delete) |
+| `CreateFolderDialog` | Text input dialog for new folder names |
+| `RenameDialog` | Text input dialog for renaming items |
+
+---
+
+### UI primitives
+
+Low-level UI components used internally. Available for custom browser layouts.
+
+```typescript
+import { Button, Input, Dialog, Select, ContextMenu as ContextMenuPrimitive } from "@s3-good/browser";
+```
+
+---
+
+## Hooks
+
+### useBrowser
+
+The core hook that manages all browser state — navigation, selection, sorting, search, and CRUD operations.
+
+```typescript
+import { useBrowser } from "@s3-good/browser";
+
+function useBrowser(options?: UseBrowserOptions): UseBrowserReturn
+```
+
+**Options:** `UseBrowserOptions`
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `url` | `string` | API endpoint URL |
+| `headers` | `HeadersInit \| (() => HeadersInit \| Promise<HeadersInit>)` | Custom request headers |
+| `config` | `BrowserConfig` | Client-side configuration |
+
+**Returns:** `UseBrowserReturn`
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `availableBuckets` | `string[]` | Buckets available for selection |
+| `activeBucket` | `string` | Currently active bucket |
+| `currentPath` | `string` | Current folder path |
+| `items` | `BrowserItem[]` | Sorted items in the current folder |
+| `selectedKeys` | `Set<string>` | Keys of selected items |
+| `viewMode` | `ViewMode` | `"grid"` or `"list"` |
+| `sort` | `SortConfig` | Current sort field and direction |
+| `searchQuery` | `string` | Active search query |
+| `filters` | `BrowserListFilters` | Active filters |
+| `isLoading` | `boolean` | Whether a request is in flight |
+| `error` | `string \| null` | Current error message |
+| `hasMore` | `boolean` | Whether more pages are available |
+| `previewItem` | `BrowserItem \| null` | Item being previewed |
+| `navigateTo` | `(path: string) => void` | Navigate to a path |
+| `openFolder` | `(item: BrowserItem) => void` | Open a folder item |
+| `goBack` | `() => void` | Navigate back in history |
+| `goForward` | `() => void` | Navigate forward in history |
+| `goUp` | `() => void` | Navigate to parent folder |
+| `select` | `(key: string) => void` | Select an item |
+| `deselect` | `(key: string) => void` | Deselect an item |
+| `toggleSelect` | `(key: string) => void` | Toggle item selection |
+| `selectAll` | `() => void` | Select all items |
+| `deselectAll` | `() => void` | Clear selection |
+| `selectRange` | `(fromKey: string, toKey: string) => void` | Select a range |
+| `setViewMode` | `(mode: ViewMode) => void` | Change view mode |
+| `setSort` | `(field: SortField, direction?: SortDirection) => void` | Change sort |
+| `setSearchQuery` | `(query: string) => void` | Set search query |
+| `setFilters` | `(filters: BrowserListFilters) => void` | Set filters |
+| `setActiveBucket` | `(bucket: string) => void` | Switch bucket |
+| `refresh` | `() => Promise<void>` | Reload current folder |
+| `loadMore` | `() => Promise<void>` | Load next page |
+| `deleteSelected` | `() => Promise<void>` | Delete selected items |
+| `renameItem` | `(key: string, newName: string) => Promise<void>` | Rename an item |
+| `moveItem` | `(key: string, destination: string) => Promise<void>` | Move an item |
+| `copyItem` | `(key: string, destination: string) => Promise<void>` | Copy an item |
+| `createFolder` | `(name: string) => Promise<void>` | Create a folder |
+| `downloadFile` | `(key: string) => Promise<void>` | Download a file |
+| `setPreviewItem` | `(item: BrowserItem \| null) => void` | Set preview item |
+| `store` | `BrowserStore` | Underlying store instance |
+| `client` | `BrowserClient` | Underlying API client |
+
+---
+
+### useSearch
+
+Debounced search hook that syncs an input value with the browser store's search query.
+
+```typescript
+import { useSearch } from "@s3-good/browser";
+
+function useSearch(store: BrowserStore, debounceMs?: number): UseSearchReturn
+```
+
+**Returns:** `UseSearchReturn`
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `searchQuery` | `string` | Current committed search query |
+| `inputValue` | `string` | Current input value (may differ during debounce) |
+| `handleChange` | `(value: string) => void` | Input change handler |
+| `clear` | `() => void` | Clear the search |
+
+---
+
+### useBreadcrumbs
+
+Computes breadcrumb segments from a path string.
+
+```typescript
+import { useBreadcrumbs } from "@s3-good/browser";
+
+function useBreadcrumbs(currentPath: string, rootPrefix?: string): BreadcrumbSegment[]
+```
+
+**Returns:** `BreadcrumbSegment[]`
+
+```typescript
+interface BreadcrumbSegment {
+  label: string;  // Display name ("Root", "uploads", "images")
+  path: string;   // Full path for navigation
+}
+```
+
+---
+
+### useKeyboardShortcuts
+
+Registers global keyboard shortcuts for the browser (Delete, F2, Ctrl+A, Escape).
+
+```typescript
+import { useKeyboardShortcuts } from "@s3-good/browser";
+
+function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
+```
+
+**Options:** `UseKeyboardShortcutsOptions`
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `selectedCount` | `number` | Number of selected items |
+| `onDelete` | `() => void` | Delete handler |
+| `onRename` | `() => void` | Rename handler (fires only when `selectedCount === 1`) |
+| `onSelectAll` | `() => void` | Select all handler |
+| `onDeselectAll` | `() => void` | Deselect all handler |
+
+---
+
+### useFileSelection
+
+Manages item selection with Ctrl/Shift click support.
+
+```typescript
+import { useFileSelection } from "@s3-good/browser";
+
+function useFileSelection(store: BrowserStore): {
+  selectedKeys: Set<string>;
+  selectedCount: number;
+  isSelected: (key: string) => boolean;
+  handleClick: (key: string, event: SelectionClickEvent) => void;
+  selectAll: () => void;
+  deselectAll: () => void;
+}
+```
+
+---
+
+### useFilePreview
+
+Manages file preview state — opening, closing, and navigating between previews.
+
+```typescript
+import { useFilePreview } from "@s3-good/browser";
+
+function useFilePreview(
+  store: BrowserStore,
+  client: BrowserClient,
+  activeBucket?: string,
+): {
+  previewItem: BrowserItem | null;
+  previewUrl: string | null;
+  isLoadingPreview: boolean;
+  previewType: PreviewType | null;
+  openPreview: (item: BrowserItem) => Promise<void>;
+  closePreview: () => void;
+  navigatePreview: (direction: "prev" | "next") => Promise<void>;
+}
+```
+
+---
+
+## Client
+
+### createBrowserClient
+
+Creates an API client for communicating with the browser route handler.
+
+```typescript
+import { createBrowserClient } from "@s3-good/browser";
+
+function createBrowserClient(options?: BrowserClientOptions): BrowserClient
+```
+
+**Options:** `BrowserClientOptions`
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `url` | `string` | API endpoint URL |
+| `headers` | `HeadersInit \| (() => HeadersInit \| Promise<HeadersInit>)` | Custom request headers |
+
+---
+
+## Factories
+
+### generateBrowserHelpers
+
+Creates a pre-configured `useBrowser` hook with baked-in URL and headers.
+
+```typescript
+import { generateBrowserHelpers } from "@s3-good/browser";
+
+const { useBrowser } = generateBrowserHelpers({
+  url: "/api/browser",
+  headers: () => ({ Authorization: `Bearer ${getToken()}` }),
+});
+```
+
+---
+
+## Store
+
+### createBrowserStore
+
+Creates the external store that powers the browser state. Used internally by `useBrowser`.
+
+```typescript
+import { createBrowserStore } from "@s3-good/browser";
+
+function createBrowserStore(initial?: Partial<BrowserState>): BrowserStore
+```
+
+**`BrowserState`**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `currentPath` | `string` | Current folder path |
+| `items` | `BrowserItem[]` | Items in the current folder |
+| `selectedKeys` | `Set<string>` | Selected item keys |
+| `viewMode` | `ViewMode` | `"grid"` or `"list"` |
+| `sort` | `SortConfig` | Sort field and direction |
+| `searchQuery` | `string` | Active search query |
+| `isLoading` | `boolean` | Loading state |
+| `error` | `string \| null` | Error message |
+| `continuationToken` | `string \| undefined` | Pagination token |
+| `hasMore` | `boolean` | More pages available |
+| `previewItem` | `BrowserItem \| null` | Item being previewed |
+| `history` | `string[]` | Navigation history |
+| `historyIndex` | `number` | Current position in history |
+
+---
+
+## Types
+
+### BrowserConfig
+
+```typescript
+interface BrowserConfig {
+  url?: string;
+  buckets?: string[];
+  defaultBucket?: string;
+  defaultView?: ViewMode;
+  defaultSort?: SortConfig;
+  showHidden?: boolean;
+  pageSize?: number;
+  allowedActions?: BrowserAction[];
+  rootPrefix?: string;
+}
+```
+
+### BrowserItem / BrowserFile / BrowserFolder
+
+```typescript
+type BrowserItem = BrowserFile | BrowserFolder;
+
+interface BrowserFile {
+  kind: "file";
+  key: string;
+  name: string;
+  size: number;
+  lastModified: Date;
+  contentType: string;
+  etag?: string;
+}
+
+interface BrowserFolder {
+  kind: "folder";
+  key: string;
+  name: string;
+}
+```
+
+### ViewMode / SortConfig
+
+```typescript
+type ViewMode = "grid" | "list";
+
+type SortField = "name" | "size" | "lastModified";
+type SortDirection = "asc" | "desc";
+
+interface SortConfig {
+  field: SortField;
+  direction: SortDirection;
+}
+```
+
+### S3BrowserNotification
+
+```typescript
+interface S3BrowserNotification {
+  type: "success" | "error" | "info";
+  message: string;
+}
+```
+
+### S3BrowserRenderContext
+
+The object passed to the `children` render prop of `S3Browser`:
+
+```typescript
+interface S3BrowserRenderContext {
+  browser: UseBrowserReturn;
+  breadcrumbs: BreadcrumbSegment[];
+  search: UseSearchReturn;
+  files: BrowserFile[];
+  previewFile: BrowserFile | null;
+  previewIndex: number;
+  previewUrl: string | null;
+  previewLoading: boolean;
+  confirmDeleteOpen: boolean;
+  createFolderOpen: boolean;
+  renameTarget: BrowserItem | null;
+  canUpload: boolean;
+  isUploading: boolean;
+  setConfirmDeleteOpen: (value: boolean) => void;
+  setCreateFolderOpen: (value: boolean) => void;
+  setRenameTarget: (value: BrowserItem | null) => void;
+  handleUploadFiles: (files: File[]) => Promise<void>;
+  openPreview: (item: BrowserItem) => Promise<void>;
+  navigatePreview: (offset: number) => Promise<void>;
+  getContextMenuItems: (item: BrowserItem) => ContextMenuItem[];
+  clearPreview: () => void;
+}
+```
+
+### ListResult
+
+```typescript
+interface ListResult {
+  items: BrowserItem[];
+  hasMore: boolean;
+  nextCursor?: string;
+  continuationToken?: string;
+  meta?: {
+    mode: "s3-list";
+    bucket: string;
+    buckets?: string[];
+    defaultBucket?: string;
+  };
+}
+```
+
+### DeleteResult
+
+```typescript
+interface DeleteResult {
+  deleted: string[];
+}
+```
+
+### BrowserClientError
+
+```typescript
+interface BrowserClientError extends Error {
+  status: number;
+  action: string;
+}
+```

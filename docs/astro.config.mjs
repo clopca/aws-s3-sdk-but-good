@@ -28,6 +28,7 @@ export default defineConfig({
             { label: "File Router", slug: "server/file-router" },
             { label: "Next.js", slug: "server/next" },
             { label: "Hono", slug: "server/hono" },
+            { label: "Browser Routes", slug: "server/browser" },
           ],
         },
         {
@@ -45,6 +46,8 @@ export default defineConfig({
             { label: "FilePreview", slug: "components/file-preview" },
             { label: "ProgressBar", slug: "components/progress-bar" },
             { label: "FileList", slug: "components/file-list" },
+            { label: "S3 Browser", slug: "components/s3-browser" },
+            { label: "Headless Browser", slug: "components/headless-browser" },
           ],
         },
         {
@@ -58,6 +61,7 @@ export default defineConfig({
           items: [
             { label: "@s3-good/core", slug: "api/core" },
             { label: "@s3-good/react", slug: "api/react" },
+            { label: "@s3-good/browser", slug: "api/browser" },
           ],
         },
       ],

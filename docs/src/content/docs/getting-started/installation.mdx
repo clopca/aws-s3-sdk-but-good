@@ -8,7 +8,7 @@ import { Tabs, TabItem, Aside, Steps } from "@astrojs/starlight/components";
 ## Prerequisites
 
 - **Node.js** >= 18.0.0
-- **React** >= 18.0.0 (only for `@s3-good/react`)
+- **React** >= 18.0.0 (only for `@s3-good/react` and `@s3-good/browser`)
 - An **AWS S3 bucket** — see the [S3 Setup guide](/getting-started/s3-setup/)
 
 ## Install packages
@@ -55,6 +55,28 @@ Choose the packages that match your project:
   </TabItem>
 </Tabs>
 
+### S3 file browser
+
+To add the full-featured file browser component:
+
+<Tabs>
+  <TabItem label="pnpm">
+    ```bash
+    pnpm add @s3-good/browser
+    ```
+  </TabItem>
+  <TabItem label="npm">
+    ```bash
+    npm install @s3-good/browser
+    ```
+  </TabItem>
+  <TabItem label="yarn">
+    ```bash
+    yarn add @s3-good/browser
+    ```
+  </TabItem>
+</Tabs>
+
 <Aside type="tip">
   `@s3-good/shared` is installed automatically as a dependency of `@s3-good/core` — you don't need to install it separately.
 </Aside>
@@ -66,6 +88,8 @@ Choose the packages that match your project:
 | `@s3-good/core` | `zod` | `>= 3.0.0` |
 | `@s3-good/react` | `react` | `>= 18.0.0` |
 | `@s3-good/react` | `react-dom` | `>= 18.0.0` |
+| `@s3-good/browser` | `react` | `>= 18.0.0` |
+| `@s3-good/browser` | `react-dom` | `>= 18.0.0` |
 
 If your project doesn't already include these, install them:
 
@@ -110,23 +134,26 @@ These values are passed to `createRouteHandler` on the server — see the [Quick
 |---------|---------|-------------|
 | `@s3-good/core` | File router, route handlers, upload client, S3 setup utilities | Server + Client |
 | `@s3-good/react` | `UploadButton`, `UploadDropzone`, `useUpload` hook, and more | Client (React) |
+| `@s3-good/browser` | `S3Browser` file manager, headless hooks, preview components | Client (React) |
 | `@s3-good/shared` | Shared types (`S3Config`, `UploadedFile`, etc.) and error classes | Both |
 
-## Styles (`@s3-good/react`)
+## Styles (`@s3-good/react` and `@s3-good/browser`)
 
-`@s3-good/react` is Tailwind v4-first.
+Both `@s3-good/react` and `@s3-good/browser` are Tailwind v4-first.
 
 - If your app already uses Tailwind v4, include the package components as a source so utility classes are generated:
 
 ```css title="src/app/globals.css"
 @import "tailwindcss";
 @source "../node_modules/@s3-good/react/dist/**/*.{js,mjs}";
+@source "../node_modules/@s3-good/browser/dist/**/*.{js,mjs}";
 ```
 
-- If your app does **not** use Tailwind, import the prebuilt stylesheet:
+- If your app does **not** use Tailwind, import the prebuilt stylesheets:
 
 ```tsx
 import "@s3-good/react/styles.css";
+import "@s3-good/browser/styles.css";
 ```
 
 ### Import paths
