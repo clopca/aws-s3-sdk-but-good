@@ -102,4 +102,52 @@ describe("S3Browser", () => {
       expect(screen.getByRole("button", { name: "Load more" })).toBeTruthy();
     });
   });
+
+  it("requests next page when clicking load more", async () => {
+    fetchMock
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        action: "list",
+        success: true,
+        items: [
+          {
+            kind: "file",
+            key: "a.txt",
+            name: "a.txt",
+            size: 1,
+            contentType: "text/plain",
+            lastModified: "2026-01-01T00:00:00.000Z",
+          },
+        ],
+        isTruncated: true,
+        nextContinuationToken: "next-token",
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        action: "list",
+        success: true,
+        items: [
+          {
+            kind: "file",
+            key: "b.txt",
+            name: "b.txt",
+            size: 2,
+            contentType: "text/plain",
+            lastModified: "2026-01-01T00:00:00.000Z",
+          },
+        ],
+        isTruncated: false,
+      }), { status: 200 }));
+
+    render(<S3Browser url="/api/browser" />);
+
+    const loadMoreButton = await screen.findByRole("button", { name: "Load more" });
+    fireEvent.click(loadMoreButton);
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    const secondBody = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body ?? "{}"));
+    expect(secondBody.action).toBe("list");
+    expect(secondBody.continuationToken).toBe("next-token");
+  });
 });
