@@ -22,7 +22,7 @@ function baseProps(size: number, className?: string) {
   };
 }
 
-export function FolderIcon({ className = "text-amber-500", size = 24 }: FolderIconProps) {
+export function FolderIcon({ className = "text-amber-600 dark:text-amber-400", size = 24 }: FolderIconProps) {
   return (
     <svg {...baseProps(size, className)} aria-hidden="true">
       <path d="M3 6.5A2.5 2.5 0 0 1 5.5 4h4l2 2H18.5A2.5 2.5 0 0 1 21 8.5v8A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5v-10Z" fill="currentColor" />
@@ -32,15 +32,15 @@ export function FolderIcon({ className = "text-amber-500", size = 24 }: FolderIc
 
 export function FileIcon({ type, className, size = 24 }: FileIconProps) {
   const colors: Record<PreviewType, string> = {
-    image: "text-emerald-500",
-    video: "text-rose-500",
-    audio: "text-orange-500",
-    pdf: "text-red-600",
-    code: "text-indigo-500",
-    json: "text-violet-500",
-    csv: "text-lime-600",
-    text: "text-slate-500",
-    unknown: "text-slate-400",
+    image: "text-emerald-600 dark:text-emerald-400",
+    video: "text-rose-600 dark:text-rose-400",
+    audio: "text-amber-600 dark:text-amber-400",
+    pdf: "text-red-600 dark:text-red-400",
+    code: "text-indigo-500 dark:text-indigo-400",
+    json: "text-violet-500 dark:text-violet-400",
+    csv: "text-lime-600 dark:text-lime-400",
+    text: "text-muted-foreground",
+    unknown: "text-muted-foreground/70",
   };
 
   const iconClass = `${colors[type]} ${className ?? ""}`.trim();
