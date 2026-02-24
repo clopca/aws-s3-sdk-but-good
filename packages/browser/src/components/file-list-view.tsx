@@ -10,7 +10,7 @@ export interface FileListViewProps {
   onSort: (field: SortField) => void;
   onItemClick: (key: string, event: React.MouseEvent) => void;
   onItemDoubleClick: (item: BrowserItem) => void;
-  onItemContextMenu: (item: BrowserItem, event: React.MouseEvent) => void;
+  onItemContextMenu: (item: BrowserItem, event: React.SyntheticEvent) => void;
   getContextMenuItems?: (item: BrowserItem) => ContextMenuItem[];
   isLoading: boolean;
   isSearching?: boolean;

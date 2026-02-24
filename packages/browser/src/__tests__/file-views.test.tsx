@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { BrowserItem } from "@s3-good/shared";
 import {
@@ -38,9 +39,30 @@ describe("file views components", () => {
       />,
     );
 
-    const folder = screen.getByText("photos");
+    const folder = screen.getByRole("button", { name: "Folder photos" });
     fireEvent.click(folder);
     expect(onItemClick).toHaveBeenCalled();
+  });
+
+  it("test_FileGrid_supports_keyboard_context_menu_shortcut", () => {
+    const onItemContextMenu = vi.fn();
+
+    const { container } = render(
+      <FileGrid
+        items={items}
+        selectedKeys={new Set([items[0]!.key])}
+        onItemClick={vi.fn()}
+        onItemDoubleClick={vi.fn()}
+        onItemContextMenu={onItemContextMenu}
+        isLoading={false}
+      />,
+    );
+
+    const folder = within(container).getByRole("button", { name: "Folder photos" });
+    fireEvent.keyDown(folder, { key: "F10", shiftKey: true });
+
+    expect(onItemContextMenu).toHaveBeenCalled();
+    expect(folder.getAttribute("aria-pressed")).toBe("true");
   });
 
   it("test_FileListView_renders_headers_and_sort", () => {
@@ -71,11 +93,13 @@ describe("file views components", () => {
     expect(screen.getByText("No files match your search")).toBeTruthy();
   });
 
-  it("test_Toolbar_and_SearchBar_actions", () => {
+  it("test_Toolbar_and_SearchBar_actions", async () => {
+    const user = userEvent.setup();
     const onViewModeChange = vi.fn();
     const onSortChange = vi.fn();
     const onCreateFolder = vi.fn();
     const onDeleteSelected = vi.fn();
+    const onUploadFiles = vi.fn();
     const onRefresh = vi.fn();
     const onSearch = vi.fn();
 
@@ -89,26 +113,33 @@ describe("file views components", () => {
           onSortChange={onSortChange}
           onCreateFolder={onCreateFolder}
           onDeleteSelected={onDeleteSelected}
+          onUploadFiles={onUploadFiles}
           onRefresh={onRefresh}
         />
         <SearchBar value="" onChange={onSearch} />
       </>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "List" }));
+    await user.click(screen.getByRole("button", { name: "List" }));
     expect(onViewModeChange).toHaveBeenCalledWith("list");
 
-    fireEvent.click(screen.getByRole("combobox"));
+    // Base UI Select requires realistic user events to trigger onValueChange
+    const sortTrigger = screen.getByRole("combobox");
+    await user.click(sortTrigger);
     const sizeOption = screen.getByRole("option", { name: "Size" });
-    fireEvent.pointerDown(sizeOption);
-    fireEvent.click(sizeOption);
+    await user.click(sizeOption);
     expect(onSortChange).toHaveBeenCalledWith("size");
 
-    fireEvent.click(screen.getByRole("button", { name: "New Folder" }));
+    await user.click(screen.getByRole("button", { name: "New Folder" }));
     expect(onCreateFolder).toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: /Delete/i }));
+    await user.click(screen.getByRole("button", { name: /Delete/i }));
     expect(onDeleteSelected).toHaveBeenCalled();
+
+    const uploadInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const uploadFile = new File(["hello"], "upload.txt", { type: "text/plain" });
+    await user.upload(uploadInput, uploadFile);
+    expect(onUploadFiles).toHaveBeenCalled();
 
     fireEvent.change(screen.getByPlaceholderText("Search files..."), { target: { value: "cat" } });
     expect(onSearch).toHaveBeenCalledWith("cat");

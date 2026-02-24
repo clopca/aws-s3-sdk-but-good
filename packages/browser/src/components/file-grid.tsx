@@ -8,17 +8,22 @@ export interface FileGridProps {
   selectedKeys: Set<string>;
   onItemClick: (key: string, event: React.MouseEvent) => void;
   onItemDoubleClick: (item: BrowserItem) => void;
-  onItemContextMenu: (item: BrowserItem, event: React.MouseEvent) => void;
+  onItemContextMenu: (item: BrowserItem, event: React.SyntheticEvent) => void;
   getContextMenuItems?: (item: BrowserItem) => ContextMenuItem[];
   isLoading: boolean;
   isSearching?: boolean;
+  className?: string;
 }
 
 function LoadingSkeleton() {
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3">
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3 p-1">
       {Array.from({ length: 8 }).map((_, index) => (
-        <div key={index} className="h-[140px] animate-pulse rounded-xl border border-slate-200 bg-slate-100" />
+        <div key={index} className="flex min-h-[140px] flex-col items-center justify-center rounded-xl border border-border bg-card p-3">
+          <div className="mb-2 h-10 w-10 animate-pulse rounded-lg bg-muted" />
+          <div className="h-3.5 w-3/4 animate-pulse rounded bg-muted" />
+          <div className="mt-2 h-3 w-1/2 animate-pulse rounded bg-muted" />
+        </div>
       ))}
     </div>
   );
@@ -33,12 +38,13 @@ export function FileGrid({
   getContextMenuItems,
   isLoading,
   isSearching,
+  className,
 }: FileGridProps) {
   if (isLoading) return <LoadingSkeleton />;
   if (items.length === 0) return <EmptyState isSearching={isSearching} />;
 
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3 p-1">
+    <div className={`grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3 p-1 ${className ?? ""}`.trim()}>
       {items.map((item) => (
         <FileItem
           key={item.key}
