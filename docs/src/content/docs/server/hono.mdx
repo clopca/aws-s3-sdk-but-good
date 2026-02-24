@@ -156,7 +156,6 @@ export function Uploader() {
   return (
     <UploadButton
       endpoint="imageUploader"
-      __internal={{ url: "/api/upload" }}
       onClientUploadComplete={(res) => console.log("Done!", res)}
       onUploadError={(err) => console.error(err)}
     />

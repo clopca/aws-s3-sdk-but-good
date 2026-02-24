@@ -193,7 +193,15 @@ By default, all helpers use `/api/upload` as the API URL. To use a different pat
 ```typescript
 // API route at a custom path
 // src/app/api/custom-upload/route.ts
-export const { GET, POST } = createRouteHandler({ ... });
+export const { GET, POST } = createRouteHandler({
+  router: uploadRouter,
+  config: {
+    region: process.env.AWS_REGION!,
+    bucket: process.env.AWS_BUCKET!,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+});
 
 // Generate helpers with the custom URL
 const UploadButton = await generateUploadButton<OurFileRouter>({
