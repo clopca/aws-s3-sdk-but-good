@@ -1,9 +1,10 @@
 import type { FileRouter } from "./_internal/types";
 import type { S3Config } from "@s3-good/shared";
 import { handleUploadAction } from "./_internal/handler";
-import { UploadError } from "@s3-good/shared";
 import type { BrowserBuilder } from "./_internal/browser-builder";
 import { handleBrowserAction } from "./_internal/browser-handler";
+import { errorToResponse } from "./_internal/error-response";
+import { getRouteConfig } from "./_internal/get-route-config";
 export { createBrowser } from "./server";
 
 // ─── Local Type Mirrors ─────────────────────────────────────────────────────
@@ -32,15 +33,41 @@ interface LocalUploadDropzoneProps extends LocalUploadButtonProps {
 // ─── SSR Helpers ────────────────────────────────────────────────────────────
 
 // NOTE: @s3-good/react is a peerDependency of @s3-good/core.
-// These helpers use a dynamic require() to avoid a hard circular dependency
+// These helpers use a dynamic import() to avoid a hard circular dependency
 // at the module level. The react package is only loaded at runtime when
 // these helpers are called.
 //
 // Circular path avoided: core/next → react → core/client
 
-/** Lazily load @s3-good/react at runtime to avoid circular module deps. */
-// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any
-const getReactPkg = (): any => require("@s3-good/react");
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _reactPkgCache: any = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _reactPkgPromise: Promise<any> | null = null;
+const importModuleDynamically = new Function(
+  "specifier",
+  "return import(specifier)",
+) as (specifier: string) => Promise<unknown>;
+
+/**
+ * Lazily load @s3-good/react at runtime to avoid circular module deps.
+ * Returns a cached module reference after the first successful import.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function getReactPkg(): Promise<any> {
+  if (_reactPkgCache) return _reactPkgCache;
+  if (!_reactPkgPromise) {
+    _reactPkgPromise = importModuleDynamically("@s3-good/react").catch((err) => {
+      _reactPkgPromise = null; // allow retry on failure
+      throw new Error(
+        "@s3-good/react is required for generateUploadButton/generateUploadDropzone. " +
+          "Install it with: pnpm add @s3-good/react",
+        { cause: err },
+      );
+    });
+  }
+  _reactPkgCache = await _reactPkgPromise;
+  return _reactPkgCache;
+}
 
 /**
  * Generates a pre-typed UploadButton component bound to a specific FileRouter.
@@ -53,14 +80,14 @@ const getReactPkg = (): any => require("@s3-good/react");
  * import type { OurFileRouter } from "~/server/upload-router";
  * import { generateUploadButton } from "@s3-good/core/next";
  *
- * export const UploadButton = generateUploadButton<OurFileRouter>();
+ * export const UploadButton = await generateUploadButton<OurFileRouter>();
  * ```
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function generateUploadButton<TRouter extends FileRouter>(opts?: {
+export async function generateUploadButton<TRouter extends FileRouter>(opts?: {
   url?: string;
 }) {
-  const reactPkg = getReactPkg();
+  const reactPkg = await getReactPkg();
   const url = opts?.url ?? "/api/upload";
 
   // Return a typed component with the URL pre-bound via __internal
@@ -87,14 +114,14 @@ export function generateUploadButton<TRouter extends FileRouter>(opts?: {
  * import type { OurFileRouter } from "~/server/upload-router";
  * import { generateUploadDropzone } from "@s3-good/core/next";
  *
- * export const UploadDropzone = generateUploadDropzone<OurFileRouter>();
+ * export const UploadDropzone = await generateUploadDropzone<OurFileRouter>();
  * ```
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function generateUploadDropzone<TRouter extends FileRouter>(opts?: {
+export async function generateUploadDropzone<TRouter extends FileRouter>(opts?: {
   url?: string;
 }) {
-  const reactPkg = getReactPkg();
+  const reactPkg = await getReactPkg();
   const url = opts?.url ?? "/api/upload";
 
   function TypedUploadDropzone(
@@ -121,32 +148,17 @@ export function generateUploadDropzone<TRouter extends FileRouter>(opts?: {
  * import { generateNextHelpers } from "@s3-good/core/next";
  *
  * export const { useUpload, uploadFiles } =
- *   generateNextHelpers<OurFileRouter>();
+ *   await generateNextHelpers<OurFileRouter>();
  * ```
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function generateNextHelpers<TRouter extends FileRouter>(
+export async function generateNextHelpers<TRouter extends FileRouter>(
   opts?: { url?: string },
 ) {
-  const reactPkg = getReactPkg();
+  const reactPkg = await getReactPkg();
   return reactPkg.generateReactHelpers({
     url: opts?.url ?? "/api/upload",
   });
-}
-
-// ─── Runtime Check ──────────────────────────────────────────────────────────
-
-/**
- * Ensure we're in a server environment.
- * Throws immediately if called from a browser context.
- */
-function assertServerEnvironment(): void {
-  if (typeof window !== "undefined") {
-    throw new Error(
-      "[@s3-good/core/next] createRouteHandler must be used in a server environment. " +
-        "Import from '@s3-good/core/next' only in API routes or server components.",
-    );
-  }
 }
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -193,8 +205,6 @@ type NextResponse = Response;
  * ```
  */
 export function createRouteHandler(opts: NextRouteHandlerOptions) {
-  assertServerEnvironment();
-
   const routerConfig = {
     router: opts.router,
     config: opts.config,
@@ -204,17 +214,7 @@ export function createRouteHandler(opts: NextRouteHandlerOptions) {
     try {
       return await handleUploadAction(req, routerConfig);
     } catch (error) {
-      if (error instanceof UploadError) {
-        return Response.json(
-          { error: { code: error.code, message: error.message } },
-          { status: error.status },
-        );
-      }
-      console.error("[s3-good] Internal error:", error);
-      return Response.json(
-        { error: { code: "INTERNAL_ERROR", message: "Internal server error" } },
-        { status: 500 },
-      );
+      return errorToResponse(error);
     }
   }
 
@@ -222,30 +222,7 @@ export function createRouteHandler(opts: NextRouteHandlerOptions) {
   async function GET(req: NextRequest): Promise<NextResponse> {
     const url = new URL(req.url);
     const slug = url.searchParams.get("slug");
-
-    if (!slug) {
-      // Return all route configs (for client to know allowed file types)
-      const routeConfigs = Object.entries(opts.router).reduce(
-        (acc, [key, route]) => {
-          acc[key] = {
-            config: route._def.routerConfig,
-          };
-          return acc;
-        },
-        {} as Record<string, { config: unknown }>,
-      );
-      return Response.json(routeConfigs);
-    }
-
-    const route = opts.router[slug];
-    if (!route) {
-      return Response.json(
-        { error: { code: "ROUTE_NOT_FOUND", message: `Route "${slug}" not found` } },
-        { status: 404 },
-      );
-    }
-
-    return Response.json({ config: route._def.routerConfig });
+    return getRouteConfig(opts.router, slug);
   }
 
   // POST handler — processes upload requests
@@ -260,8 +237,6 @@ export function createRouteHandler(opts: NextRouteHandlerOptions) {
  * Creates a Next.js App Router route handler for browser actions.
  */
 export function createBrowserRouteHandler(opts: NextBrowserRouteHandlerOptions) {
-  assertServerEnvironment();
-
   const routeConfig = opts.browser._build();
 
   async function handleRequest(req: NextRequest): Promise<NextResponse> {
