@@ -28,7 +28,7 @@ describe("S3Browser", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Grid" })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "Grid view" })).toBeTruthy();
     expect(screen.getByText("bucket-a")).toBeTruthy();
 
     await waitFor(() => {
@@ -74,7 +74,7 @@ describe("S3Browser", () => {
       expect(fetchMock).toHaveBeenCalled();
     });
 
-    expect(within(container).queryByRole("button", { name: "Grid" })).toBeNull();
+    expect(within(container).queryByRole("radio", { name: "Grid view" })).toBeNull();
     expect(within(container).getByTestId("path")).toBeTruthy();
   });
 

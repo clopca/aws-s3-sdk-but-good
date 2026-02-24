@@ -83,5 +83,15 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/clopca/aws-s3-sdk-but-good.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/clopca/aws-s3-sdk-but-good/tree/main/packages/core",
+  "bugs": {
+    "url": "https://github.com/clopca/aws-s3-sdk-but-good/issues"
   }
 }

@@ -51,8 +51,8 @@ describe("S3Browser compound pattern", () => {
     });
 
     // Toolbar buttons should be present (Grid/List view mode buttons)
-    expect(screen.getByRole("button", { name: "Grid" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "List" })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "Grid view" })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "List view" })).toBeTruthy();
 
     // Breadcrumb nav should be present
     expect(screen.getByLabelText("Breadcrumb")).toBeTruthy();
@@ -113,7 +113,7 @@ describe("S3Browser compound pattern", () => {
 
     // FileView should render (it shows empty state or grid when no items)
     // Toolbar should NOT be present since we only included FileView
-    expect(screen.queryByRole("button", { name: "Grid" })).toBeNull();
+    expect(screen.queryByRole("radio", { name: "Grid view" })).toBeNull();
 
     // The root container should exist with data-state
     const rootDiv = container.querySelector("[data-state]");

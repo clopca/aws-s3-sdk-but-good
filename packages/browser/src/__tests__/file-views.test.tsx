@@ -43,7 +43,7 @@ describe("file views components", () => {
       />,
     );
 
-    const folder = screen.getByRole("button", { name: "Folder photos" });
+    const folder = screen.getByRole("option", { name: "Folder photos" });
     fireEvent.click(folder);
     expect(onItemClick).toHaveBeenCalled();
   });
@@ -62,11 +62,11 @@ describe("file views components", () => {
       />,
     );
 
-    const folder = within(container).getByRole("button", { name: "Folder photos" });
+    const folder = within(container).getByRole("option", { name: "Folder photos" });
     fireEvent.keyDown(folder, { key: "F10", shiftKey: true });
 
     expect(onItemContextMenu).toHaveBeenCalled();
-    expect(folder.getAttribute("aria-pressed")).toBe("true");
+    expect(folder.getAttribute("aria-selected")).toBe("true");
   });
 
   it("test_FileGrid_virtualization_renders_visible_subset", () => {
@@ -208,7 +208,7 @@ describe("file views components", () => {
       </>,
     );
 
-    await user.click(screen.getByRole("button", { name: "List" }));
+    await user.click(screen.getByRole("radio", { name: "List view" }));
     expect(onViewModeChange).toHaveBeenCalledWith("list");
 
     // Base UI Select requires realistic user events to trigger onValueChange

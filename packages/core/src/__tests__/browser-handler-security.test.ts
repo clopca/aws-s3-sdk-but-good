@@ -91,7 +91,6 @@ describe("browser handler – rename security", () => {
       { route: {}, config },
     );
 
-    const body = await response.json();
     expect(response.status).toBe(400);
     expect(copyObject).not.toHaveBeenCalled();
   });
@@ -226,7 +225,6 @@ describe("browser handler – create-folder security", () => {
       { route: {}, config },
     );
 
-    const body = await response.json();
     expect(response.status).toBe(400);
     expect(putEmptyObject).not.toHaveBeenCalled();
   });
