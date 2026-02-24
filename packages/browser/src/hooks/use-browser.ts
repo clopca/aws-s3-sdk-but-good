@@ -47,7 +47,20 @@ function resolveDefaultBucket(config?: BrowserConfig): string {
   return allowedBuckets[0] ?? "";
 }
 
+function areSameBuckets(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "AbortError";
+}
+
 export interface UseBrowserReturn {
+  availableBuckets: string[];
   activeBucket: string;
   currentPath: string;
   items: BrowserItem[];
@@ -91,7 +104,12 @@ export interface UseBrowserReturn {
 
 export function useBrowser(options: UseBrowserOptions = {}): UseBrowserReturn {
   const storeRef = useRef<BrowserStore | null>(null);
+  const refreshAbortRef = useRef<AbortController | null>(null);
+  const loadMoreAbortRef = useRef<AbortController | null>(null);
+  const refreshRequestIdRef = useRef(0);
+  const loadMoreRequestIdRef = useRef(0);
   const [activeBucket, setActiveBucketState] = useState(resolveDefaultBucket(options.config));
+  const [availableBuckets, setAvailableBuckets] = useState(resolveAllowedBuckets(options.config));
   const [filters, setFiltersState] = useState<BrowserListFilters>({});
 
   if (!storeRef.current) {
@@ -120,6 +138,12 @@ export function useBrowser(options: UseBrowserOptions = {}): UseBrowserReturn {
   }), [filters, state.currentPath, state.searchQuery]);
 
   const refresh = useCallback(async (): Promise<void> => {
+    refreshAbortRef.current?.abort();
+    const controller = new AbortController();
+    refreshAbortRef.current = controller;
+    const requestId = refreshRequestIdRef.current + 1;
+    refreshRequestIdRef.current = requestId;
+
     store.setLoading(true);
     try {
       const result = await client.list({
@@ -127,15 +151,38 @@ export function useBrowser(options: UseBrowserOptions = {}): UseBrowserReturn {
         prefix: state.currentPath,
         continuationToken: undefined,
         filters: listFilters,
+        signal: controller.signal,
       });
+      if (refreshRequestIdRef.current !== requestId) return;
       store.setItems(result.items, result.hasMore, result.continuationToken ?? result.nextCursor);
+
+      const metaBuckets = result.meta?.buckets?.map((bucket) => bucket.trim()).filter(Boolean) ?? [];
+      if (metaBuckets.length > 0) {
+        setAvailableBuckets((prev) => (areSameBuckets(prev, metaBuckets) ? prev : metaBuckets));
+      }
+
+      if (result.meta?.bucket && result.meta.bucket !== activeBucket) {
+        setActiveBucketState(result.meta.bucket);
+      }
     } catch (error) {
+      if (isAbortError(error)) {
+        if (refreshRequestIdRef.current === requestId) {
+          store.setLoading(false);
+        }
+        return;
+      }
       store.setError(error instanceof Error ? error.message : "Failed to load files");
     }
   }, [activeBucket, client, listFilters, state.currentPath, store]);
 
   const loadMore = useCallback(async (): Promise<void> => {
     if (!state.hasMore || state.isLoading) return;
+
+    loadMoreAbortRef.current?.abort();
+    const controller = new AbortController();
+    loadMoreAbortRef.current = controller;
+    const requestId = loadMoreRequestIdRef.current + 1;
+    loadMoreRequestIdRef.current = requestId;
 
     store.setLoading(true);
     try {
@@ -146,9 +193,17 @@ export function useBrowser(options: UseBrowserOptions = {}): UseBrowserReturn {
         continuationToken: token,
         cursor: token,
         filters: listFilters,
+        signal: controller.signal,
       });
+      if (loadMoreRequestIdRef.current !== requestId) return;
       store.appendItems(result.items, result.hasMore, result.continuationToken ?? result.nextCursor);
     } catch (error) {
+      if (isAbortError(error)) {
+        if (loadMoreRequestIdRef.current === requestId) {
+          store.setLoading(false);
+        }
+        return;
+      }
       store.setError(error instanceof Error ? error.message : "Failed to load more files");
     }
   }, [activeBucket, client, listFilters, state.continuationToken, state.currentPath, state.hasMore, state.isLoading, store]);
@@ -157,9 +212,17 @@ export function useBrowser(options: UseBrowserOptions = {}): UseBrowserReturn {
     void refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    return () => {
+      refreshAbortRef.current?.abort();
+      loadMoreAbortRef.current?.abort();
+    };
+  }, []);
+
   const setActiveBucket = useCallback((bucket: string) => {
     if (bucket === activeBucket) return;
-    const allowedBuckets = resolveAllowedBuckets(options.config);
+    const configuredBuckets = resolveAllowedBuckets(options.config);
+    const allowedBuckets = availableBuckets.length > 0 ? availableBuckets : configuredBuckets;
     if (allowedBuckets.length > 0 && !allowedBuckets.includes(bucket)) return;
 
     setActiveBucketState(bucket);
@@ -175,7 +238,7 @@ export function useBrowser(options: UseBrowserOptions = {}): UseBrowserReturn {
       historyIndex: 0,
       error: null,
     });
-  }, [activeBucket, options.config, store]);
+  }, [activeBucket, availableBuckets, options.config, store]);
 
   const setFilters = useCallback((next: BrowserListFilters) => {
     setFiltersState(next);
@@ -194,9 +257,10 @@ export function useBrowser(options: UseBrowserOptions = {}): UseBrowserReturn {
   const deleteSelected = useCallback(async (): Promise<void> => {
     const keys = Array.from(state.selectedKeys);
     if (keys.length === 0) return;
+    const deletingSingleFolder = keys.length === 1 && (keys[0]?.endsWith("/") ?? false);
 
     try {
-      if (keys.length === 1) {
+      if (keys.length === 1 && !deletingSingleFolder) {
         await client.deleteFile(keys[0] ?? "", activeBucket || undefined);
       } else {
         await client.deleteMany(keys, activeBucket || undefined);
@@ -258,6 +322,7 @@ export function useBrowser(options: UseBrowserOptions = {}): UseBrowserReturn {
   }, [activeBucket, client, store]);
 
   return {
+    availableBuckets,
     activeBucket,
     currentPath: state.currentPath,
     items: store.getSortedItems(),

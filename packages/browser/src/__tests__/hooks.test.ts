@@ -43,6 +43,28 @@ describe("browser hooks", () => {
     expect(String(fetchMock.mock.calls[0]?.[1]?.body ?? "")).toContain('"action":"list"');
   });
 
+  it("test_useBrowser_populates_available_buckets_from_server_meta", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({
+      action: "list",
+      success: true,
+      items: [],
+      isTruncated: false,
+      meta: {
+        mode: "s3-list",
+        bucket: "bucket-b",
+        buckets: ["bucket-a", "bucket-b"],
+        defaultBucket: "bucket-a",
+      },
+    }), { status: 200 }));
+
+    const { result } = renderHook(() => useBrowser({ url: "/api/browser" }));
+
+    await waitFor(() => {
+      expect(result.current.availableBuckets).toEqual(["bucket-a", "bucket-b"]);
+    });
+    expect(result.current.activeBucket).toBe("bucket-b");
+  });
+
   it("test_useBrowser_change_bucket_resets_state_and_refetches", async () => {
     const { result } = renderHook(() => useBrowser({
       url: "/api/browser",
@@ -130,6 +152,9 @@ describe("browser hooks", () => {
 
     expect(result.current.error).toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(3);
+    const deleteBody = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body ?? "{}"));
+    expect(deleteBody.action).toBe("delete-many");
+    expect(deleteBody.keys).toEqual(["photos/"]);
   });
 
   it("test_useBreadcrumbs_root", () => {
