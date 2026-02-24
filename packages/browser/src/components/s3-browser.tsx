@@ -9,6 +9,7 @@ import { Breadcrumbs } from "./breadcrumbs";
 import { ConfirmDialog, CreateFolderDialog, RenameDialog } from "./dialogs";
 import { FileGrid } from "./file-grid";
 import { FileListView } from "./file-list-view";
+import type { FileListVirtualizationOptions } from "./file-list-view";
 import { PreviewModal } from "./preview/preview-modal";
 import { SearchBar } from "./search-bar";
 import { SelectionBar } from "./selection-bar";
@@ -32,6 +33,9 @@ export interface S3BrowserProps {
     onUploadError?: (error: Error) => void;
   };
   children?: (ctx: S3BrowserRenderContext) => ReactNode;
+  virtualization?: Partial<{
+    list: FileListVirtualizationOptions;
+  }>;
   appearance?: Partial<{
     container: string;
     header: string;
@@ -71,7 +75,7 @@ export interface S3BrowserRenderContext {
   clearPreview: () => void;
 }
 
-export function S3Browser({ url, headers, config, className, upload, children, appearance }: S3BrowserProps) {
+export function S3Browser({ url, headers, config, className, upload, children, virtualization, appearance }: S3BrowserProps) {
   const browser = useBrowser({ url, headers, config });
   const breadcrumbs = useBreadcrumbs(browser.currentPath, config?.rootPrefix);
   const search = useSearch(browser.store);
@@ -353,6 +357,7 @@ export function S3Browser({ url, headers, config, className, upload, children, a
           getContextMenuItems={getContextMenuItems}
           isLoading={browser.isLoading}
           isSearching={Boolean(browser.searchQuery)}
+          virtualization={virtualization?.list}
           className={appearance?.list}
         />
       )}

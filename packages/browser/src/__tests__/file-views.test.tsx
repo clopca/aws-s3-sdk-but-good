@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { BrowserItem } from "@s3-good/shared";
 import {
   EmptyState,
@@ -23,6 +23,10 @@ const items: BrowserItem[] = [
 ];
 
 describe("file views components", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   it("test_FileGrid_renders_items_and_callbacks", () => {
     const onItemClick = vi.fn();
     const onItemDoubleClick = vi.fn();
@@ -85,6 +89,34 @@ describe("file views components", () => {
     expect(onSort).toHaveBeenCalledWith("name");
   });
 
+  it("test_FileListView_virtualization_renders_visible_subset", () => {
+    const manyItems: BrowserItem[] = Array.from({ length: 220 }).map((_, index) => ({
+      kind: "file",
+      key: `file-${index}.txt`,
+      name: `file-${index}.txt`,
+      size: index + 1,
+      lastModified: new Date("2026-01-01T00:00:00.000Z"),
+      contentType: "text/plain",
+    }));
+
+    render(
+      <FileListView
+        items={manyItems}
+        selectedKeys={new Set()}
+        sort={{ field: "name", direction: "asc" }}
+        onSort={vi.fn()}
+        onItemClick={vi.fn()}
+        onItemDoubleClick={vi.fn()}
+        onItemContextMenu={vi.fn()}
+        isLoading={false}
+        virtualization={{ enabled: true, threshold: 1, rowHeight: 46, overscan: 6 }}
+      />,
+    );
+
+    expect(screen.getByText("file-0.txt")).toBeTruthy();
+    expect(screen.queryByText("file-219.txt")).toBeNull();
+  });
+
   it("test_EmptyState_messages", () => {
     const { rerender } = render(<EmptyState />);
     expect(screen.getByText("This folder is empty")).toBeTruthy();
@@ -126,7 +158,8 @@ describe("file views components", () => {
     // Base UI Select requires realistic user events to trigger onValueChange
     const sortTrigger = screen.getByRole("combobox");
     await user.click(sortTrigger);
-    const sizeOption = screen.getByRole("option", { name: "Size" });
+    const listbox = await screen.findByRole("listbox");
+    const sizeOption = within(listbox).getByText("Size");
     await user.click(sizeOption);
     expect(onSortChange).toHaveBeenCalledWith("size");
 
