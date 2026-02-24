@@ -1,6 +1,6 @@
 # @s3-good/browser
 
-UI components and hooks to browse, preview, upload, and manage files in S3-compatible buckets.
+S3 file browser UI for listing, previewing, navigating, and managing objects.
 
 ## Installation
 
@@ -8,18 +8,45 @@ UI components and hooks to browse, preview, upload, and manage files in S3-compa
 pnpm add @s3-good/browser
 ```
 
-Import styles once in your app:
+Import styles once:
 
 ```ts
 import "@s3-good/browser/styles.css";
 ```
 
-## Quick Start
+## Server route setup
+
+`@s3-good/browser` expects a browser API endpoint (usually `/api/browser`).
+
+### Next.js route
+
+```ts
+// app/api/browser/route.ts
+import { createBrowser, createBrowserRouteHandler } from "@s3-good/core/next";
+
+const browser = createBrowser()
+  .buckets(["assets", "backups"])
+  .defaultBucket("assets")
+  .pageSize(100)
+  .done();
+
+export const { GET, POST } = createBrowserRouteHandler({
+  browser,
+  config: {
+    region: process.env.AWS_REGION!,
+    bucket: process.env.AWS_BUCKET!,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+});
+```
+
+## Basic UI usage
 
 ```tsx
 import { S3Browser } from "@s3-good/browser";
 
-export function FilesPage() {
+export default function FilesPage() {
   return (
     <S3Browser
       url="/api/browser"
@@ -32,7 +59,9 @@ export function FilesPage() {
 }
 ```
 
-## Upload Integration
+## Upload integration
+
+You can wire uploads directly into the browser toolbar.
 
 ```tsx
 <S3Browser
@@ -43,74 +72,81 @@ export function FilesPage() {
     multiple: true,
     label: "Upload",
   }}
-/>
+/>;
 ```
 
-You can also provide your own uploader via `upload.onUploadFiles`.
+Or provide your own uploader with `upload.onUploadFiles`.
 
-## Virtualization
+## Performance options
 
-Enable optional virtualization for large directories:
+### Virtualization
 
 ```tsx
 <S3Browser
   virtualization={{
-    grid: {
-      enabled: true,
-      threshold: 180,
-      itemMinWidth: 140,
-      rowHeight: 152,
-      overscanRows: 2,
-    },
-    list: {
-      enabled: true,
-      threshold: 120,
-      rowHeight: 46,
-      overscan: 6,
-    },
+    grid: { enabled: true, threshold: 180, itemMinWidth: 140, rowHeight: 152, overscanRows: 2 },
+    list: { enabled: true, threshold: 120, rowHeight: 46, overscan: 6 },
   }}
-/>
+/>;
 ```
 
-## Appearance Slots
+### Pagination
 
-Use `appearance` to style specific areas without replacing behavior:
+```tsx
+<S3Browser
+  pagination={{
+    mode: "infinite", // or "manual"
+    rootMargin: "240px 0px",
+    threshold: 0,
+  }}
+/>;
+```
+
+## Theming and composition
+
+### Appearance slots
 
 ```tsx
 <S3Browser
   appearance={{
     container: "rounded-3xl",
     toolbar: "bg-muted/30",
-    grid: "p-2",
+    list: "shadow-none",
     loadMoreButton: "min-w-40",
-    error: "text-sm",
   }}
-/>
+/>;
 ```
 
-Notable slots include `grid`, `list`, `loadMoreContainer`, `loadMoreButton`, and dialog slots.
-
-## Pagination
-
-When the backend returns truncated list results, the browser shows a `Load more` control and requests the next page with the continuation token.
-
-You can also enable automatic pagination:
+### Headless composition with `S3BrowserRoot`
 
 ```tsx
-<S3Browser
-  pagination={{
-    mode: "infinite",
-    rootMargin: "240px 0px",
-    threshold: 0,
-  }}
-/>
+import {
+  S3BrowserRoot,
+  BrowserToolbar,
+  BrowserBreadcrumbs,
+  BrowserSearchBar,
+  BrowserFileView,
+  BrowserSelectionBar,
+  BrowserPreviewModal,
+} from "@s3-good/browser";
+
+<S3BrowserRoot url="/api/browser">
+  <BrowserBreadcrumbs />
+  <BrowserSearchBar />
+  <BrowserToolbar />
+  <BrowserFileView />
+  <BrowserSelectionBar />
+  <BrowserPreviewModal />
+</S3BrowserRoot>;
 ```
 
-## Main Exports
+## Main exports
 
 - `S3Browser`
-- `useBrowser`
-- `createBrowserClient`
-- `createBrowserStore`
-- `FileGridVirtualizationOptions`
-- `FileListVirtualizationOptions`
+- `S3BrowserRoot`, `useS3BrowserContext`
+- `useBrowser`, `createBrowserClient`, `createBrowserStore`
+- utility exports: `getPreviewType`, `getCodeLanguage`
+
+## License
+
+MIT
