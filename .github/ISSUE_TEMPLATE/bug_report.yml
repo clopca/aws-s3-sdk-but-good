@@ -1,0 +1,52 @@
+name: Bug report
+description: Report a reproducible bug in core/react/browser/shared
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please include a minimal reproduction.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened and what did you expect?
+      placeholder: A clear and concise bug summary.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+      description: Include exact steps and code snippets if possible.
+      placeholder: |
+        1. Configure...
+        2. Call...
+        3. Observe...
+    validations:
+      required: true
+  - type: input
+    id: package
+    attributes:
+      label: Affected package(s)
+      description: e.g. @s3-good/core, @s3-good/react, @s3-good/browser
+      placeholder: "@s3-good/core"
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: Runtime and framework details
+      placeholder: |
+        Node:
+        pnpm:
+        Framework (Next/Hono/etc):
+        OS:
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs/errors
+      render: shell

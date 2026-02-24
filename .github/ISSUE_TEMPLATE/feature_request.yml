@@ -1,0 +1,35 @@
+name: Feature request
+description: Suggest an API, DX, or UI enhancement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What problem are you trying to solve?
+      placeholder: I want to...
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe your preferred API/behavior.
+      placeholder: We could add...
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any workarounds or alternative approaches?
+  - type: input
+    id: package
+    attributes:
+      label: Target package(s)
+      placeholder: "@s3-good/browser"
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Links, examples, screenshots, related issues.
