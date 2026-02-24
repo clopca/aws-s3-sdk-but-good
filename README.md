@@ -95,6 +95,16 @@ export default function Page() {
 }
 ```
 
+### 5. Browse files in your bucket (optional)
+
+```tsx
+import { S3Browser } from "@s3-good/browser";
+
+export default function FilesPage() {
+  return <S3Browser url="/api/browser" />;
+}
+```
+
 ## Packages
 
 | Package | Description | Docs |
@@ -102,6 +112,7 @@ export default function Page() {
 | [`@s3-good/core`](./packages/core) | Core SDK: upload builder, S3 integration, route handlers, client factory | [README](./packages/core/README.md) |
 | [`@s3-good/react`](./packages/react) | React components (`UploadButton`, `UploadDropzone`) and hooks (`useUpload`) | [README](./packages/react/README.md) |
 | [`@s3-good/shared`](./packages/shared) | Shared types, error classes, and utilities used by core and react | [README](./packages/shared/README.md) |
+| [`@s3-good/browser`](./packages/browser) | S3 file browser component with previews, search, and folder navigation | [README](./packages/browser/README.md) |
 
 ## Documentation
 

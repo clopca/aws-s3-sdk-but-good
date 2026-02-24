@@ -9,6 +9,11 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
+import {
+  greenButtonAppearance,
+  minimalButtonAppearance,
+  darkDropzoneAppearance,
+} from "~/lib/upload-styles";
 import { UploadButton, UploadDropzone } from "~/utils/upload";
 
 export default function ThemedPage() {
@@ -41,54 +46,22 @@ export default function ThemedPage() {
 
       {/* Themed Variants Grid */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Custom Styled Button */}
+        {/* Green / Emerald Button */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Custom Styled</CardTitle>
+              <CardTitle>Emerald Theme</CardTitle>
               <Badge variant="secondary">appearance</Badge>
             </div>
             <CardDescription>
-              Override default styles with the appearance prop. Style values can
-              be static objects or functions of component state.
+              A nature-inspired pill button with emerald colors. Demonstrates
+              className-based theming via the appearance prop.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center py-6">
             <UploadButton
               endpoint="imageUploader"
-              appearance={{
-                button: ({
-                  ready,
-                  isUploading,
-                }: {
-                  ready: boolean;
-                  isUploading: boolean;
-                }) => ({
-                  padding: "10px 24px",
-                  borderRadius: 20,
-                  border: "none",
-                  backgroundColor: isUploading
-                    ? "#f59e0b"
-                    : ready
-                      ? "#10b981"
-                      : "#d1d5db",
-                  color: "#fff",
-                  fontWeight: 600,
-                  fontSize: 14,
-                  cursor: ready ? "pointer" : "not-allowed",
-                  transition: "background-color 200ms ease",
-                }),
-                container: {
-                  display: "flex",
-                  flexDirection: "column" as const,
-                  alignItems: "center",
-                  gap: 8,
-                },
-                allowedContent: {
-                  color: "#9ca3af",
-                  fontSize: 12,
-                },
-              }}
+              appearance={greenButtonAppearance}
               content={{
                 button: ({
                   isUploading,
@@ -104,7 +77,7 @@ export default function ThemedPage() {
               }}
               onClientUploadComplete={(res: unknown[]) => {
                 toast.success(`Uploaded ${String(res.length)} file(s)`, {
-                  description: "Custom styled upload completed.",
+                  description: "Emerald theme upload completed.",
                 });
               }}
               onUploadError={(error: Error) => {
@@ -131,25 +104,7 @@ export default function ThemedPage() {
           <CardContent className="flex justify-center py-6">
             <UploadButton
               endpoint="imageUploader"
-              appearance={{
-                button: {
-                  background: "none",
-                  border: "none",
-                  color: "#0070f3",
-                  textDecoration: "underline",
-                  cursor: "pointer",
-                  fontSize: 14,
-                  padding: 0,
-                },
-                container: {
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 4,
-                },
-                allowedContent: {
-                  display: "none",
-                },
-              }}
+              appearance={minimalButtonAppearance}
               content={{
                 button: ({
                   isUploading,
@@ -185,47 +140,14 @@ export default function ThemedPage() {
             <Badge variant="secondary">dark theme</Badge>
           </div>
           <CardDescription>
-            A dark-themed dropzone with custom content and styles. Demonstrates
-            dynamic styling based on drag state.
+            A dark-themed dropzone with custom content and styles. Uses Tailwind
+            classes with zinc and indigo colors for a sleek dark appearance.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <UploadDropzone
             endpoint="anyFileUploader"
-            appearance={{
-              container: ({
-                isDragOver,
-              }: {
-                isDragOver: boolean;
-              }) => ({
-                padding: 32,
-                border: `2px dashed ${isDragOver ? "#818cf8" : "#4b5563"}`,
-                borderRadius: 12,
-                backgroundColor: isDragOver ? "#1e1b4b" : "#111827",
-                cursor: "pointer",
-                transition: "all 200ms ease",
-              }),
-              uploadIcon: {
-                color: "#6b7280",
-              },
-              label: {
-                color: "#e5e7eb",
-                fontSize: 15,
-              },
-              allowedContent: {
-                color: "#6b7280",
-                fontSize: 12,
-              },
-              button: {
-                padding: "8px 20px",
-                borderRadius: 6,
-                border: "none",
-                backgroundColor: "#6366f1",
-                color: "#fff",
-                fontWeight: 500,
-                cursor: "pointer",
-              },
-            }}
+            appearance={darkDropzoneAppearance}
             content={{
               label: ({
                 isDragOver,

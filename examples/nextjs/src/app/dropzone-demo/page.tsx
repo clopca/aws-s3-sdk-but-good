@@ -9,6 +9,9 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
+import {
+  uploadDropzoneAppearance,
+} from "~/lib/upload-styles";
 import { UploadDropzone } from "~/utils/upload";
 
 export default function DropzoneDemoPage() {
@@ -41,6 +44,7 @@ export default function DropzoneDemoPage() {
         <CardContent>
           <UploadDropzone
             endpoint="imageUploader"
+            appearance={uploadDropzoneAppearance}
             onClientUploadComplete={(res: unknown[]) => {
               toast.success(`Uploaded ${String(res.length)} image(s)`, {
                 description: "Images uploaded successfully to S3.",
@@ -85,6 +89,7 @@ export default function DropzoneDemoPage() {
           <UploadDropzone
             endpoint="anyFileUploader"
             mode="manual"
+            appearance={uploadDropzoneAppearance}
             onClientUploadComplete={(res: unknown[]) => {
               toast.success(`Uploaded ${String(res.length)} file(s)`, {
                 description: "Files uploaded via manual mode.",
@@ -115,6 +120,7 @@ export default function DropzoneDemoPage() {
           <UploadDropzone
             endpoint="imageUploader"
             onPaste
+            appearance={uploadDropzoneAppearance}
             onClientUploadComplete={(res: unknown[]) => {
               toast.success(
                 `Pasted & uploaded ${String(res.length)} file(s)`,

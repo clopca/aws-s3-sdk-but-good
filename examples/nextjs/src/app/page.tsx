@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Badge } from "~/components/ui/badge";
 import {
   Card,
+  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -87,6 +88,70 @@ export default function HomePage() {
           <Badge variant="outline">Presigned URLs</Badge>
           <Badge variant="outline">Progress Tracking</Badge>
         </div>
+      </section>
+
+      {/* Get Started */}
+      <section className="space-y-4">
+        <h2 className="text-xl font-semibold tracking-tight">Get Started</h2>
+        <Card>
+          <CardHeader>
+            <CardTitle>Installation</CardTitle>
+            <CardDescription>
+              Install the packages and start uploading in minutes.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="overflow-x-auto rounded-lg bg-zinc-950 p-4 font-[family-name:var(--font-geist-mono)] text-sm leading-relaxed text-zinc-100">
+              <p className="text-zinc-500"># Install core + React components</p>
+              <p>
+                <span className="text-emerald-400">pnpm</span> add @s3-good/core
+                @s3-good/react
+              </p>
+              <p className="mt-3 text-zinc-500"># Optional: file browser</p>
+              <p>
+                <span className="text-emerald-400">pnpm</span> add
+                @s3-good/browser
+              </p>
+            </div>
+            <div className="overflow-x-auto rounded-lg bg-zinc-950 p-4 font-[family-name:var(--font-geist-mono)] text-sm leading-relaxed text-zinc-100">
+              <p className="text-zinc-500">
+                {"// Define your upload routes (server)"}
+              </p>
+              <p>
+                <span className="text-violet-400">import</span>{" "}
+                {"{ createUploader }"}{" "}
+                <span className="text-violet-400">from</span>{" "}
+                <span className="text-amber-300">
+                  {'"@s3-good/core/server"'}
+                </span>
+                ;
+              </p>
+              <p className="mt-2">
+                <span className="text-violet-400">const</span>{" "}
+                <span className="text-sky-300">f</span> ={" "}
+                <span className="text-yellow-200">createUploader</span>();
+              </p>
+              <p className="mt-2">
+                <span className="text-violet-400">export const</span>{" "}
+                <span className="text-sky-300">uploadRouter</span> = {"{"}
+              </p>
+              <p className="pl-4">
+                <span className="text-sky-300">imageUploader</span>:{" "}
+                <span className="text-yellow-200">f</span>({"{"}{" "}
+                <span className="text-sky-300">image</span>: {"{"}{" "}
+                <span className="text-sky-300">maxFileSize</span>:{" "}
+                <span className="text-amber-300">{'"4MB"'}</span> {"}"} {"}"})
+              </p>
+              <p className="pl-6">
+                .<span className="text-yellow-200">onUploadComplete</span>(
+                {"({ file }) => "}
+                <span className="text-yellow-200">console</span>.
+                <span className="text-yellow-200">log</span>(file)),
+              </p>
+              <p>{"}"}</p>
+            </div>
+          </CardContent>
+        </Card>
       </section>
 
       {/* Demo Cards */}

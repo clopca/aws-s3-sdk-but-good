@@ -181,7 +181,7 @@ export default function CustomHookPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <pre className="overflow-auto rounded-lg bg-zinc-950 p-4 font-[family-name:var(--font-geist-mono)] text-[13px] leading-6 text-zinc-100">
+          <pre className="overflow-auto rounded-lg border border-border bg-muted/40 p-4 font-[family-name:var(--font-geist-mono)] text-[13px] leading-6 text-foreground">
             {`const { startUpload, isUploading, progress, abort } =
   useUpload("imageUploader", {
     onClientUploadComplete: (res) => {

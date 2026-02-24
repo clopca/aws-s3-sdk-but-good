@@ -1,6 +1,7 @@
 "use client";
 
 import { S3Browser } from "@s3-good/browser";
+import { toast } from "sonner";
 import {
   Card,
   CardContent,
@@ -32,7 +33,15 @@ export default function BrowserPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <S3Browser url="/api/browser" />
+          <S3Browser
+            url="/api/browser"
+            upload={{ endpoint: "anyFileUploader", url: "/api/upload" }}
+            onNotify={({ type, message }) => {
+              if (type === "success") toast.success(message);
+              else if (type === "error") toast.error(message);
+              else toast.info(message);
+            }}
+          />
         </CardContent>
       </Card>
     </div>

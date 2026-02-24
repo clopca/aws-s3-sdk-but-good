@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
+import { uploadButtonAppearance } from "~/lib/upload-styles";
 import { UploadButton } from "~/utils/upload";
 
 export default function ButtonDemoPage() {
@@ -37,6 +38,7 @@ export default function ButtonDemoPage() {
         <CardContent className="flex flex-col items-center gap-4 py-8">
           <UploadButton
             endpoint="imageUploader"
+            appearance={uploadButtonAppearance}
             onClientUploadComplete={(res: unknown[]) => {
               toast.success(`Uploaded ${String(res.length)} file(s)`, {
                 description: "Files uploaded successfully to S3.",
@@ -81,6 +83,7 @@ export default function ButtonDemoPage() {
           <UploadButton
             endpoint="imageUploader"
             mode="manual"
+            appearance={uploadButtonAppearance}
             onClientUploadComplete={(res: unknown[]) => {
               toast.success(`Uploaded ${String(res.length)} file(s)`, {
                 description: "Manual upload completed.",
@@ -110,6 +113,7 @@ export default function ButtonDemoPage() {
         <CardContent className="flex flex-col items-center gap-4 py-8">
           <UploadButton
             endpoint="anyFileUploader"
+            appearance={uploadButtonAppearance}
             onClientUploadComplete={(res: unknown[]) => {
               toast.success(`Uploaded ${String(res.length)} file(s)`, {
                 description: "Files uploaded via anyFileUploader.",
