@@ -66,10 +66,18 @@ export {
   SearchBar,
   SelectionBar,
   S3Browser,
+  S3BrowserRoot,
+  useS3BrowserContext,
   Toolbar,
   getPreviewComponent,
 } from "./components";
 
-export type { PreviewRendererProps } from "./components";
+export type {
+  FileGridVirtualizationOptions,
+  FileListVirtualizationOptions,
+  PreviewRendererProps,
+  S3BrowserProps,
+  S3BrowserRenderContext,
+} from "./components";
 export { generateBrowserHelpers } from "./generate-helpers";
 export type { GenerateBrowserHelpersOptions } from "./generate-helpers";
