@@ -212,6 +212,30 @@ export function S3Browser({ url, headers, config, className, upload, children, v
     return items;
   };
 
+  const handleItemClick = (key: string, event: React.MouseEvent) => {
+    if (event.shiftKey && browser.selectedKeys.size > 0) {
+      const lastSelected = Array.from(browser.selectedKeys).pop();
+      if (lastSelected) browser.selectRange(lastSelected, key);
+      return;
+    }
+    if (event.ctrlKey || event.metaKey) {
+      browser.toggleSelect(key);
+      return;
+    }
+    browser.deselectAll();
+    browser.select(key);
+  };
+
+  const handleItemDoubleClick = (item: BrowserItem) => {
+    void openPreview(item);
+  };
+
+  const handleItemContextMenu = (item: BrowserItem, event: React.SyntheticEvent) => {
+    event.preventDefault();
+    browser.deselectAll();
+    browser.select(item.key);
+  };
+
   const clearPreview = () => {
     previewRequestIdRef.current += 1;
     browser.setPreviewItem(null);
@@ -303,27 +327,9 @@ export function S3Browser({ url, headers, config, className, upload, children, v
         <FileGrid
           items={browser.items}
           selectedKeys={browser.selectedKeys}
-          onItemClick={(key, event) => {
-            if (event.shiftKey && browser.selectedKeys.size > 0) {
-              const lastSelected = Array.from(browser.selectedKeys).pop();
-              if (lastSelected) browser.selectRange(lastSelected, key);
-              return;
-            }
-            if (event.ctrlKey || event.metaKey) {
-              browser.toggleSelect(key);
-              return;
-            }
-            browser.deselectAll();
-            browser.select(key);
-          }}
-          onItemDoubleClick={(item) => {
-            void openPreview(item);
-          }}
-          onItemContextMenu={(item, event) => {
-            event.preventDefault();
-            browser.deselectAll();
-            browser.select(item.key);
-          }}
+          onItemClick={handleItemClick}
+          onItemDoubleClick={handleItemDoubleClick}
+          onItemContextMenu={handleItemContextMenu}
           getContextMenuItems={getContextMenuItems}
           isLoading={browser.isLoading}
           isSearching={Boolean(browser.searchQuery)}
@@ -336,27 +342,9 @@ export function S3Browser({ url, headers, config, className, upload, children, v
           selectedKeys={browser.selectedKeys}
           sort={browser.sort}
           onSort={browser.setSort}
-          onItemClick={(key, event) => {
-            if (event.shiftKey && browser.selectedKeys.size > 0) {
-              const lastSelected = Array.from(browser.selectedKeys).pop();
-              if (lastSelected) browser.selectRange(lastSelected, key);
-              return;
-            }
-            if (event.ctrlKey || event.metaKey) {
-              browser.toggleSelect(key);
-              return;
-            }
-            browser.deselectAll();
-            browser.select(key);
-          }}
-          onItemDoubleClick={(item) => {
-            void openPreview(item);
-          }}
-          onItemContextMenu={(item, event) => {
-            event.preventDefault();
-            browser.deselectAll();
-            browser.select(item.key);
-          }}
+          onItemClick={handleItemClick}
+          onItemDoubleClick={handleItemDoubleClick}
+          onItemContextMenu={handleItemContextMenu}
           getContextMenuItems={getContextMenuItems}
           isLoading={browser.isLoading}
           isSearching={Boolean(browser.searchQuery)}
