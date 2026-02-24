@@ -76,6 +76,7 @@ export type {
   FileGridVirtualizationOptions,
   FileListVirtualizationOptions,
   PreviewRendererProps,
+  S3BrowserPaginationOptions,
   S3BrowserProps,
   S3BrowserRenderContext,
 } from "./components";

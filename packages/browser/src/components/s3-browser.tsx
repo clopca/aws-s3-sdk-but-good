@@ -17,6 +17,12 @@ import { SelectionBar } from "./selection-bar";
 import { Toolbar } from "./toolbar";
 import { Button } from "./ui";
 
+export interface S3BrowserPaginationOptions {
+  mode?: "manual" | "infinite";
+  rootMargin?: string;
+  threshold?: number;
+}
+
 export interface S3BrowserProps {
   url?: string;
   headers?: HeadersInit | (() => Promise<HeadersInit> | HeadersInit);
@@ -35,11 +41,7 @@ export interface S3BrowserProps {
     onUploadError?: (error: Error) => void;
   };
   children?: (ctx: S3BrowserRenderContext) => ReactNode;
-  pagination?: {
-    mode?: "manual" | "infinite";
-    rootMargin?: string;
-    threshold?: number;
-  };
+  pagination?: S3BrowserPaginationOptions;
   /**
    * Optional virtualization controls for large directories.
    * Keep disabled for small folders and enable where item counts are high.

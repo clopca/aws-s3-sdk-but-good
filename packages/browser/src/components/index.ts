@@ -11,7 +11,7 @@ export { SearchBar } from "./search-bar";
 export { ContextMenu } from "./context-menu";
 export { SelectionBar } from "./selection-bar";
 export { S3Browser } from "./s3-browser";
-export type { S3BrowserRenderContext, S3BrowserProps } from "./s3-browser";
+export type { S3BrowserPaginationOptions, S3BrowserRenderContext, S3BrowserProps } from "./s3-browser";
 export { S3BrowserRoot, useS3BrowserContext } from "./s3-browser-root";
 export * from "./dialogs";
 export * from "./ui";
