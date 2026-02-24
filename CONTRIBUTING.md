@@ -14,6 +14,14 @@ Thanks for contributing to `s3-good`.
 pnpm install
 ```
 
+Docs site setup:
+
+```bash
+cd docs
+pnpm install
+pnpm dev
+```
+
 ## Development workflow
 
 1. Create a branch from `main`.
@@ -87,3 +95,8 @@ Open an issue with:
 - Environment (Node, package versions, framework)
 
 For security issues, do not open a public issue. See [SECURITY.md](./SECURITY.md).
+
+## Community standards
+
+By participating, you agree to follow [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md).
+For support expectations and channels, see [SUPPORT.md](./SUPPORT.md).
