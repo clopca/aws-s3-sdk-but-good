@@ -1,6 +1,6 @@
 # @s3-good/core
 
-Core SDK for building type-safe file upload routes backed by your own AWS S3 bucket. Provides the server-side upload builder, client-side upload functions, Next.js integration, and S3 management utilities.
+Core package for `s3-good`: route builders, framework adapters, typed upload client, and S3 setup utilities.
 
 ## Installation
 
@@ -8,219 +8,112 @@ Core SDK for building type-safe file upload routes backed by your own AWS S3 buc
 pnpm add @s3-good/core zod
 ```
 
-## Entry Points
+## Entry points
 
-| Import Path | Purpose |
-|-------------|---------|
-| `@s3-good/core/server` | Upload builder (`createUploader`), route handler, middleware helpers |
-| `@s3-good/core/client` | Client-side upload functions (`genUploader`) |
-| `@s3-good/core/next` | Next.js-specific route handler and component generators |
-| `@s3-good/core/types` | TypeScript types and inference utilities |
-| `@s3-good/core/sdk` | S3 bucket setup, CORS validation, and management |
+| Import path | Use for |
+| --- | --- |
+| `@s3-good/core/server` | Route builder, framework-agnostic handlers, browser route builder |
+| `@s3-good/core/client` | Typed upload client factory (`genUploader`) |
+| `@s3-good/core/next` | Next.js server route handlers (`createRouteHandler`, `createBrowserRouteHandler`) |
+| `@s3-good/core/next-client` | Next.js client helper factories (`generateUploadButton`, `generateUploadDropzone`, `generateNextHelpers`) |
+| `@s3-good/core/hono` | Hono handlers |
+| `@s3-good/core/sdk` | Bucket setup, CORS validation |
+| `@s3-good/core/types` | Public type exports |
 
----
-
-## `@s3-good/core/server`
+## Server API (`@s3-good/core/server`)
 
 ### `createUploader()`
 
-Factory function that returns the `f()` builder for defining upload routes.
-
-```typescript
-import { createUploader } from "@s3-good/core/server";
-import type { FileRouter } from "@s3-good/core/server";
+```ts
+import { createUploader, type FileRouter } from "@s3-good/core/server";
+import { z } from "zod";
 
 const f = createUploader();
 
 export const uploadRouter = {
-  // Simple image uploader
   imageUploader: f({ image: { maxFileSize: "4MB", maxFileCount: 4 } })
     .middleware(async ({ req }) => {
-      const userId = req.headers.get("x-user-id") ?? "anonymous";
+      const userId = req.headers.get("x-user-id");
+      if (!userId) throw new Error("Unauthorized");
       return { userId };
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      console.log("Upload complete:", metadata.userId, file.url);
-      return { url: file.url };
+      return { ownerId: metadata.userId, key: file.key };
     }),
 
-  // With Zod input validation
-  documentUploader: f({
-    pdf: { maxFileSize: "16MB" },
-    text: { maxFileSize: "1MB" },
-  })
-    .input(
-      z.object({
-        category: z.string(),
-        tags: z.array(z.string()).optional(),
-      }),
-    )
-    .middleware(async ({ input }) => {
-      return { category: input.category, tags: input.tags ?? [] };
-    })
-    .onUploadComplete(async ({ metadata, file }) => {
-      return { url: file.url, category: metadata.category };
-    }),
+  docsUploader: f({ pdf: { maxFileSize: "16MB" } })
+    .input(z.object({ folderId: z.string() }))
+    .middleware(async ({ input }) => ({ folderId: input.folderId }))
+    .onUploadComplete(async ({ metadata, file }) => ({
+      folderId: metadata.folderId,
+      url: file.url,
+    })),
 } satisfies FileRouter;
-
-export type OurFileRouter = typeof uploadRouter;
 ```
 
-#### Builder Chain
+### `createRouteHandler({ router, config })`
 
-| Method | Description |
-|--------|-------------|
-| `f(config)` | Define allowed file types and limits (`image`, `video`, `audio`, `pdf`, `text`, `blob`) |
-| `.input(zodSchema)` | Add typed input validation with Zod |
-| `.middleware(fn)` | Run server-side logic before upload (auth, validation). Return metadata. |
-| `.onUploadComplete(fn)` | Handle successful uploads. Return data sent back to the client. |
-| `.onUploadError(fn)` | Handle upload failures (optional). |
+Framework-agnostic upload handler that returns `{ GET, POST }`.
 
-#### File Type Configuration
+### `createBrowser()` and `createBrowserRouteHandler(...)`
 
-```typescript
-f({
-  image: {
-    maxFileSize: "4MB",      // Max size per file
-    maxFileCount: 4,          // Max number of files
-    minFileCount: 1,          // Min number of files (optional)
-    contentDisposition: "inline", // "inline" | "attachment"
-  },
-})
-```
+Build and expose a browser API route (list/move/copy/delete/presigned preview URL).
 
-Supported file types: `image`, `video`, `audio`, `pdf`, `text`, `blob` (catch-all).
+```ts
+import {
+  createBrowser,
+  createBrowserRouteHandler,
+} from "@s3-good/core/server";
 
-### `createRouteHandler(opts)`
+const browser = createBrowser()
+  .buckets(["assets", "backups"])
+  .defaultBucket("assets")
+  .pageSize(100)
+  .done();
 
-Creates a framework-agnostic route handler. Returns `{ GET, POST }` handlers.
-
-```typescript
-import { createRouteHandler } from "@s3-good/core/server";
-
-const handler = createRouteHandler({
-  router: uploadRouter,
+export const { GET, POST } = createBrowserRouteHandler({
+  browser,
   config: {
-    region: "us-east-1",
-    bucket: "myapp-uploads",
+    region: process.env.AWS_REGION!,
+    bucket: process.env.AWS_BUCKET!,
     accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
   },
 });
-
-// Wire into any framework that supports Web API Request/Response
-export const { GET, POST } = handler;
 ```
 
-### Middleware Helpers
+### Middleware helpers
 
-Optional convenience functions for extracting auth data from requests:
+`getCookie(req, name)`, `getBearerToken(req)`, `getHeader(req, name)`.
 
-```typescript
-import { getCookie, getBearerToken, getHeader } from "@s3-good/core/server";
+## Client API (`@s3-good/core/client`)
 
-// Extract a cookie
-const sessionToken = getCookie(req, "session-token");
+### `genUploader<TRouter>({ url? })`
 
-// Extract a Bearer token from the Authorization header
-const jwt = getBearerToken(req);
-
-// Extract any header
-const apiKey = getHeader(req, "x-api-key");
-```
-
-#### Auth Examples
-
-```typescript
-// NextAuth.js
-.middleware(async ({ req }) => {
-  const session = await getServerSession(authOptions);
-  if (!session) throw new UploadError({ code: "MIDDLEWARE_ERROR", message: "Unauthorized" });
-  return { userId: session.user.id };
-})
-
-// Clerk
-.middleware(async ({ req }) => {
-  const { userId } = await auth();
-  if (!userId) throw new UploadError({ code: "MIDDLEWARE_ERROR", message: "Unauthorized" });
-  return { userId };
-})
-
-// Custom JWT
-.middleware(async ({ req }) => {
-  const token = getBearerToken(req);
-  if (!token) throw new UploadError({ code: "MIDDLEWARE_ERROR", message: "No token" });
-  const payload = verify(token, process.env.JWT_SECRET!);
-  return { userId: payload.sub };
-})
-```
-
----
-
-## `@s3-good/core/client`
-
-### `genUploader<TRouter>(opts?)`
-
-Creates typed client-side upload functions bound to your `FileRouter`.
-
-```typescript
+```ts
 import { genUploader } from "@s3-good/core/client";
 import type { OurFileRouter } from "~/server/upload-router";
 
 const { uploadFiles, createUpload } = genUploader<OurFileRouter>({
-  url: "/api/upload", // default
+  url: "/api/upload",
 });
-```
 
-#### `uploadFiles(endpoint, opts)`
-
-Upload files to a specific endpoint. Handles the full flow: presigned URL request, S3 upload with progress, and server completion notification.
-
-```typescript
-const result = await uploadFiles("imageUploader", {
+await uploadFiles("imageUploader", {
   files: [file],
-  input: { category: "avatar" },  // Typed based on your route's .input() schema
-  onUploadBegin: (fileName) => console.log("Starting:", fileName),
-  onUploadProgress: (progress) => console.log(`${progress.percentage}%`),
-  headers: { "x-user-id": "user_123" },
-  signal: abortController.signal,
+  input: { folderId: "abc" },
+  onUploadProgress: (progress) => {
+    console.log(progress.percentage);
+  },
 });
-
-// result: UploadFileResponse[]
-// { key, url, name, size, type, serverData }
 ```
 
-#### `createUpload(endpoint, opts)`
+## Next.js server adapter (`@s3-good/core/next`)
 
-Create a controllable upload handle with deferred start and abort capability.
+Use this in App Router route files.
 
-```typescript
-const upload = createUpload("imageUploader", {
-  files: [file],
-  onUploadProgress: (p) => setProgress(p.percentage),
-});
-
-// Start when ready
-const result = await upload.done();
-
-// Or abort
-upload.abort();
-```
-
----
-
-## `@s3-good/core/next`
-
-Next.js-specific integration with App Router support and typed component generators.
-
-### `createRouteHandler(opts)`
-
-Creates a Next.js App Router route handler with server environment validation.
-
-```typescript
+```ts
 // app/api/upload/route.ts
 import { createRouteHandler } from "@s3-good/core/next";
-import { uploadRouter } from "~/server/upload-router";
 
 export const { GET, POST } = createRouteHandler({
   router: uploadRouter,
@@ -233,189 +126,81 @@ export const { GET, POST } = createRouteHandler({
 });
 ```
 
-### `generateUploadButton<TRouter>(opts?)`
+```ts
+// app/api/browser/route.ts
+import { createBrowser, createBrowserRouteHandler } from "@s3-good/core/next";
 
-Generates a pre-typed `UploadButton` component with endpoint autocomplete.
+const browser = createBrowser().done();
 
-```typescript
-import type { OurFileRouter } from "~/server/upload-router";
-import { generateUploadButton } from "@s3-good/core/next";
-
-export const UploadButton = generateUploadButton<OurFileRouter>();
-```
-
-### `generateUploadDropzone<TRouter>(opts?)`
-
-Generates a pre-typed `UploadDropzone` component with endpoint autocomplete.
-
-```typescript
-import type { OurFileRouter } from "~/server/upload-router";
-import { generateUploadDropzone } from "@s3-good/core/next";
-
-export const UploadDropzone = generateUploadDropzone<OurFileRouter>();
-```
-
-### `generateNextHelpers<TRouter>(opts?)`
-
-Convenience wrapper that returns all React helpers pre-configured for Next.js.
-
-```typescript
-import type { OurFileRouter } from "~/server/upload-router";
-import { generateNextHelpers } from "@s3-good/core/next";
-
-export const { useUpload, uploadFiles, createUpload } =
-  generateNextHelpers<OurFileRouter>();
-```
-
----
-
-## `@s3-good/core/types`
-
-TypeScript types and inference utilities for working with file routers.
-
-```typescript
-import type {
-  FileRouter,
-  FileRoute,
-  S3Config,
-  UploadedFile,
-  UploadFileResponse,
-  FileSize,
-  AllowedFileType,
-  ExpandedRouteConfig,
-  FileRouteConfig,
-  inferEndpointInput,
-  inferEndpointOutput,
-  inferEndpoints,
-  inferServerData,
-  inferMetadata,
-  PermittedFileInfo,
-} from "@s3-good/core/types";
-
-// Error classes
-import { UploadError, S3Error } from "@s3-good/core/types";
-```
-
-### Key Types
-
-| Type | Description |
-|------|-------------|
-| `FileRouter` | Record of named `FileRoute` definitions |
-| `FileRoute` | A single upload route with config, middleware, and callbacks |
-| `S3Config` | S3 connection configuration (region, bucket, credentials) |
-| `UploadedFile` | File metadata after upload (key, url, name, size, type) |
-| `UploadFileResponse<T>` | Upload result including `serverData` from `onUploadComplete` |
-| `FileSize` | Template literal type for file sizes (`"4MB"`, `"512KB"`, `"1GB"`) |
-| `AllowedFileType` | `"image" \| "video" \| "audio" \| "pdf" \| "text" \| "blob"` |
-| `inferEndpoints<TRouter>` | Infer endpoint names as string literal union |
-| `inferEndpointInput<TRouter, TEndpoint>` | Infer the input type for an endpoint |
-| `inferEndpointOutput<TRouter, TEndpoint>` | Infer the output type for an endpoint |
-
----
-
-## `@s3-good/core/sdk`
-
-S3 bucket management utilities for setup and validation.
-
-### `S3Api`
-
-High-level class-based API for S3 operations.
-
-```typescript
-import { S3Api } from "@s3-good/core/sdk";
-
-const s3 = new S3Api({
-  region: "us-east-1",
-  bucket: "myapp-uploads",
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-});
-
-// Get a public URL for a file
-const url = s3.getFileUrl("uploads/photo.jpg");
-
-// Get a presigned download URL (expires in 1 hour by default)
-const signedUrl = await s3.getSignedUrl("uploads/photo.jpg", 3600);
-
-// Configure bucket CORS and lifecycle rules
-await s3.setupBucket({ allowedOrigins: ["https://myapp.com"] });
-
-// Validate CORS configuration
-const { isValid, issues } = await s3.validateCors();
-```
-
-### `setupBucket(config, opts?)`
-
-Configures an S3 bucket with CORS rules and lifecycle policies. Run once during project setup.
-
-```typescript
-import { setupBucket } from "@s3-good/core/sdk";
-
-const result = await setupBucket(
-  {
-    region: "us-east-1",
-    bucket: "myapp-uploads",
-    accessKeyId: "AKIA...",
-    secretAccessKey: "...",
+export const { GET, POST } = createBrowserRouteHandler({
+  browser,
+  config: {
+    region: process.env.AWS_REGION!,
+    bucket: process.env.AWS_BUCKET!,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
   },
-  {
-    allowedOrigins: ["https://myapp.com"], // default: ["*"]
-    multipartExpiryDays: 1,                // default: 1
-  },
-);
-// result: { cors: true, lifecycle: true }
+});
 ```
 
-### `validateBucketCors(config)`
+## Next.js client helpers (`@s3-good/core/next-client`)
 
-Validates that a bucket has the required CORS configuration for browser uploads.
+These helpers are async and should be used in client-side modules.
 
-```typescript
-import { validateBucketCors } from "@s3-good/core/sdk";
+```ts
+"use client";
 
-const { isValid, issues } = await validateBucketCors({
-  region: "us-east-1",
-  bucket: "myapp-uploads",
-  accessKeyId: "AKIA...",
-  secretAccessKey: "...",
-});
+import type { OurFileRouter } from "~/server/upload-router";
+import {
+  generateUploadButton,
+  generateUploadDropzone,
+  generateNextHelpers,
+} from "@s3-good/core/next-client";
 
-if (!isValid) {
-  console.error("CORS issues:", issues);
+export async function createUploadUi() {
+  const UploadButton = await generateUploadButton<OurFileRouter>({
+    url: "/api/upload",
+  });
+  const UploadDropzone = await generateUploadDropzone<OurFileRouter>();
+  const helpers = await generateNextHelpers<OurFileRouter>();
+
+  return { UploadButton, UploadDropzone, ...helpers };
 }
 ```
 
----
+## Hono adapter (`@s3-good/core/hono`)
 
-## S3-Compatible Services
+```ts
+import { Hono } from "hono";
+import { createRouteHandler } from "@s3-good/core/hono";
 
-The SDK works with any S3-compatible storage. Pass `endpoint` and `forcePathStyle`:
+const app = new Hono();
+const { GET, POST } = createRouteHandler({ router: uploadRouter, config });
 
-```typescript
-// MinIO
-const config: S3Config = {
-  region: "us-east-1",
-  bucket: "myapp-uploads",
-  accessKeyId: "minioadmin",
-  secretAccessKey: "minioadmin",
-  endpoint: "http://localhost:9000",
-  forcePathStyle: true,
-};
-
-// Cloudflare R2
-const config: S3Config = {
-  region: "auto",
-  bucket: "myapp-uploads",
-  accessKeyId: "...",
-  secretAccessKey: "...",
-  endpoint: "https://<ACCOUNT_ID>.r2.cloudflarestorage.com",
-};
+app.get("/api/upload", (c) => GET(c));
+app.post("/api/upload", (c) => POST(c));
 ```
 
-## Documentation
+## SDK utilities (`@s3-good/core/sdk`)
 
-- [S3 Bucket Setup Guide](../../docs/s3-setup.md)
-- [Example App](../../examples/nextjs/)
+- `setupBucket` - configure CORS/lifecycle defaults
+- `validateBucketCors` - verify CORS rules
+- `S3Api` - low-level helpers
+
+## Environment variables
+
+```bash
+AWS_REGION=us-east-1
+AWS_BUCKET=my-bucket
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+```
+
+## Notes
+
+- `@s3-good/core/next` is server-only.
+- `@s3-good/core/next-client` isolates client-side helper generation.
+- For custom frontends, prefer `genUploader` or `generateReactHelpers` from `@s3-good/react`.
 
 ## License
 
