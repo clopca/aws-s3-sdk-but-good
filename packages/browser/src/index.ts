@@ -4,10 +4,7 @@
  * Browser-focused UI and hooks for S3 file management.
  */
 
-export {
-  getCodeLanguage,
-  getPreviewType,
-} from "@s3-good/shared";
+export { getCodeLanguage, getPreviewType } from "@s3-good/shared";
 
 export type {
   BrowserAction,
@@ -41,11 +38,13 @@ export {
   useBreadcrumbs,
   useFilePreview,
   useFileSelection,
+  useKeyboardShortcuts,
   useSearch,
 } from "./hooks";
 export type {
   BreadcrumbSegment,
   SelectionClickEvent,
+  UseKeyboardShortcutsOptions,
   UseBrowserOptions,
   UseBrowserReturn,
 } from "./hooks";
@@ -57,28 +56,50 @@ export {
   CreateFolderDialog,
   EmptyState,
   FileGrid,
+  FileGridSkeleton,
   FileIcon,
   FileItem,
+  FileListSkeleton,
   FileListView,
+  FileThumbnail,
   FolderIcon,
   PreviewModal,
   RenameDialog,
   SearchBar,
   SelectionBar,
+  Skeleton,
   S3Browser,
   S3BrowserRoot,
   useS3BrowserContext,
   Toolbar,
   getPreviewComponent,
+  // Compound sub-components (context-connected)
+  BrowserToolbar,
+  BrowserBreadcrumbs,
+  BrowserSearchBar,
+  BrowserFileView,
+  BrowserSelectionBar,
+  BrowserPreviewModal,
 } from "./components";
 
 export type {
   FileGridVirtualizationOptions,
   FileListVirtualizationOptions,
   PreviewRendererProps,
+  S3BrowserNotification,
   S3BrowserPaginationOptions,
   S3BrowserProps,
   S3BrowserRenderContext,
+  // Compound sub-component prop types
+  BrowserToolbarProps,
+  BrowserBreadcrumbsProps,
+  BrowserSearchBarProps,
+  BrowserFileViewProps,
+  BrowserSelectionBarProps,
+  BrowserPreviewModalProps,
 } from "./components";
+export { BrowserProvider, useBrowserContext } from "./context";
+export type { BrowserContextValue, BrowserProviderProps } from "./context";
+
 export { generateBrowserHelpers } from "./generate-helpers";
 export type { GenerateBrowserHelpersOptions } from "./generate-helpers";

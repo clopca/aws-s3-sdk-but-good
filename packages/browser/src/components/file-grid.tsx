@@ -3,6 +3,7 @@ import type { BrowserItem } from "@s3-good/shared";
 import type { ContextMenuItem } from "./context-menu";
 import { EmptyState } from "./empty-state";
 import { FileItem } from "./file-item";
+import { FileGridSkeleton } from "./skeleton";
 
 const DEFAULT_GRID_ITEM_MIN_WIDTH = 140;
 const DEFAULT_GRID_ROW_HEIGHT = 152;
@@ -28,24 +29,11 @@ export interface FileGridProps {
   onItemDoubleClick: (item: BrowserItem) => void;
   onItemContextMenu: (item: BrowserItem, event: React.SyntheticEvent) => void;
   getContextMenuItems?: (item: BrowserItem) => ContextMenuItem[];
+  getPreviewUrl?: (key: string) => Promise<string>;
   isLoading: boolean;
   isSearching?: boolean;
   className?: string;
   virtualization?: FileGridVirtualizationOptions;
-}
-
-function LoadingSkeleton() {
-  return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3 p-1">
-      {Array.from({ length: 8 }).map((_, index) => (
-        <div key={index} className="flex min-h-[140px] flex-col items-center justify-center rounded-xl border border-border bg-card p-3">
-          <div className="mb-2 h-10 w-10 animate-pulse rounded-lg bg-muted" />
-          <div className="h-3.5 w-3/4 animate-pulse rounded bg-muted" />
-          <div className="mt-2 h-3 w-1/2 animate-pulse rounded bg-muted" />
-        </div>
-      ))}
-    </div>
-  );
 }
 
 export function FileGrid({
@@ -55,6 +43,7 @@ export function FileGrid({
   onItemDoubleClick,
   onItemContextMenu,
   getContextMenuItems,
+  getPreviewUrl,
   isLoading,
   isSearching,
   className,
@@ -135,7 +124,7 @@ export function FileGrid({
 
   const regularGridClassName = `grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3 p-1 ${className ?? ""}`.trim();
 
-  if (isLoading) return <LoadingSkeleton />;
+  if (isLoading) return <FileGridSkeleton />;
   if (itemCount === 0) return <EmptyState isSearching={isSearching} />;
 
   return (
@@ -167,6 +156,7 @@ export function FileGrid({
                 isSelected={selectedKeys.has(item.key)}
                 viewMode="grid"
                 contextMenuItems={getContextMenuItems?.(item)}
+                getPreviewUrl={getPreviewUrl}
                 onClick={(event) => onItemClick(item.key, event)}
                 onDoubleClick={() => onItemDoubleClick(item)}
                 onContextMenu={(event) => onItemContextMenu(item, event)}
@@ -183,6 +173,7 @@ export function FileGrid({
               isSelected={selectedKeys.has(item.key)}
               viewMode="grid"
               contextMenuItems={getContextMenuItems?.(item)}
+              getPreviewUrl={getPreviewUrl}
               onClick={(event) => onItemClick(item.key, event)}
               onDoubleClick={() => onItemDoubleClick(item)}
               onContextMenu={(event) => onItemContextMenu(item, event)}

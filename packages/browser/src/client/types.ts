@@ -13,6 +13,8 @@ export interface ListResult {
   meta?: {
     mode: "s3-list";
     bucket: string;
+    buckets?: string[];
+    defaultBucket?: string;
   };
 }
 
@@ -22,6 +24,7 @@ export interface ListParams {
   filters?: BrowserListFilters;
   continuationToken?: string;
   cursor?: string;
+  signal?: AbortSignal;
 }
 
 export interface DeleteResult {

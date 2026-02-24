@@ -1,4 +1,5 @@
 import type { BreadcrumbSegment } from "../hooks";
+import { Button } from "./ui";
 
 export interface BreadcrumbsProps {
   segments: BreadcrumbSegment[];
@@ -12,19 +13,16 @@ export function Breadcrumbs({ segments, onNavigate }: BreadcrumbsProps) {
         const isLast = index === segments.length - 1;
         return (
           <span key={segment.path} className="flex items-center gap-1">
-            <button
-              type="button"
-              className={`rounded-md px-2 py-1 transition-colors ${
-                isLast
-                  ? "font-semibold text-slate-900"
-                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-              }`}
+            <Button
+              variant="ghost"
+              size="sm"
+              className={isLast ? "font-semibold text-foreground" : "text-muted-foreground"}
               onClick={() => onNavigate(segment.path)}
               disabled={isLast}
             >
               {segment.label}
-            </button>
-            {!isLast ? <span className="text-slate-400">/</span> : null}
+            </Button>
+            {!isLast ? <span className="text-muted-foreground/70">/</span> : null}
           </span>
         );
       })}

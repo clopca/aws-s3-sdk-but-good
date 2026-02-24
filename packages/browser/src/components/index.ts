@@ -1,20 +1,45 @@
 export { FileIcon, FolderIcon } from "./file-icon";
 export { FileItem } from "./file-item";
+export { FileThumbnail } from "./file-thumbnail";
 export { FileGrid } from "./file-grid";
 export type { FileGridVirtualizationOptions } from "./file-grid";
 export { FileListView } from "./file-list-view";
 export type { FileListVirtualizationOptions } from "./file-list-view";
 export { EmptyState } from "./empty-state";
+export { Skeleton, FileGridSkeleton, FileListSkeleton } from "./skeleton";
 export { Toolbar } from "./toolbar";
 export { Breadcrumbs } from "./breadcrumbs";
 export { SearchBar } from "./search-bar";
 export { ContextMenu } from "./context-menu";
 export { SelectionBar } from "./selection-bar";
 export { S3Browser } from "./s3-browser";
-export type { S3BrowserPaginationOptions, S3BrowserRenderContext, S3BrowserProps } from "./s3-browser";
+export type {
+  S3BrowserNotification,
+  S3BrowserPaginationOptions,
+  S3BrowserRenderContext,
+  S3BrowserProps,
+} from "./s3-browser";
 export { S3BrowserRoot, useS3BrowserContext } from "./s3-browser-root";
 export * from "./dialogs";
 export * from "./ui";
 export { PreviewModal } from "./preview/preview-modal";
 export { getPreviewComponent } from "./preview";
 export type { PreviewRendererProps } from "./preview";
+
+// Compound sub-components (context-connected)
+export {
+  BrowserToolbar,
+  BrowserBreadcrumbs,
+  BrowserSearchBar,
+  BrowserFileView,
+  BrowserSelectionBar,
+  BrowserPreviewModal,
+} from "./compound";
+export type {
+  BrowserToolbarProps,
+  BrowserBreadcrumbsProps,
+  BrowserSearchBarProps,
+  BrowserFileViewProps,
+  BrowserSelectionBarProps,
+  BrowserPreviewModalProps,
+} from "./compound";

@@ -24,7 +24,7 @@ export default function TextPreview({ url }: PreviewRendererProps) {
   }, [url]);
 
   return (
-    <pre className="max-h-[80vh] w-[80vw] overflow-auto rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-800">
+    <pre className="max-h-[80vh] w-[80vw] overflow-auto rounded-lg border border-border bg-card p-4 text-sm text-card-foreground">
       {content}
     </pre>
   );

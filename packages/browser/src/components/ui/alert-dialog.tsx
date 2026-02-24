@@ -10,6 +10,7 @@ function AlertDialogOverlay({
 }: React.ComponentProps<typeof AlertDialogPrimitive.Backdrop>) {
   return (
     <AlertDialogPrimitive.Backdrop
+      data-state="open"
       className={cn("fixed inset-0 z-50 bg-black/50", className)}
       {...props}
     />
@@ -26,6 +27,7 @@ function AlertDialogContent({
       <AlertDialogOverlay />
       <div className="fixed inset-0 z-50 grid place-items-center p-4">
         <AlertDialogPrimitive.Popup
+          data-state="open"
           className={cn(
             "w-full max-w-md rounded-xl border border-border bg-card p-6 text-card-foreground shadow-lg",
             className,
@@ -43,14 +45,24 @@ function AlertDialogHeader({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("flex flex-col space-y-1.5", className)} {...props} />;
+  return (
+    <div className={cn("flex flex-col space-y-1.5", className)} {...props} />
+  );
 }
 
 function AlertDialogFooter({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end", className)} {...props} />;
+  return (
+    <div
+      className={cn(
+        "mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
 function AlertDialogTitle({

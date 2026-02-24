@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { BrowserStore } from "../state";
 
-export function useSearch(store: BrowserStore, debounceMs = 300) {
+export interface UseSearchReturn {
+  searchQuery: string;
+  inputValue: string;
+  handleChange: (value: string) => void;
+  clear: () => void;
+}
+
+export function useSearch(store: BrowserStore, debounceMs = 300): UseSearchReturn {
   const searchQuery = useSyncExternalStore(store.subscribe, store.getState, store.getState).searchQuery;
   const [inputValue, setInputValue] = useState(searchQuery);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);

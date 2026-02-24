@@ -1,12 +1,13 @@
 import { Suspense, useEffect } from "react";
 import type { BrowserFile } from "@s3-good/shared";
 import { getPreviewType } from "@s3-good/shared";
+import { Dialog as DialogPrimitive } from "@base-ui/react";
 import {
-  DialogBackdrop,
+  Button,
+  Dialog,
   DialogClose,
-  DialogContent,
+  DialogOverlay,
   DialogPortal,
-  DialogRoot,
   DialogTitle,
 } from "../ui";
 import { getPreviewComponent } from "./index";
@@ -64,25 +65,25 @@ export function PreviewModal({
   }, [hasNext, hasPrev, onClose, onNext, onPrev]);
 
   return (
-    <DialogRoot
+    <Dialog
       open
       onOpenChange={(nextOpen) => {
         if (!nextOpen) onClose();
       }}
     >
       <DialogPortal>
-        <DialogBackdrop className="fixed inset-0 z-50 bg-slate-950/90" />
-        <DialogContent className="fixed inset-0 z-50 flex flex-col outline-none" aria-label={`Preview ${file.name}`}>
-          <header className="flex items-center justify-between border-b border-white/10 bg-black/30 px-4 py-3">
+        <DialogOverlay className="bg-black/85 backdrop-blur-sm" />
+        <DialogPrimitive.Popup className="fixed inset-0 z-50 flex flex-col outline-none" aria-label={`Preview ${file.name}`}>
+          <header className="flex items-center justify-between border-b border-white/10 bg-black/35 px-4 py-3">
             <div className="min-w-0">
               <DialogTitle className="truncate text-sm font-medium text-white">{file.name}</DialogTitle>
-              <p className="text-xs text-slate-300">{formatFileSize(file.size)} • {previewType}</p>
+              <p className="text-xs text-white/70">{formatFileSize(file.size)} • {previewType}</p>
             </div>
             <div className="flex items-center gap-2">
-              <button type="button" className="rounded-md bg-white/10 px-3 py-1.5 text-sm text-white" onClick={onDownload}>
+              <Button className="bg-white/10 text-white hover:bg-white/20" onClick={onDownload}>
                 Download
-              </button>
-              <DialogClose className="rounded-md bg-white/10 px-3 py-1.5 text-sm text-white" onClick={onClose}>
+              </Button>
+              <DialogClose render={<Button className="bg-white/10 text-white hover:bg-white/20" onClick={onClose} />}>
                 Close
               </DialogClose>
             </div>
@@ -90,9 +91,9 @@ export function PreviewModal({
 
           <div className="relative flex flex-1 items-center justify-center p-4">
             {hasPrev ? (
-              <button type="button" className="absolute left-4 rounded-full bg-white/15 p-3 text-white" onClick={onPrev}>
+              <Button variant="ghost" size="icon" className="absolute left-4 rounded-full bg-white/15 p-3 text-white hover:bg-white/25" onClick={onPrev}>
                 ←
-              </button>
+              </Button>
             ) : null}
 
             {isLoading ? (
@@ -102,22 +103,22 @@ export function PreviewModal({
                 <PreviewComponent url={url} fileName={file.name} contentType={file.contentType} />
               </Suspense>
             ) : (
-              <div className="rounded-lg bg-white p-6 text-center">
-                <p className="text-slate-900">Preview not available.</p>
-                <button type="button" className="mt-3 rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white" onClick={onDownload}>
+              <div className="rounded-lg border border-border bg-card p-6 text-center text-card-foreground">
+                <p className="text-foreground">Preview not available.</p>
+                <Button className="mt-3" onClick={onDownload}>
                   Download instead
-                </button>
+                </Button>
               </div>
             )}
 
             {hasNext ? (
-              <button type="button" className="absolute right-4 rounded-full bg-white/15 p-3 text-white" onClick={onNext}>
+              <Button variant="ghost" size="icon" className="absolute right-4 rounded-full bg-white/15 p-3 text-white hover:bg-white/25" onClick={onNext}>
                 →
-              </button>
+              </Button>
             ) : null}
           </div>
-        </DialogContent>
+        </DialogPrimitive.Popup>
       </DialogPortal>
-    </DialogRoot>
+    </Dialog>
   );
 }

@@ -3,12 +3,14 @@ import { getPreviewType } from "@s3-good/shared";
 import type { ContextMenuItem } from "./context-menu";
 import { ContextMenu } from "./context-menu";
 import { FileIcon, FolderIcon } from "./file-icon";
+import { FileThumbnail } from "./file-thumbnail";
 
 export interface FileItemProps {
   item: BrowserItem;
   isSelected: boolean;
   viewMode: "grid" | "list";
   contextMenuItems?: ContextMenuItem[];
+  getPreviewUrl?: (key: string) => Promise<string>;
   onClick: (event: React.MouseEvent) => void;
   onDoubleClick: () => void;
   onContextMenu: (event: React.SyntheticEvent) => void;
@@ -41,6 +43,7 @@ function FileItemButton({
   item,
   isSelected,
   viewMode,
+  getPreviewUrl,
   onClick,
   onDoubleClick,
   onContextMenu,
@@ -49,9 +52,14 @@ function FileItemButton({
     ? "border-primary/50 bg-accent ring-1 ring-ring/50 shadow-sm"
     : "border-border bg-card hover:bg-accent/50 hover:shadow-sm";
 
-  const icon = item.kind === "folder"
-    ? <FolderIcon size={viewMode === "grid" ? 42 : 22} />
-    : <FileIcon type={getPreviewType(item.contentType, item.name)} size={viewMode === "grid" ? 42 : 22} />;
+  const gridIcon = item.kind === "folder"
+    ? <FolderIcon size={42} />
+    : <FileThumbnail item={item} size={42} getPreviewUrl={getPreviewUrl} />;
+
+  const listIcon = item.kind === "folder"
+    ? <FolderIcon size={22} />
+    : <FileIcon type={getPreviewType(item.contentType, item.name)} size={22} />;
+
   const accessibleLabel = buildAccessibleItemLabel(item);
 
   if (viewMode === "grid") {
@@ -71,7 +79,7 @@ function FileItemButton({
           }
         }}
       >
-        <div className="mb-2 flex h-12 items-center transition-transform duration-150 group-hover:scale-105">{icon}</div>
+        <div className="mb-2 flex h-12 items-center transition-transform duration-150 group-hover:scale-105">{gridIcon}</div>
         <div className="w-full truncate text-sm font-medium text-foreground" title={item.name}>{item.name}</div>
         {item.kind === "file" ? (
           <div className="mt-1 text-xs text-muted-foreground">{formatSize(item.size)}</div>
@@ -99,7 +107,7 @@ function FileItemButton({
       }}
     >
       <div className="flex min-w-0 items-center gap-2.5">
-        {icon}
+        {listIcon}
         <span className="truncate text-sm font-medium text-foreground" title={item.name}>{item.name}</span>
       </div>
       <span className="text-xs tabular-nums text-muted-foreground">{item.kind === "file" ? formatSize(item.size) : "—"}</span>

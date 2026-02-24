@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { genUploader } from "@s3-good/core/client";
 import type { FileRouter } from "@s3-good/core/server";
 import type { BrowserConfig, BrowserFile, BrowserItem } from "@s3-good/shared";
-import { useBreadcrumbs, useBrowser, useSearch } from "../hooks";
+import { useBreadcrumbs, useBrowser, useKeyboardShortcuts, useSearch } from "../hooks";
 import type { BreadcrumbSegment, UseSearchReturn, UseBrowserReturn } from "../hooks";
 import type { ContextMenuItem } from "./context-menu";
 import { Breadcrumbs } from "./breadcrumbs";
@@ -23,11 +23,21 @@ export interface S3BrowserPaginationOptions {
   threshold?: number;
 }
 
+export interface S3BrowserNotification {
+  type: "success" | "error" | "info";
+  message: string;
+}
+
 export interface S3BrowserProps {
   url?: string;
   headers?: HeadersInit | (() => Promise<HeadersInit> | HeadersInit);
   config?: BrowserConfig;
   className?: string;
+  /**
+   * Optional callback invoked after browser actions (create folder, rename, delete).
+   * Use this to wire up toast notifications in the consuming app.
+   */
+  onNotify?: (notification: S3BrowserNotification) => void;
   upload?: {
     endpoint?: string;
     url?: string;
@@ -99,6 +109,7 @@ export function S3Browser({
   headers,
   config,
   className,
+  onNotify,
   upload,
   children,
   pagination,
@@ -275,6 +286,11 @@ export function S3Browser({
     setPreviewLoading(false);
   };
 
+  const getThumbnailUrl = useCallback(
+    (key: string) => browser.client.getPreviewUrl(key, browser.activeBucket || undefined),
+    [browser.client, browser.activeBucket],
+  );
+
   const requestLoadMore = useCallback(() => {
     if (loadMoreInFlightRef.current) return;
     loadMoreInFlightRef.current = true;
@@ -282,6 +298,24 @@ export function S3Browser({
       loadMoreInFlightRef.current = false;
     });
   }, [browser]);
+
+  useKeyboardShortcuts({
+    selectedCount: browser.selectedKeys.size,
+    onDelete: () => setConfirmDeleteOpen(true),
+    onRename: () => {
+      const selected = Array.from(browser.selectedKeys);
+      if (selected.length === 1) {
+        const item = browser.items.find((i) => i.key === selected[0]);
+        if (item) setRenameTarget(item);
+      }
+    },
+    onSelectAll: () => {
+      for (const item of browser.items) {
+        browser.select(item.key);
+      }
+    },
+    onDeselectAll: browser.deselectAll,
+  });
 
   useEffect(() => {
     if (!useInfinitePagination) return;
@@ -403,6 +437,7 @@ export function S3Browser({
           onItemDoubleClick={handleItemDoubleClick}
           onItemContextMenu={handleItemContextMenu}
           getContextMenuItems={getContextMenuItems}
+          getPreviewUrl={getThumbnailUrl}
           isLoading={browser.isLoading}
           isSearching={Boolean(browser.searchQuery)}
           virtualization={virtualization?.grid}
@@ -460,7 +495,13 @@ export function S3Browser({
         onCancel={() => setCreateFolderOpen(false)}
         onSubmit={(name) => {
           setCreateFolderOpen(false);
-          void browser.createFolder(name);
+          void browser.createFolder(name).then(
+            () => onNotify?.({ type: "success", message: "Folder created" }),
+            (error: unknown) => {
+              const message = error instanceof Error ? error.message : "Failed to create folder";
+              onNotify?.({ type: "error", message });
+            },
+          );
         }}
         className={appearance?.createFolderDialog}
       />
@@ -473,7 +514,13 @@ export function S3Browser({
           if (!renameTarget) return;
           const targetKey = renameTarget.key;
           setRenameTarget(null);
-          void browser.renameItem(targetKey, newName);
+          void browser.renameItem(targetKey, newName).then(
+            () => onNotify?.({ type: "success", message: "Item renamed" }),
+            (error: unknown) => {
+              const message = error instanceof Error ? error.message : "Failed to rename item";
+              onNotify?.({ type: "error", message });
+            },
+          );
         }}
         className={appearance?.renameDialog}
       />
@@ -486,7 +533,13 @@ export function S3Browser({
         onCancel={() => setConfirmDeleteOpen(false)}
         onConfirm={() => {
           setConfirmDeleteOpen(false);
-          void browser.deleteSelected();
+          void browser.deleteSelected().then(
+            () => onNotify?.({ type: "success", message: "Items deleted" }),
+            (error: unknown) => {
+              const message = error instanceof Error ? error.message : "Failed to delete items";
+              onNotify?.({ type: "error", message });
+            },
+          );
         }}
         className={appearance?.confirmDialog}
       />

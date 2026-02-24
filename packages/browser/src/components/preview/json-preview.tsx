@@ -24,7 +24,7 @@ export default function JsonPreview({ url }: PreviewRendererProps) {
   }, [url]);
 
   return (
-    <pre className="max-h-[80vh] w-[80vw] overflow-auto rounded-lg bg-slate-900 p-4 text-sm text-slate-100">
+    <pre className="max-h-[80vh] w-[80vw] overflow-auto rounded-lg border border-border bg-muted/40 p-4 text-sm text-foreground">
       {JSON.stringify(content, null, 2)}
     </pre>
   );

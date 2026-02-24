@@ -33,12 +33,12 @@ export default function CodePreview({ url, fileName }: PreviewRendererProps) {
   const language = useMemo(() => getCodeLanguage(fileName), [fileName]);
 
   if (loading) {
-    return <div className="h-[60vh] w-[70vw] animate-pulse rounded-lg bg-slate-800" />;
+    return <div className="h-[60vh] w-[70vw] animate-pulse rounded-lg bg-muted" />;
   }
 
   return (
-    <div className="max-h-[80vh] w-[80vw] overflow-auto rounded-lg bg-slate-900 p-4 text-slate-100">
-      <div className="mb-2 text-xs uppercase text-slate-400">{language}</div>
+    <div className="max-h-[80vh] w-[80vw] overflow-auto rounded-lg border border-border bg-muted/40 p-4 text-foreground">
+      <div className="mb-2 text-xs uppercase text-muted-foreground">{language}</div>
       <pre className="text-sm"><code>{content}</code></pre>
     </div>
   );

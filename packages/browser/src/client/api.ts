@@ -91,11 +91,12 @@ export function createBrowserClient(opts: BrowserClientOptions = {}) {
     return body as BrowserActionResponse;
   }
 
-  async function fetchPost(payload: BrowserActionPayload): Promise<BrowserActionResponse> {
+  async function fetchPost(payload: BrowserActionPayload, signal?: AbortSignal): Promise<BrowserActionResponse> {
     const response = await fetch(baseUrl, {
       method: "POST",
       headers: await getHeaders(),
       body: JSON.stringify(payload),
+      signal,
     });
 
     return parseResponse(response, payload.action);
@@ -114,7 +115,7 @@ export function createBrowserClient(opts: BrowserClientOptions = {}) {
       continuationToken: params.continuationToken,
       cursor: params.cursor,
       filters,
-    });
+    }, params.signal);
 
     return {
       items: deserializeItems(response.items),
