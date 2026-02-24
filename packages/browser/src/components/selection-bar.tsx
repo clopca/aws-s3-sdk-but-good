@@ -1,22 +1,41 @@
+import { Button, cn } from "./ui";
+
 export interface SelectionBarProps {
   count: number;
   onClear: () => void;
   onDelete: () => void;
+  className?: string;
+  appearance?: Partial<{
+    root: string;
+    label: string;
+    clearButton: string;
+    deleteButton: string;
+  }>;
 }
 
-export function SelectionBar({ count, onClear, onDelete }: SelectionBarProps) {
+export function SelectionBar({ count, onClear, onDelete, className, appearance }: SelectionBarProps) {
   if (count === 0) return null;
 
   return (
-    <div className="sticky bottom-3 z-20 flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50 px-4 py-2">
-      <span className="text-sm font-medium text-blue-900">{count} selected</span>
+    <div className={cn("sticky bottom-3 z-20 flex items-center justify-between rounded-xl border border-primary/30 bg-primary/10 px-4 py-2.5 shadow-md", appearance?.root, className)}>
+      <span aria-live="polite" className={cn("text-sm font-medium text-primary", appearance?.label)}>{count} selected</span>
       <div className="flex items-center gap-2">
-        <button type="button" className="rounded-md bg-white px-3 py-1.5 text-sm text-slate-700" onClick={onClear}>
+        <Button
+          type="button"
+          variant="outline"
+          className={appearance?.clearButton}
+          onClick={onClear}
+        >
           Clear
-        </button>
-        <button type="button" className="rounded-md bg-rose-600 px-3 py-1.5 text-sm text-white" onClick={onDelete}>
+        </Button>
+        <Button
+          type="button"
+          variant="destructive"
+          className={appearance?.deleteButton}
+          onClick={onDelete}
+        >
           Delete
-        </button>
+        </Button>
       </div>
     </div>
   );

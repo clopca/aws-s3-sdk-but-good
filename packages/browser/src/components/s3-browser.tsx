@@ -328,7 +328,11 @@ export function S3Browser({ url, headers, config, className, upload, children, v
       />
 
       {browser.error ? (
-        <div className={`rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive ${appearance?.error ?? ""}`.trim()}>
+        <div
+          role="alert"
+          aria-live="assertive"
+          className={`rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive ${appearance?.error ?? ""}`.trim()}
+        >
           {browser.error}
         </div>
       ) : null}
