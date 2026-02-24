@@ -1,0 +1,27 @@
+[
+  {
+    "name": "@s3-good/shared",
+    "path": "packages/shared/dist/index.js",
+    "limit": "10 KB"
+  },
+  {
+    "name": "@s3-good/core (client)",
+    "path": "packages/core/dist/client.js",
+    "limit": "15 KB"
+  },
+  {
+    "name": "@s3-good/core (server)",
+    "path": "packages/core/dist/server.js",
+    "limit": "5 KB"
+  },
+  {
+    "name": "@s3-good/react",
+    "path": "packages/react/dist/index.js",
+    "limit": "50 KB"
+  },
+  {
+    "name": "@s3-good/browser",
+    "path": "packages/browser/dist/index.js",
+    "limit": "70 KB"
+  }
+]
