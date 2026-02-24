@@ -19,7 +19,43 @@ import type { S3Config } from "@s3-good/shared";
 // S3 Client Factory — lazy initialization with singleton caching per config
 // ---------------------------------------------------------------------------
 
-const clientCache = new Map<string, S3Client>();
+interface CacheEntry {
+  client: S3Client;
+  createdAt: number;
+}
+
+const clientCache = new Map<string, CacheEntry>();
+
+/** Default TTL for cached S3 clients (5 minutes). */
+const DEFAULT_TTL_MS = 5 * 60 * 1000;
+
+/** Minimum interval between full cache sweeps (60 seconds). */
+const CLEANUP_INTERVAL_MS = 60 * 1000;
+
+let lastCleanup = 0;
+
+function isExpired(entry: CacheEntry, ttlMs: number): boolean {
+  return Date.now() - entry.createdAt > ttlMs;
+}
+
+/**
+ * Sweeps the entire cache and removes expired entries.
+ *
+ * Runs at most once per {@link CLEANUP_INTERVAL_MS} to avoid scanning on every
+ * cache access. This piggybacks on normal `getS3Client` calls so no timers are
+ * needed.
+ */
+function cleanupExpired(): void {
+  const now = Date.now();
+  if (now - lastCleanup < CLEANUP_INTERVAL_MS) return;
+  lastCleanup = now;
+
+  for (const [key, entry] of clientCache) {
+    if (isExpired(entry, DEFAULT_TTL_MS)) {
+      clientCache.delete(key);
+    }
+  }
+}
 
 function configToKey(config: S3Config): string {
   return `${config.region}:${config.bucket}:${config.accessKeyId}:${config.endpoint ?? "default"}:${config.sessionToken ?? "none"}`;
@@ -29,30 +65,46 @@ function configToKey(config: S3Config): string {
  * Returns a cached {@link S3Client} for the given config.
  *
  * The client is created lazily on first call and reused for subsequent calls
- * with the same config (keyed by region + bucket + accessKeyId + endpoint).
+ * with the same config (keyed by region + bucket + accessKeyId + endpoint +
+ * sessionToken).
+ *
+ * Cache entries expire after {@link DEFAULT_TTL_MS} (5 minutes) so that stale
+ * clients with expired credentials are evicted automatically.
  */
 export function getS3Client(config: S3Config): S3Client {
   const key = configToKey(config);
-  let client = clientCache.get(key);
-  if (!client) {
-    client = new S3Client({
-      region: config.region,
-      credentials: {
-        accessKeyId: config.accessKeyId,
-        secretAccessKey: config.secretAccessKey,
-        ...(config.sessionToken && { sessionToken: config.sessionToken }),
-      },
-      ...(config.endpoint && { endpoint: config.endpoint }),
-      forcePathStyle: config.forcePathStyle ?? false,
-      // Disable automatic checksum computation. AWS SDK v3 enables flexible
-      // checksums by default which bakes a CRC32 of the (empty) body into
-      // presigned URLs. When the browser later PUTs actual file data the
-      // checksum mismatches and S3 returns 403 SignatureDoesNotMatch.
-      requestChecksumCalculation: "WHEN_REQUIRED",
-      responseChecksumValidation: "WHEN_REQUIRED",
-    });
-    clientCache.set(key, client);
+  const cached = clientCache.get(key);
+
+  if (cached && !isExpired(cached, DEFAULT_TTL_MS)) {
+    return cached.client;
   }
+
+  // Entry missing or expired — remove stale entry if present
+  if (cached) {
+    clientCache.delete(key);
+  }
+
+  const client = new S3Client({
+    region: config.region,
+    credentials: {
+      accessKeyId: config.accessKeyId,
+      secretAccessKey: config.secretAccessKey,
+      ...(config.sessionToken && { sessionToken: config.sessionToken }),
+    },
+    ...(config.endpoint && { endpoint: config.endpoint }),
+    forcePathStyle: config.forcePathStyle ?? false,
+    // Disable automatic checksum computation. AWS SDK v3 enables flexible
+    // checksums by default which bakes a CRC32 of the (empty) body into
+    // presigned URLs. When the browser later PUTs actual file data the
+    // checksum mismatches and S3 returns 403 SignatureDoesNotMatch.
+    requestChecksumCalculation: "WHEN_REQUIRED",
+    responseChecksumValidation: "WHEN_REQUIRED",
+  });
+  clientCache.set(key, { client, createdAt: Date.now() });
+
+  // Piggyback cleanup on cache writes to avoid timer leaks
+  cleanupExpired();
+
   return client;
 }
 
@@ -282,7 +334,10 @@ export async function deleteObject(
 export async function deleteObjects(
   s3: S3Client,
   opts: { bucket: string; keys: string[] },
-): Promise<{ deleted: string[]; errors: Array<{ key: string; message: string }> }> {
+): Promise<{
+  deleted: string[];
+  errors: Array<{ key: string; message: string }>;
+}> {
   if (opts.keys.length === 0) {
     return { deleted: [], errors: [] };
   }
@@ -568,4 +623,5 @@ export async function abortMultipartUpload(
  */
 export function clearS3ClientCache(): void {
   clientCache.clear();
+  lastCleanup = 0;
 }

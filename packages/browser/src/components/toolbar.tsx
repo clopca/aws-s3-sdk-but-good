@@ -131,7 +131,11 @@ const Toolbar = forwardRef<HTMLDivElement, ToolbarProps>(
             </div>
           ) : null}
 
-          <div className="inline-flex rounded-lg border border-border bg-muted p-0.5">
+          <div
+            role="radiogroup"
+            aria-label="View mode"
+            className="inline-flex rounded-lg border border-border bg-muted p-0.5"
+          >
             <Button
               variant={viewMode === "grid" ? "default" : "ghost"}
               size="sm"
@@ -140,6 +144,9 @@ const Toolbar = forwardRef<HTMLDivElement, ToolbarProps>(
                 viewMode !== "grid" && "text-muted-foreground shadow-none",
               )}
               data-state={viewMode === "grid" ? "active" : "inactive"}
+              role="radio"
+              aria-checked={viewMode === "grid"}
+              aria-label="Grid view"
               onClick={() => onViewModeChange("grid")}
             >
               Grid
@@ -152,6 +159,9 @@ const Toolbar = forwardRef<HTMLDivElement, ToolbarProps>(
                 viewMode !== "list" && "text-muted-foreground shadow-none",
               )}
               data-state={viewMode === "list" ? "active" : "inactive"}
+              role="radio"
+              aria-checked={viewMode === "list"}
+              aria-label="List view"
               onClick={() => onViewModeChange("list")}
             >
               List
@@ -167,7 +177,7 @@ const Toolbar = forwardRef<HTMLDivElement, ToolbarProps>(
           >
             <SelectTrigger
               className={cn("min-w-[140px]", appearance?.sortSelect)}
-              aria-label="Sort"
+              aria-label="Sort by"
             >
               <SelectValue>
                 {(value) =>
@@ -225,6 +235,8 @@ const Toolbar = forwardRef<HTMLDivElement, ToolbarProps>(
                 type="button"
                 variant="outline"
                 disabled={uploadDisabled}
+                aria-busy={uploadDisabled || undefined}
+                aria-label={uploadLabel}
                 onClick={() => uploadInputRef.current?.click()}
               >
                 {uploadLabel}

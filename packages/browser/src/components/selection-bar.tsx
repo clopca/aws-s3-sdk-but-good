@@ -29,6 +29,7 @@ const SelectionBar = forwardRef<HTMLDivElement, SelectionBarProps>(
       >
         <span
           aria-live="polite"
+          aria-atomic="true"
           className={cn("text-sm font-medium text-primary", appearance?.label)}
         >
           {count} selected

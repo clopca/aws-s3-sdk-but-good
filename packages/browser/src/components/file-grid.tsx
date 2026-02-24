@@ -79,9 +79,11 @@ const FileGrid = forwardRef<HTMLDivElement, FileGridProps>(
     ref,
   ) => {
     const scrollRef = useRef<HTMLDivElement | null>(null);
+    const itemRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
     const [containerWidth, setContainerWidth] = useState(
       FALLBACK_GRID_CONTAINER_WIDTH,
     );
+    const [focusedIndex, setFocusedIndex] = useState(0);
 
     const itemMinWidth = Math.max(
       1,
@@ -100,6 +102,7 @@ const FileGrid = forwardRef<HTMLDivElement, FileGridProps>(
       0,
       virtualization?.threshold ?? DEFAULT_GRID_VIRTUALIZATION_THRESHOLD,
     );
+    const firstItemKey = items[0]?.key ?? "";
     const shouldVirtualize =
       Boolean(virtualization?.enabled) && items.length >= threshold;
 
@@ -143,13 +146,93 @@ const FileGrid = forwardRef<HTMLDivElement, FileGridProps>(
 
     // Reset scroll position when item list changes
     useEffect(() => {
+      // Reset when visible dataset changes.
+      void firstItemKey;
       if (scrollRef.current) {
         scrollRef.current.scrollTop = 0;
       }
       if (shouldVirtualize) {
         virtualizer.scrollToOffset(0);
       }
-    }, [items, shouldVirtualize, virtualizer]);
+    }, [firstItemKey, shouldVirtualize, virtualizer]);
+
+    useEffect(() => {
+      if (items.length === 0) {
+        setFocusedIndex(0);
+        return;
+      }
+      setFocusedIndex((prev) => Math.min(prev, items.length - 1));
+    }, [items.length]);
+
+    const focusedItem = items[focusedIndex];
+
+    useEffect(() => {
+      if (!focusedItem) return;
+
+      if (shouldVirtualize) {
+        const rowIndex = Math.floor(focusedIndex / columnCount);
+        virtualizer.scrollToIndex(rowIndex, { align: "auto" });
+      }
+
+      const frame = requestAnimationFrame(() => {
+        itemRefs.current.get(focusedItem.key)?.focus();
+      });
+
+      return () => cancelAnimationFrame(frame);
+    }, [focusedIndex, focusedItem, shouldVirtualize, columnCount, virtualizer]);
+
+    const moveFocus = (nextIndex: number) => {
+      if (items.length === 0) return;
+      const clamped = Math.max(0, Math.min(nextIndex, items.length - 1));
+      setFocusedIndex(clamped);
+    };
+
+    const handleItemKeyDown = (
+      index: number,
+      item: BrowserItem,
+      event: React.KeyboardEvent<HTMLButtonElement>,
+    ) => {
+      switch (event.key) {
+        case "ArrowRight": {
+          event.preventDefault();
+          moveFocus(index + 1);
+          return;
+        }
+        case "ArrowLeft": {
+          event.preventDefault();
+          moveFocus(index - 1);
+          return;
+        }
+        case "ArrowDown": {
+          event.preventDefault();
+          moveFocus(index + columnCount);
+          return;
+        }
+        case "ArrowUp": {
+          event.preventDefault();
+          moveFocus(index - columnCount);
+          return;
+        }
+        case "Home": {
+          event.preventDefault();
+          moveFocus(0);
+          return;
+        }
+        case "End": {
+          event.preventDefault();
+          moveFocus(items.length - 1);
+          return;
+        }
+        case "Enter":
+        case " ": {
+          event.preventDefault();
+          onItemDoubleClick(item);
+          return;
+        }
+        default:
+          return;
+      }
+    };
 
     if (isLoading) return <FileGridSkeleton />;
     if (items.length === 0) return <EmptyState isSearching={isSearching} />;
@@ -168,6 +251,9 @@ const FileGrid = forwardRef<HTMLDivElement, FileGridProps>(
           shouldVirtualize && "max-h-[60vh] overflow-auto",
           className,
         )}
+        role="listbox"
+        aria-label="File grid"
+        aria-multiselectable="true"
       >
         {shouldVirtualize ? (
           <div
@@ -199,19 +285,37 @@ const FileGrid = forwardRef<HTMLDivElement, FileGridProps>(
                     gap: `${gap}px`,
                   }}
                 >
-                  {rowItems.map((item) => (
-                    <FileItem
-                      key={item.key}
-                      item={item}
-                      isSelected={selectedKeys.has(item.key)}
-                      viewMode="grid"
-                      contextMenuItems={getContextMenuItems?.(item)}
-                      getPreviewUrl={getPreviewUrl}
-                      onClick={(event) => onItemClick(item.key, event)}
-                      onDoubleClick={() => onItemDoubleClick(item)}
-                      onContextMenu={(event) => onItemContextMenu(item, event)}
-                    />
-                  ))}
+                  {rowItems.map((item, colIndex) => {
+                    const itemIndex = startIndex + colIndex;
+                    return (
+                      <FileItem
+                        key={item.key}
+                        ref={(node) => {
+                          if (!node) {
+                            itemRefs.current.delete(item.key);
+                            return;
+                          }
+                          itemRefs.current.set(item.key, node);
+                        }}
+                        item={item}
+                        isSelected={selectedKeys.has(item.key)}
+                        viewMode="grid"
+                        role="option"
+                        ariaSelected={selectedKeys.has(item.key)}
+                        tabIndex={itemIndex === focusedIndex ? 0 : -1}
+                        contextMenuItems={getContextMenuItems?.(item)}
+                        getPreviewUrl={getPreviewUrl}
+                        onClick={(event) => onItemClick(item.key, event)}
+                        onDoubleClick={() => onItemDoubleClick(item)}
+                        onContextMenu={(event) =>
+                          onItemContextMenu(item, event)
+                        }
+                        onKeyDown={(event) =>
+                          handleItemKeyDown(itemIndex, item, event)
+                        }
+                      />
+                    );
+                  })}
                 </div>
               );
             })}
@@ -222,17 +326,28 @@ const FileGrid = forwardRef<HTMLDivElement, FileGridProps>(
               "grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3 p-1",
             )}
           >
-            {items.map((item) => (
+            {items.map((item, index) => (
               <FileItem
                 key={item.key}
+                ref={(node) => {
+                  if (!node) {
+                    itemRefs.current.delete(item.key);
+                    return;
+                  }
+                  itemRefs.current.set(item.key, node);
+                }}
                 item={item}
                 isSelected={selectedKeys.has(item.key)}
                 viewMode="grid"
+                role="option"
+                ariaSelected={selectedKeys.has(item.key)}
+                tabIndex={index === focusedIndex ? 0 : -1}
                 contextMenuItems={getContextMenuItems?.(item)}
                 getPreviewUrl={getPreviewUrl}
                 onClick={(event) => onItemClick(item.key, event)}
                 onDoubleClick={() => onItemDoubleClick(item)}
                 onContextMenu={(event) => onItemContextMenu(item, event)}
+                onKeyDown={(event) => handleItemKeyDown(index, item, event)}
               />
             ))}
           </div>

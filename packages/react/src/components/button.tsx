@@ -185,6 +185,8 @@ function UploadButtonInner<
   return (
     <div
       ref={ref}
+      role="group"
+      aria-label="File upload"
       className={cn(className, containerClassName)}
       style={containerStyle}
       data-state={isUploading ? "uploading" : ready ? "ready" : "disabled"}
@@ -209,6 +211,8 @@ function UploadButtonInner<
         onClick={handleButtonClick}
         disabled={disabled && !isUploading}
         aria-label="Upload file"
+        aria-busy={isUploading || undefined}
+        aria-disabled={!ready}
         aria-describedby={hasAllowedContent ? allowedContentId : undefined}
         data-state={isUploading ? "uploading" : ready ? "ready" : "disabled"}
         data-uploading={isUploading || undefined}

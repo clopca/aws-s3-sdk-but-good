@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useRef } from "react";
+import { forwardRef, useEffect, useRef, useState } from "react";
 import {
   useVirtualizer,
   observeElementRect as defaultObserveElementRect,
@@ -105,6 +105,8 @@ const FileListView = forwardRef<HTMLDivElement, FileListViewProps>(
     ref,
   ) => {
     const scrollRef = useRef<HTMLDivElement | null>(null);
+    const itemRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+    const [focusedIndex, setFocusedIndex] = useState(0);
 
     const rowHeight = Math.max(
       1,
@@ -120,6 +122,7 @@ const FileListView = forwardRef<HTMLDivElement, FileListViewProps>(
     );
     const shouldVirtualize =
       Boolean(virtualization?.enabled) && items.length >= threshold;
+    const firstItemKey = items[0]?.key ?? "";
 
     const virtualizer = useVirtualizer({
       count: shouldVirtualize ? items.length : 0,
@@ -134,13 +137,83 @@ const FileListView = forwardRef<HTMLDivElement, FileListViewProps>(
 
     // Reset scroll position when item list changes
     useEffect(() => {
+      // Reset when the visible dataset changes.
+      void firstItemKey;
       if (scrollRef.current) {
         scrollRef.current.scrollTop = 0;
       }
       if (shouldVirtualize) {
         virtualizer.scrollToOffset(0);
       }
-    }, [items, shouldVirtualize, virtualizer]);
+    }, [firstItemKey, shouldVirtualize, virtualizer]);
+
+    // Keep focus index in bounds as items change
+    useEffect(() => {
+      if (items.length === 0) {
+        setFocusedIndex(0);
+        return;
+      }
+      setFocusedIndex((prev) => Math.min(prev, items.length - 1));
+    }, [items.length]);
+
+    const focusedItem = items[focusedIndex];
+
+    useEffect(() => {
+      if (!focusedItem) return;
+
+      if (shouldVirtualize) {
+        virtualizer.scrollToIndex(focusedIndex, { align: "auto" });
+      }
+
+      const frame = requestAnimationFrame(() => {
+        itemRefs.current.get(focusedItem.key)?.focus();
+      });
+
+      return () => cancelAnimationFrame(frame);
+    }, [focusedIndex, focusedItem, shouldVirtualize, virtualizer]);
+
+    const moveFocus = (nextIndex: number) => {
+      if (items.length === 0) return;
+      const clamped = Math.max(0, Math.min(nextIndex, items.length - 1));
+      setFocusedIndex(clamped);
+    };
+
+    const handleItemKeyDown = (
+      index: number,
+      item: BrowserItem,
+      event: React.KeyboardEvent<HTMLButtonElement>,
+    ) => {
+      switch (event.key) {
+        case "ArrowDown": {
+          event.preventDefault();
+          moveFocus(index + 1);
+          return;
+        }
+        case "ArrowUp": {
+          event.preventDefault();
+          moveFocus(index - 1);
+          return;
+        }
+        case "Home": {
+          event.preventDefault();
+          moveFocus(0);
+          return;
+        }
+        case "End": {
+          event.preventDefault();
+          moveFocus(items.length - 1);
+          return;
+        }
+        case "Enter":
+        case " ": {
+          event.preventDefault();
+          onItemDoubleClick(item);
+          return;
+        }
+        default:
+          return;
+      }
+    };
 
     if (isLoading) return <FileListSkeleton />;
     if (items.length === 0) return <EmptyState isSearching={isSearching} />;
@@ -177,6 +250,9 @@ const FileListView = forwardRef<HTMLDivElement, FileListViewProps>(
         </div>
         <div
           ref={scrollRef}
+          role="listbox"
+          aria-label="File list"
+          aria-multiselectable="true"
           className={cn(
             "max-h-[60vh] overflow-auto",
             !shouldVirtualize && "divide-y divide-border/60",
@@ -206,29 +282,53 @@ const FileListView = forwardRef<HTMLDivElement, FileListViewProps>(
                     }}
                   >
                     <FileItem
+                      ref={(node) => {
+                        if (!node) {
+                          itemRefs.current.delete(item.key);
+                          return;
+                        }
+                        itemRefs.current.set(item.key, node);
+                      }}
                       item={item}
                       isSelected={selectedKeys.has(item.key)}
                       viewMode="list"
+                      role="option"
+                      ariaSelected={selectedKeys.has(item.key)}
+                      tabIndex={virtualRow.index === focusedIndex ? 0 : -1}
                       contextMenuItems={getContextMenuItems?.(item)}
                       onClick={(event) => onItemClick(item.key, event)}
                       onDoubleClick={() => onItemDoubleClick(item)}
                       onContextMenu={(event) => onItemContextMenu(item, event)}
+                      onKeyDown={(event) =>
+                        handleItemKeyDown(virtualRow.index, item, event)
+                      }
                     />
                   </div>
                 );
               })}
             </div>
           ) : (
-            items.map((item) => (
+            items.map((item, index) => (
               <FileItem
                 key={item.key}
+                ref={(node) => {
+                  if (!node) {
+                    itemRefs.current.delete(item.key);
+                    return;
+                  }
+                  itemRefs.current.set(item.key, node);
+                }}
                 item={item}
                 isSelected={selectedKeys.has(item.key)}
                 viewMode="list"
+                role="option"
+                ariaSelected={selectedKeys.has(item.key)}
+                tabIndex={index === focusedIndex ? 0 : -1}
                 contextMenuItems={getContextMenuItems?.(item)}
                 onClick={(event) => onItemClick(item.key, event)}
                 onDoubleClick={() => onItemDoubleClick(item)}
                 onContextMenu={(event) => onItemContextMenu(item, event)}
+                onKeyDown={(event) => handleItemKeyDown(index, item, event)}
               />
             ))
           )}

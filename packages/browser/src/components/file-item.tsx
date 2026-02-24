@@ -16,6 +16,10 @@ export interface FileItemProps {
   onClick: (event: React.MouseEvent) => void;
   onDoubleClick: () => void;
   onContextMenu: (event: React.SyntheticEvent) => void;
+  onKeyDown?: (event: React.KeyboardEvent<HTMLButtonElement>) => void;
+  tabIndex?: number;
+  role?: "gridcell" | "option";
+  ariaSelected?: boolean;
   className?: string;
 }
 
@@ -58,6 +62,10 @@ const FileItemButton = forwardRef<
       onClick,
       onDoubleClick,
       onContextMenu,
+      onKeyDown,
+      tabIndex,
+      role,
+      ariaSelected,
       className,
     },
     ref,
@@ -89,6 +97,8 @@ const FileItemButton = forwardRef<
         event.preventDefault();
         onContextMenu(event);
       }
+
+      onKeyDown?.(event as React.KeyboardEvent<HTMLButtonElement>);
     };
 
     if (viewMode === "grid") {
@@ -105,7 +115,9 @@ const FileItemButton = forwardRef<
           )}
           data-state={isSelected ? "selected" : "idle"}
           aria-label={accessibleLabel}
-          aria-pressed={isSelected}
+          role={role}
+          tabIndex={tabIndex}
+          {...(role ? { "aria-selected": ariaSelected } : {})}
           onClick={onClick}
           onDoubleClick={onDoubleClick}
           onContextMenu={onContextMenu}
@@ -140,7 +152,9 @@ const FileItemButton = forwardRef<
         )}
         data-state={isSelected ? "selected" : "idle"}
         aria-label={accessibleLabel}
-        aria-pressed={isSelected}
+        role={role}
+        tabIndex={tabIndex}
+        {...(role ? { "aria-selected": ariaSelected } : {})}
         onClick={onClick}
         onDoubleClick={onDoubleClick}
         onContextMenu={onContextMenu}

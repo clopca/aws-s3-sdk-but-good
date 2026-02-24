@@ -33,6 +33,10 @@ const Breadcrumbs = forwardRef<HTMLElement, BreadcrumbsProps>(
                 }
                 onClick={() => onNavigate(segment.path)}
                 disabled={isLast}
+                aria-current={isLast ? "page" : undefined}
+                aria-label={
+                  isLast ? segment.label : `Navigate to ${segment.label}`
+                }
               >
                 {segment.label}
               </Button>
