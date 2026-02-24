@@ -68,6 +68,21 @@ describe("types exports", () => {
   });
 });
 
+describe("next-client exports", () => {
+  it("test_next_client_exports", async () => {
+    const nextClientModule = await import("../next-client");
+
+    expect(nextClientModule).toHaveProperty("generateUploadButton");
+    expect(typeof nextClientModule.generateUploadButton).toBe("function");
+
+    expect(nextClientModule).toHaveProperty("generateUploadDropzone");
+    expect(typeof nextClientModule.generateUploadDropzone).toBe("function");
+
+    expect(nextClientModule).toHaveProperty("generateNextHelpers");
+    expect(typeof nextClientModule.generateNextHelpers).toBe("function");
+  });
+});
+
 // ─── Tests: SDK Exports ─────────────────────────────────────────────────────
 
 describe("sdk exports", () => {

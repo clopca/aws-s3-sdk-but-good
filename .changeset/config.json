@@ -1,10 +1,10 @@
 {
   "$schema": "https://unpkg.com/@changesets/config@3.0.0/schema.json",
-  "changelog": "@changesets/cli/changelog",
+  "changelog": ["@changesets/changelog-github", { "repo": "clopca/aws-s3-sdk-but-good" }],
   "commit": false,
   "fixed": [],
   "linked": [
-    ["@s3-good/core", "@s3-good/react", "@s3-good/shared"]
+    ["@s3-good/core", "@s3-good/react", "@s3-good/shared", "@s3-good/browser"]
   ],
   "access": "public",
   "baseBranch": "main",

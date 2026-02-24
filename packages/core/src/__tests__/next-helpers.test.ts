@@ -1,11 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// ─── Mock @s3-good/react via require interception ───────────────────────────
+// ─── Mock @s3-good/react via dynamic import interception ────────────────────
 
-// The SSR helpers in next.ts use `require("@s3-good/react")` at runtime.
-// Since the react package only has ESM exports (no "main" field), we need
-// to intercept the require() call. We do this by mocking the entire next.ts
-// module's internal require via vi.mock on the source module path.
+// The Next client helpers use dynamic import("@s3-good/react") at runtime.
+// We mock the entire next-client.ts module to inject our mock react package, avoiding
+// the actual import of @s3-good/react which may not be installed in test env.
 
 const mockUploadButton = vi.fn((_props: unknown) => "UploadButton");
 const mockUploadDropzone = vi.fn((_props: unknown) => "UploadDropzone");
@@ -21,14 +20,14 @@ const mockReactPkg = {
   generateReactHelpers: mockGenerateReactHelpers,
 };
 
-// Mock the next.ts module to replace the getReactPkg function
+// Mock the next-client.ts module to replace the getReactPkg function
 // We re-implement the SSR helpers with our mock react package
-vi.mock("../next", async (importOriginal) => {
+vi.mock("../next-client", async (importOriginal) => {
   // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- typeof import() is the only way to type importOriginal
-  const actual = await importOriginal<typeof import("../next")>();
+  const actual = await importOriginal<typeof import("../next-client")>();
 
-  // Re-implement generateUploadButton with mock react package
-  function generateUploadButton(opts?: { url?: string }) {
+  // Re-implement generateUploadButton with mock react package (async to match real signature)
+  async function generateUploadButton(opts?: { url?: string }) {
     const url = opts?.url ?? "/api/upload";
     function TypedUploadButton(props: Record<string, unknown>) {
       return mockReactPkg.UploadButton({
@@ -39,7 +38,7 @@ vi.mock("../next", async (importOriginal) => {
     return TypedUploadButton;
   }
 
-  function generateUploadDropzone(opts?: { url?: string }) {
+  async function generateUploadDropzone(opts?: { url?: string }) {
     const url = opts?.url ?? "/api/upload";
     function TypedUploadDropzone(props: Record<string, unknown>) {
       return mockReactPkg.UploadDropzone({
@@ -50,7 +49,7 @@ vi.mock("../next", async (importOriginal) => {
     return TypedUploadDropzone;
   }
 
-  function generateNextHelpers(opts?: { url?: string }) {
+  async function generateNextHelpers(opts?: { url?: string }) {
     return mockReactPkg.generateReactHelpers({
       url: opts?.url ?? "/api/upload",
     });
@@ -68,7 +67,7 @@ import {
   generateUploadButton,
   generateUploadDropzone,
   generateNextHelpers,
-} from "../next";
+} from "../next-client";
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
@@ -77,9 +76,9 @@ describe("generateUploadButton", () => {
     vi.clearAllMocks();
   });
 
-  it("test_generateUploadButton_returns_component", () => {
+  it("test_generateUploadButton_returns_component", async () => {
     // Arrange & Act
-    const UploadButton = generateUploadButton();
+    const UploadButton = await generateUploadButton();
 
     // Assert — factory returns a function (component)
     expect(typeof UploadButton).toBe("function");
@@ -100,9 +99,9 @@ describe("generateUploadDropzone", () => {
     vi.clearAllMocks();
   });
 
-  it("test_generateUploadDropzone_returns_component", () => {
+  it("test_generateUploadDropzone_returns_component", async () => {
     // Arrange & Act
-    const UploadDropzone = generateUploadDropzone();
+    const UploadDropzone = await generateUploadDropzone();
 
     // Assert — factory returns a function (component)
     expect(typeof UploadDropzone).toBe("function");
@@ -123,9 +122,9 @@ describe("generateNextHelpers", () => {
     vi.clearAllMocks();
   });
 
-  it("test_generateNextHelpers_returns_all", () => {
+  it("test_generateNextHelpers_returns_all", async () => {
     // Arrange & Act
-    const helpers = generateNextHelpers();
+    const helpers = await generateNextHelpers();
 
     // Assert
     expect(mockGenerateReactHelpers).toHaveBeenCalledWith({

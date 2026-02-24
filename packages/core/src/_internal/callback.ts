@@ -107,7 +107,10 @@ export async function handleUploadCallback(
   completionData: UploadCompletionData,
 ): Promise<UploadFileResponse[]> {
   // 1. Decode and verify metadata token
-  const uploadMetadata = decodeMetadataToken(metadataToken, config.secretAccessKey);
+  const uploadMetadata = decodeMetadataToken(
+    metadataToken,
+    config.signingSecret ?? config.secretAccessKey,
+  );
 
   // 2. Verify file keys match
   const expectedKeys = new Set(uploadMetadata.fileKeys);

@@ -2,30 +2,45 @@
   "name": "@s3-good/core",
   "version": "0.0.1",
   "type": "module",
+  "sideEffects": false,
+  "main": "./dist/server.cjs",
+  "module": "./dist/server.js",
+  "types": "./dist/server.d.ts",
   "exports": {
     "./server": {
+      "types": "./dist/server.d.ts",
       "import": "./dist/server.js",
-      "types": "./dist/server.d.ts"
+      "require": "./dist/server.cjs"
     },
     "./client": {
+      "types": "./dist/client.d.ts",
       "import": "./dist/client.js",
-      "types": "./dist/client.d.ts"
+      "require": "./dist/client.cjs"
     },
     "./next": {
+      "types": "./dist/next.d.ts",
       "import": "./dist/next.js",
-      "types": "./dist/next.d.ts"
+      "require": "./dist/next.cjs"
+    },
+    "./next-client": {
+      "types": "./dist/next-client.d.ts",
+      "import": "./dist/next-client.js",
+      "require": "./dist/next-client.cjs"
     },
     "./types": {
+      "types": "./dist/types.d.ts",
       "import": "./dist/types.js",
-      "types": "./dist/types.d.ts"
+      "require": "./dist/types.cjs"
     },
     "./hono": {
+      "types": "./dist/hono.d.ts",
       "import": "./dist/hono.js",
-      "types": "./dist/hono.d.ts"
+      "require": "./dist/hono.cjs"
     },
     "./sdk": {
+      "types": "./dist/sdk/index.d.ts",
       "import": "./dist/sdk/index.js",
-      "types": "./dist/sdk/index.d.ts"
+      "require": "./dist/sdk/index.cjs"
     }
   },
   "files": [
@@ -43,15 +58,15 @@
     "@aws-sdk/client-s3": "^3.600.0",
     "@aws-sdk/s3-request-presigner": "^3.600.0",
     "@s3-good/shared": "workspace:*",
-    "sqids": "^0.3.0",
-    "zod": "^3.23.0"
+    "sqids": "^0.3.0"
   },
   "devDependencies": {
     "@types/node": "^25.3.0",
     "hono": "^4.12.2",
     "tsup": "^8.0.0",
     "typescript": "^5.5.0",
-    "vitest": "^2.0.0"
+    "vitest": "^2.0.0",
+    "zod": "^3.23.0"
   },
   "peerDependencies": {
     "@s3-good/react": "workspace:*",

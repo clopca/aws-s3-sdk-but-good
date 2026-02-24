@@ -29,9 +29,16 @@ export class BrowserBuilder<TMetadata = unknown> {
   }
 
   rootPrefix(prefix: string): BrowserBuilder<TMetadata> {
+    const trimmed = prefix.trim();
+    if (!trimmed) {
+      return new BrowserBuilder<TMetadata>({
+        ...this.config,
+        rootPrefix: undefined,
+      });
+    }
     return new BrowserBuilder<TMetadata>({
       ...this.config,
-      rootPrefix: prefix.endsWith("/") ? prefix : `${prefix}/`,
+      rootPrefix: trimmed.endsWith("/") ? trimmed : `${trimmed}/`,
     });
   }
 

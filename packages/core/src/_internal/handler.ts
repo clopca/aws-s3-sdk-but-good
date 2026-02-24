@@ -343,7 +343,7 @@ export async function handleUploadRequest(
   );
 
   // 6. Encode metadata token (includes original file info for callback resolution)
-  const secret = config.secretAccessKey;
+  const secret = config.signingSecret ?? config.secretAccessKey;
   const fileNames: Record<string, string> = {};
   const fileSizes: Record<string, number> = {};
   const fileTypes: Record<string, string> = {};

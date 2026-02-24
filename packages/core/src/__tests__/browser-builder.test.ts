@@ -45,6 +45,16 @@ describe("browser builder", () => {
     expect(built.rootPrefix).toBe("uploads/");
   });
 
+  it("test_builder_rootPrefix_empty_string_becomes_undefined", () => {
+    const built = createBrowser().rootPrefix("")._build();
+    expect(built.rootPrefix).toBeUndefined();
+  });
+
+  it("test_builder_rootPrefix_whitespace_only_becomes_undefined", () => {
+    const built = createBrowser().rootPrefix("  ")._build();
+    expect(built.rootPrefix).toBeUndefined();
+  });
+
   it("test_createBrowserRouteHandler_returns_handlers", async () => {
     const handlers = createBrowserRouteHandler({
       browser: createBrowser().rootPrefix("uploads"),

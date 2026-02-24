@@ -11,9 +11,10 @@
 import type { FileRouter } from "./_internal/types";
 import type { S3Config } from "@s3-good/shared";
 import { handleUploadAction } from "./_internal/handler";
-import { UploadError } from "@s3-good/shared";
 import type { BrowserBuilder } from "./_internal/browser-builder";
 import { handleBrowserAction } from "./_internal/browser-handler";
+import { errorToResponse } from "./_internal/error-response";
+import { getRouteConfig } from "./_internal/get-route-config";
 export { createBrowser } from "./server";
 
 // Import Hono types only — no runtime dependency
@@ -29,20 +30,6 @@ export interface HonoRouteHandlerOptions {
 export interface HonoBrowserRouteHandlerOptions {
   browser: BrowserBuilder<unknown>;
   config: S3Config;
-}
-
-// ─── Runtime Check ──────────────────────────────────────────────────────────
-
-/**
- * Ensure we're in a server environment.
- * Throws immediately if called from a browser context.
- */
-function assertServerEnvironment(): void {
-  if (typeof window !== "undefined") {
-    throw new Error(
-      "[@s3-good/core/hono] createRouteHandler must be used in a server environment.",
-    );
-  }
 }
 
 // ─── Route Handler ──────────────────────────────────────────────────────────
@@ -78,8 +65,6 @@ function assertServerEnvironment(): void {
  * ```
  */
 export function createRouteHandler(opts: HonoRouteHandlerOptions) {
-  assertServerEnvironment();
-
   const routerConfig = {
     router: opts.router,
     config: opts.config,
@@ -90,30 +75,7 @@ export function createRouteHandler(opts: HonoRouteHandlerOptions) {
     const req = c.req.raw;
     const url = new URL(req.url);
     const slug = url.searchParams.get("slug");
-
-    if (!slug) {
-      // Return all route configs (for client to know allowed file types)
-      const routeConfigs = Object.entries(opts.router).reduce(
-        (acc, [key, route]) => {
-          acc[key] = {
-            config: route._def.routerConfig,
-          };
-          return acc;
-        },
-        {} as Record<string, { config: unknown }>,
-      );
-      return Response.json(routeConfigs);
-    }
-
-    const route = opts.router[slug];
-    if (!route) {
-      return Response.json(
-        { error: { code: "ROUTE_NOT_FOUND", message: `Route "${slug}" not found` } },
-        { status: 404 },
-      );
-    }
-
-    return Response.json({ config: route._def.routerConfig });
+    return getRouteConfig(opts.router, slug);
   }
 
   // POST handler — delegates to core handler
@@ -121,17 +83,7 @@ export function createRouteHandler(opts: HonoRouteHandlerOptions) {
     try {
       return await handleUploadAction(c.req.raw, routerConfig);
     } catch (error) {
-      if (error instanceof UploadError) {
-        return Response.json(
-          { error: { code: error.code, message: error.message } },
-          { status: error.status },
-        );
-      }
-      console.error("[s3-good] Internal error:", error);
-      return Response.json(
-        { error: { code: "INTERNAL_ERROR", message: "Internal server error" } },
-        { status: 500 },
-      );
+      return errorToResponse(error);
     }
   }
 
@@ -142,8 +94,6 @@ export function createRouteHandler(opts: HonoRouteHandlerOptions) {
  * Creates a Hono route handler for browser actions.
  */
 export function createBrowserRouteHandler(opts: HonoBrowserRouteHandlerOptions) {
-  assertServerEnvironment();
-
   const routeConfig = opts.browser._build();
 
   async function GET(c: Context): Promise<Response> {

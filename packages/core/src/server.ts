@@ -1,10 +1,10 @@
 import { UploadBuilder } from "./_internal/upload-builder";
 import type { UploadBuilderParams, FileRouter } from "./_internal/types";
 import type { ExpandedRouteConfig, S3Config } from "@s3-good/shared";
-import { UploadError } from "@s3-good/shared";
 import { handleUploadAction } from "./_internal/handler";
 import { BrowserBuilder } from "./_internal/browser-builder";
 import { handleBrowserAction } from "./_internal/browser-handler";
+import { errorToResponse } from "./_internal/error-response";
 
 export interface CreateUploaderOptions {
   /**
@@ -87,16 +87,7 @@ export function createRouteHandler(opts: RouteHandlerOptions) {
         config: opts.config,
       });
     } catch (error) {
-      if (error instanceof UploadError) {
-        return Response.json(
-          { error: { code: error.code, message: error.message } },
-          { status: error.status },
-        );
-      }
-      return Response.json(
-        { error: { code: "INTERNAL_ERROR", message: "Internal server error" } },
-        { status: 500 },
-      );
+      return errorToResponse(error);
     }
   };
 
