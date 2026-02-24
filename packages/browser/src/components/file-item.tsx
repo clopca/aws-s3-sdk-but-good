@@ -39,8 +39,8 @@ function FileItemButton({
   onContextMenu,
 }: Omit<FileItemProps, "contextMenuItems">) {
   const selectedClass = isSelected
-    ? "border-blue-400 bg-blue-50 shadow-sm"
-    : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm";
+    ? "border-primary/50 bg-accent ring-1 ring-ring/50 shadow-sm"
+    : "border-border bg-card hover:bg-accent/50 hover:shadow-sm";
 
   const icon = item.kind === "folder"
     ? <FolderIcon size={viewMode === "grid" ? 42 : 22} />
@@ -50,15 +50,15 @@ function FileItemButton({
     return (
       <button
         type="button"
-        className={`group flex min-h-[140px] w-full flex-col items-center rounded-xl border p-3 text-center transition-all ${selectedClass}`}
+        className={`group flex min-h-[140px] w-full flex-col items-center rounded-xl border p-3 text-center transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${selectedClass}`}
         onClick={onClick}
         onDoubleClick={onDoubleClick}
         onContextMenu={onContextMenu}
       >
-        <div className="mb-2 flex h-12 items-center">{icon}</div>
-        <div className="w-full truncate text-sm font-medium text-slate-800">{item.name}</div>
+        <div className="mb-2 flex h-12 items-center transition-transform duration-150 group-hover:scale-105">{icon}</div>
+        <div className="w-full truncate text-sm font-medium text-foreground">{item.name}</div>
         {item.kind === "file" ? (
-          <div className="mt-1 text-xs text-slate-500">{formatSize(item.size)}</div>
+          <div className="mt-1 text-xs text-muted-foreground">{formatSize(item.size)}</div>
         ) : null}
       </button>
     );
@@ -67,20 +67,20 @@ function FileItemButton({
   return (
     <button
       type="button"
-      className={`grid w-full grid-cols-[minmax(0,1fr)_110px_150px_120px] items-center gap-3 border-b px-3 py-2 text-left transition-colors ${
-        isSelected ? "bg-blue-50" : "bg-white hover:bg-slate-50"
+      className={`grid w-full grid-cols-[minmax(0,1fr)_92px] items-center gap-3 border-b border-border/70 px-3 py-2.5 text-left transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50 md:grid-cols-[minmax(0,1fr)_110px_150px_120px] ${
+        isSelected ? "bg-accent/70" : "bg-card hover:bg-accent/40"
       }`}
       onClick={onClick}
       onDoubleClick={onDoubleClick}
       onContextMenu={onContextMenu}
     >
-      <div className="flex min-w-0 items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2.5">
         {icon}
-        <span className="truncate text-sm font-medium text-slate-800">{item.name}</span>
+        <span className="truncate text-sm font-medium text-foreground">{item.name}</span>
       </div>
-      <span className="text-xs text-slate-500">{item.kind === "file" ? formatSize(item.size) : "—"}</span>
-      <span className="text-xs text-slate-500">{item.kind === "file" ? formatDate(item.lastModified) : "—"}</span>
-      <span className="text-xs text-slate-500 uppercase">{item.kind === "file" ? getPreviewType(item.contentType, item.name) : "folder"}</span>
+      <span className="text-xs tabular-nums text-muted-foreground">{item.kind === "file" ? formatSize(item.size) : "—"}</span>
+      <span className="hidden text-xs text-muted-foreground md:block">{item.kind === "file" ? formatDate(item.lastModified) : "—"}</span>
+      <span className="hidden text-xs uppercase text-muted-foreground md:block">{item.kind === "file" ? getPreviewType(item.contentType, item.name) : "folder"}</span>
     </button>
   );
 }

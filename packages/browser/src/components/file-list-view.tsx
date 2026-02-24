@@ -14,6 +14,7 @@ export interface FileListViewProps {
   getContextMenuItems?: (item: BrowserItem) => ContextMenuItem[];
   isLoading: boolean;
   isSearching?: boolean;
+  className?: string;
 }
 
 function SortHeader({
@@ -28,26 +29,29 @@ function SortHeader({
   onSort: (field: SortField) => void;
 }) {
   const isActive = sort.field === field;
-  const arrow = isActive ? (sort.direction === "asc" ? "↑" : "↓") : "";
+  const arrow = isActive ? (sort.direction === "asc" ? " ↑" : " ↓") : "";
 
   return (
     <button
       type="button"
-      className={`text-left text-xs font-semibold uppercase tracking-wide ${
-        isActive ? "text-slate-800" : "text-slate-500"
+      className={`rounded-md px-1 py-0.5 text-left text-xs font-semibold uppercase tracking-wide transition-colors hover:text-foreground ${
+        isActive ? "text-foreground" : "text-muted-foreground"
       }`}
       onClick={() => onSort(field)}
     >
-      {label} {arrow}
+      {label}{arrow}
     </button>
   );
 }
 
 function LoadingRows() {
   return (
-    <div>
+    <div className="overflow-hidden rounded-xl border border-border bg-card">
       {Array.from({ length: 8 }).map((_, index) => (
-        <div key={index} className="h-10 animate-pulse border-b border-slate-200 bg-slate-100" />
+        <div key={index} className="flex h-11 items-center gap-3 border-b border-border/60 px-3">
+          <div className="h-5 w-5 animate-pulse rounded bg-muted" />
+          <div className="h-3.5 flex-1 animate-pulse rounded bg-muted" style={{ maxWidth: `${180 + index * 20}px` }} />
+        </div>
       ))}
     </div>
   );
@@ -64,19 +68,24 @@ export function FileListView({
   getContextMenuItems,
   isLoading,
   isSearching,
+  className,
 }: FileListViewProps) {
   if (isLoading) return <LoadingRows />;
   if (items.length === 0) return <EmptyState isSearching={isSearching} />;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-      <div className="grid grid-cols-[minmax(0,1fr)_110px_150px_120px] items-center gap-3 border-b border-slate-200 px-3 py-2">
+    <div className={`overflow-hidden rounded-xl border border-border bg-card shadow-sm ${className ?? ""}`.trim()}>
+      <div className="grid grid-cols-[minmax(0,1fr)_92px] items-center gap-3 border-b border-border bg-muted/40 px-3 py-2.5 md:grid-cols-[minmax(0,1fr)_110px_150px_120px]">
         <SortHeader field="name" label="Name" sort={sort} onSort={onSort} />
         <SortHeader field="size" label="Size" sort={sort} onSort={onSort} />
-        <SortHeader field="lastModified" label="Modified" sort={sort} onSort={onSort} />
-        <SortHeader field="contentType" label="Type" sort={sort} onSort={onSort} />
+        <div className="hidden md:block">
+          <SortHeader field="lastModified" label="Modified" sort={sort} onSort={onSort} />
+        </div>
+        <div className="hidden md:block">
+          <SortHeader field="contentType" label="Type" sort={sort} onSort={onSort} />
+        </div>
       </div>
-      <div className="max-h-[60vh] overflow-auto">
+      <div className="max-h-[60vh] divide-y divide-border/60 overflow-auto">
         {items.map((item) => (
           <FileItem
             key={item.key}

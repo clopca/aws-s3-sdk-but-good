@@ -1,6 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
+import { genUploader } from "@s3-good/core/client";
+import type { FileRouter } from "@s3-good/core/server";
 import type { BrowserConfig, BrowserFile, BrowserItem } from "@s3-good/shared";
 import { useBreadcrumbs, useBrowser, useSearch } from "../hooks";
+import type { BreadcrumbSegment, UseSearchReturn, UseBrowserReturn } from "../hooks";
 import type { ContextMenuItem } from "./context-menu";
 import { Breadcrumbs } from "./breadcrumbs";
 import { ConfirmDialog, CreateFolderDialog, RenameDialog } from "./dialogs";
@@ -16,9 +19,59 @@ export interface S3BrowserProps {
   headers?: HeadersInit | (() => Promise<HeadersInit> | HeadersInit);
   config?: BrowserConfig;
   className?: string;
+  upload?: {
+    endpoint?: string;
+    url?: string;
+    input?: unknown | ((ctx: { currentPath: string; activeBucket?: string }) => unknown);
+    headers?: HeadersInit | (() => Promise<HeadersInit> | HeadersInit);
+    accept?: string;
+    multiple?: boolean;
+    label?: string;
+    onUploadFiles?: (files: File[], ctx: { currentPath: string; activeBucket?: string }) => void | Promise<void>;
+    onUploadComplete?: () => void;
+    onUploadError?: (error: Error) => void;
+  };
+  children?: (ctx: S3BrowserRenderContext) => ReactNode;
+  appearance?: Partial<{
+    container: string;
+    header: string;
+    searchBar: string;
+    toolbar: string;
+    grid: string;
+    list: string;
+    selectionBar: string;
+    createFolderDialog: string;
+    renameDialog: string;
+    confirmDialog: string;
+    error: string;
+  }>;
 }
 
-export function S3Browser({ url, headers, config, className }: S3BrowserProps) {
+export interface S3BrowserRenderContext {
+  browser: UseBrowserReturn;
+  breadcrumbs: BreadcrumbSegment[];
+  search: UseSearchReturn;
+  files: BrowserFile[];
+  previewFile: BrowserFile | null;
+  previewIndex: number;
+  previewUrl: string | null;
+  previewLoading: boolean;
+  confirmDeleteOpen: boolean;
+  createFolderOpen: boolean;
+  renameTarget: BrowserItem | null;
+  canUpload: boolean;
+  isUploading: boolean;
+  setConfirmDeleteOpen: (value: boolean) => void;
+  setCreateFolderOpen: (value: boolean) => void;
+  setRenameTarget: (value: BrowserItem | null) => void;
+  handleUploadFiles: (files: File[]) => Promise<void>;
+  openPreview: (item: BrowserItem) => Promise<void>;
+  navigatePreview: (offset: number) => Promise<void>;
+  getContextMenuItems: (item: BrowserItem) => ContextMenuItem[];
+  clearPreview: () => void;
+}
+
+export function S3Browser({ url, headers, config, className, upload, children, appearance }: S3BrowserProps) {
   const browser = useBrowser({ url, headers, config });
   const breadcrumbs = useBreadcrumbs(browser.currentPath, config?.rootPrefix);
   const search = useSearch(browser.store);
@@ -27,6 +80,8 @@ export function S3Browser({ url, headers, config, className }: S3BrowserProps) {
   const [renameTarget, setRenameTarget] = useState<BrowserItem | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const previewRequestIdRef = useRef(0);
 
   const previewFile = browser.previewItem?.kind === "file" ? browser.previewItem : null;
 
@@ -39,6 +94,20 @@ export function S3Browser({ url, headers, config, className }: S3BrowserProps) {
     ? files.findIndex((file) => file.key === previewFile.key)
     : -1;
 
+  const loadPreviewUrl = async (key: string) => {
+    const requestId = ++previewRequestIdRef.current;
+    setPreviewLoading(true);
+    try {
+      const urlValue = await browser.client.getPreviewUrl(key, browser.activeBucket || undefined);
+      if (requestId !== previewRequestIdRef.current) return;
+      setPreviewUrl(urlValue);
+    } finally {
+      if (requestId === previewRequestIdRef.current) {
+        setPreviewLoading(false);
+      }
+    }
+  };
+
   const openPreview = async (item: BrowserItem) => {
     if (item.kind !== "file") {
       browser.openFolder(item);
@@ -46,14 +115,7 @@ export function S3Browser({ url, headers, config, className }: S3BrowserProps) {
     }
 
     browser.setPreviewItem(item);
-    setPreviewLoading(true);
-
-    try {
-      const urlValue = await browser.client.getPreviewUrl(item.key, browser.activeBucket || undefined);
-      setPreviewUrl(urlValue);
-    } finally {
-      setPreviewLoading(false);
-    }
+    await loadPreviewUrl(item.key);
   };
 
   const navigatePreview = async (offset: number) => {
@@ -61,11 +123,44 @@ export function S3Browser({ url, headers, config, className }: S3BrowserProps) {
     const nextFile = files[previewIndex + offset];
     if (!nextFile) return;
     browser.setPreviewItem(nextFile);
-    setPreviewLoading(true);
+    await loadPreviewUrl(nextFile.key);
+  };
+
+  const canUpload = Boolean(upload?.onUploadFiles || upload?.endpoint);
+
+  const handleUploadFiles = async (files: File[]) => {
+    if (files.length === 0) return;
+    if (!canUpload) return;
+
+    const context = {
+      currentPath: browser.currentPath,
+      activeBucket: browser.activeBucket || undefined,
+    };
+
+    setIsUploading(true);
     try {
-      setPreviewUrl(await browser.client.getPreviewUrl(nextFile.key, browser.activeBucket || undefined));
+      if (upload?.onUploadFiles) {
+        await upload.onUploadFiles(files, context);
+      } else if (upload?.endpoint) {
+        const { uploadFiles } = genUploader<FileRouter>({ url: upload.url });
+        const resolvedInput = typeof upload.input === "function"
+          ? upload.input(context)
+          : upload.input;
+        await uploadFiles(upload.endpoint, {
+          files,
+          input: resolvedInput,
+          headers: upload.headers,
+        });
+      }
+
+      await browser.refresh();
+      upload?.onUploadComplete?.();
+    } catch (error) {
+      const normalized = error instanceof Error ? error : new Error("Upload failed");
+      browser.store.setError(normalized.message);
+      upload?.onUploadError?.(normalized);
     } finally {
-      setPreviewLoading(false);
+      setIsUploading(false);
     }
   };
 
@@ -111,15 +206,69 @@ export function S3Browser({ url, headers, config, className }: S3BrowserProps) {
     return items;
   };
 
+  const clearPreview = () => {
+    previewRequestIdRef.current += 1;
+    browser.setPreviewItem(null);
+    setPreviewUrl(null);
+    setPreviewLoading(false);
+  };
+
+  const renderContext: S3BrowserRenderContext = {
+    browser,
+    breadcrumbs,
+    search,
+    files,
+    previewFile,
+    previewIndex,
+    previewUrl,
+    previewLoading,
+    confirmDeleteOpen,
+    createFolderOpen,
+    renameTarget,
+    canUpload,
+    isUploading,
+    setConfirmDeleteOpen,
+    setCreateFolderOpen,
+    setRenameTarget,
+    handleUploadFiles,
+    openPreview,
+    navigatePreview,
+    getContextMenuItems,
+    clearPreview,
+  };
+
+  if (children) {
+    return <>{children(renderContext)}</>;
+  }
+
   return (
-    <div className={`space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5 ${className ?? ""}`.trim()}>
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-center">
+    <div
+      className={`space-y-4 rounded-2xl border border-border bg-card p-4 text-card-foreground shadow-sm md:p-5 ${appearance?.container ?? ""} ${className ?? ""}`.trim()}
+      onDragOver={(event) => {
+        if (!canUpload) return;
+        event.preventDefault();
+      }}
+      onDrop={(event) => {
+        if (!canUpload) return;
+        event.preventDefault();
+        const files = Array.from(event.dataTransfer?.files ?? []);
+        if (files.length > 0) {
+          void handleUploadFiles(files);
+        }
+      }}
+    >
+      <div className={`grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-center ${appearance?.header ?? ""}`.trim()}>
         <Breadcrumbs segments={breadcrumbs} onNavigate={browser.navigateTo} />
-        <SearchBar value={search.inputValue} onChange={search.handleChange} onClear={search.clear} />
+        <SearchBar
+          value={search.inputValue}
+          onChange={search.handleChange}
+          onClear={search.clear}
+          className={appearance?.searchBar}
+        />
       </div>
 
       <Toolbar
-        buckets={config?.buckets}
+        buckets={browser.availableBuckets}
         activeBucket={browser.activeBucket}
         viewMode={browser.viewMode}
         sort={browser.sort}
@@ -129,11 +278,17 @@ export function S3Browser({ url, headers, config, className }: S3BrowserProps) {
         onSortChange={browser.setSort}
         onCreateFolder={() => setCreateFolderOpen(true)}
         onDeleteSelected={() => setConfirmDeleteOpen(true)}
+        onUploadFiles={canUpload ? handleUploadFiles : undefined}
+        uploadAccept={upload?.accept}
+        uploadMultiple={upload?.multiple}
+        uploadLabel={upload?.label}
+        uploadDisabled={isUploading}
         onRefresh={() => void browser.refresh()}
+        className={appearance?.toolbar}
       />
 
       {browser.error ? (
-        <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+        <div className={`rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive ${appearance?.error ?? ""}`.trim()}>
           {browser.error}
         </div>
       ) : null}
@@ -166,6 +321,7 @@ export function S3Browser({ url, headers, config, className }: S3BrowserProps) {
           getContextMenuItems={getContextMenuItems}
           isLoading={browser.isLoading}
           isSearching={Boolean(browser.searchQuery)}
+          className={appearance?.grid}
         />
       ) : (
         <FileListView
@@ -197,6 +353,7 @@ export function S3Browser({ url, headers, config, className }: S3BrowserProps) {
           getContextMenuItems={getContextMenuItems}
           isLoading={browser.isLoading}
           isSearching={Boolean(browser.searchQuery)}
+          className={appearance?.list}
         />
       )}
 
@@ -204,6 +361,7 @@ export function S3Browser({ url, headers, config, className }: S3BrowserProps) {
         count={browser.selectedKeys.size}
         onClear={browser.deselectAll}
         onDelete={() => setConfirmDeleteOpen(true)}
+        className={appearance?.selectionBar}
       />
 
       <CreateFolderDialog
@@ -213,6 +371,7 @@ export function S3Browser({ url, headers, config, className }: S3BrowserProps) {
           setCreateFolderOpen(false);
           void browser.createFolder(name);
         }}
+        className={appearance?.createFolderDialog}
       />
 
       <RenameDialog
@@ -225,6 +384,7 @@ export function S3Browser({ url, headers, config, className }: S3BrowserProps) {
           setRenameTarget(null);
           void browser.renameItem(targetKey, newName);
         }}
+        className={appearance?.renameDialog}
       />
 
       <ConfirmDialog
@@ -237,6 +397,7 @@ export function S3Browser({ url, headers, config, className }: S3BrowserProps) {
           setConfirmDeleteOpen(false);
           void browser.deleteSelected();
         }}
+        className={appearance?.confirmDialog}
       />
 
       {previewFile && previewUrl ? (
@@ -247,8 +408,7 @@ export function S3Browser({ url, headers, config, className }: S3BrowserProps) {
           onPrev={() => void navigatePreview(-1)}
           onNext={() => void navigatePreview(1)}
           onClose={() => {
-            browser.setPreviewItem(null);
-            setPreviewUrl(null);
+            clearPreview();
           }}
           onDownload={() => void browser.downloadFile(previewFile.key)}
           hasPrev={previewIndex > 0}

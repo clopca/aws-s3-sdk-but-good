@@ -1,12 +1,11 @@
+import { useRef } from "react";
 import type { SortConfig, SortField, ViewMode } from "@s3-good/shared";
 import {
+  Button,
+  cn,
+  Select,
   SelectContent,
-  SelectIcon,
   SelectItem,
-  SelectList,
-  SelectPortal,
-  SelectPositioner,
-  SelectRoot,
   SelectTrigger,
   SelectValue,
 } from "./ui";
@@ -22,7 +21,21 @@ export interface ToolbarProps {
   onSortChange: (field: SortField) => void;
   onCreateFolder: () => void;
   onDeleteSelected: () => void;
+  onUploadFiles?: (files: File[]) => void | Promise<void>;
+  uploadLabel?: string;
+  uploadAccept?: string;
+  uploadMultiple?: boolean;
+  uploadDisabled?: boolean;
   onRefresh?: () => void;
+  className?: string;
+  appearance?: Partial<{
+    root: string;
+    controls: string;
+    actions: string;
+    bucketSelect: string;
+    sortSelect: string;
+    selectedBadge: string;
+  }>;
 }
 
 const SORT_LABELS: Record<SortField, string> = {
@@ -31,28 +44,6 @@ const SORT_LABELS: Record<SortField, string> = {
   lastModified: "Modified",
   contentType: "Type",
 };
-
-function controlButton(active: boolean): string {
-  return `inline-flex h-10 items-center rounded-md border px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 ${
-    active
-      ? "border-slate-900 bg-slate-900 text-white"
-      : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-  }`;
-}
-
-function actionButton(variant: "neutral" | "primary" | "danger"): string {
-  if (variant === "primary") {
-    return "inline-flex h-10 items-center rounded-md bg-blue-600 px-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200";
-  }
-  if (variant === "danger") {
-    return "inline-flex h-10 items-center rounded-md bg-rose-600 px-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200 disabled:cursor-not-allowed disabled:opacity-50";
-  }
-  return "inline-flex h-10 items-center rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200";
-}
-
-const selectTriggerClass = "inline-flex h-10 min-w-[160px] items-center justify-between rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 shadow-sm transition-colors hover:border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200";
-const selectContentClass = "z-50 min-w-[160px] rounded-md border border-slate-200 bg-white p-1 shadow-lg";
-const selectItemClass = "cursor-default rounded px-2.5 py-2 text-sm text-slate-700 outline-none data-[highlighted]:bg-slate-100";
 
 export function Toolbar({
   buckets = [],
@@ -65,89 +56,142 @@ export function Toolbar({
   onSortChange,
   onCreateFolder,
   onDeleteSelected,
+  onUploadFiles,
+  uploadLabel = "Upload",
+  uploadAccept,
+  uploadMultiple = true,
+  uploadDisabled = false,
   onRefresh,
+  className,
+  appearance,
 }: ToolbarProps) {
+  const uploadInputRef = useRef<HTMLInputElement>(null);
+  const bucketItems = buckets.map((bucket) => ({ label: bucket, value: bucket }));
+  const sortItems = [
+    { label: "Name", value: "name" },
+    { label: "Size", value: "size" },
+    { label: "Modified", value: "lastModified" },
+    { label: "Type", value: "contentType" },
+  ] satisfies Array<{ label: string; value: SortField }>;
+
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 md:flex-row md:items-center md:justify-between">
-      <div className="flex flex-wrap items-center gap-2">
+    <div className={cn("flex flex-col gap-3 rounded-xl border border-border bg-muted/40 p-3 md:flex-row md:items-center md:justify-between", appearance?.root, className)}>
+      <div className={cn("flex flex-wrap items-center gap-2", appearance?.controls)}>
         {buckets.length > 0 ? (
-          <SelectRoot
-            value={activeBucket}
-            onValueChange={(value) => {
-              if (value && onBucketChange) onBucketChange(value);
-            }}
-          >
-            <SelectTrigger className={selectTriggerClass}>
-              <SelectValue>{(value) => `Bucket: ${(value as string) ?? ""}`}</SelectValue>
-              <SelectIcon className="text-xs text-slate-500">▾</SelectIcon>
-            </SelectTrigger>
-            <SelectPortal>
-              <SelectPositioner sideOffset={6}>
-                <SelectContent className={selectContentClass}>
-                  <SelectList>
-                    {buckets.map((bucket) => (
-                      <SelectItem key={bucket} value={bucket} className={selectItemClass}>
-                        {bucket}
-                      </SelectItem>
-                    ))}
-                  </SelectList>
-                </SelectContent>
-              </SelectPositioner>
-            </SelectPortal>
-          </SelectRoot>
+          <div className={cn("min-w-0 max-w-[320px] grow sm:grow-0", appearance?.bucketSelect)}>
+            <Select
+              items={bucketItems}
+              value={activeBucket}
+              onValueChange={(value) => {
+                if (value && onBucketChange) onBucketChange(value);
+              }}
+            >
+              <SelectTrigger className="w-full min-w-0" aria-label="Bucket">
+                <SelectValue className="truncate" placeholder="Select bucket" />
+              </SelectTrigger>
+              <SelectContent>
+                {bucketItems.map((bucket) => (
+                  <SelectItem key={bucket.value} value={bucket.value} className="truncate">
+                    {bucket.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         ) : null}
 
-        <div className="inline-flex rounded-md border border-slate-200 bg-white p-1 shadow-sm">
-          <button type="button" className={controlButton(viewMode === "grid")} onClick={() => onViewModeChange("grid")}>
+        <div className="inline-flex rounded-lg border border-border bg-muted p-0.5">
+          <Button
+            variant={viewMode === "grid" ? "default" : "ghost"}
+            size="sm"
+            className={cn(
+              "rounded-md",
+              viewMode !== "grid" && "text-muted-foreground shadow-none",
+            )}
+            onClick={() => onViewModeChange("grid")}
+          >
             Grid
-          </button>
-          <button type="button" className={controlButton(viewMode === "list")} onClick={() => onViewModeChange("list")}>
+          </Button>
+          <Button
+            variant={viewMode === "list" ? "default" : "ghost"}
+            size="sm"
+            className={cn(
+              "rounded-md",
+              viewMode !== "list" && "text-muted-foreground shadow-none",
+            )}
+            onClick={() => onViewModeChange("list")}
+          >
             List
-          </button>
+          </Button>
         </div>
 
-        <SelectRoot value={sort.field}>
-          <SelectTrigger className={selectTriggerClass}>
+        <Select
+          items={sortItems}
+          value={sort.field}
+          onValueChange={(value) => {
+            if (value) onSortChange(value as SortField);
+          }}
+        >
+          <SelectTrigger className={cn("min-w-[140px]", appearance?.sortSelect)} aria-label="Sort">
             <SelectValue>{(value) => `Sort: ${SORT_LABELS[(value as SortField) ?? "name"]}`}</SelectValue>
-            <SelectIcon className="text-xs text-slate-500">▾</SelectIcon>
           </SelectTrigger>
-          <SelectPortal>
-            <SelectPositioner sideOffset={6}>
-              <SelectContent className={selectContentClass}>
-                <SelectList>
-                  <SelectItem value="name" className={selectItemClass} onClick={() => onSortChange("name")}>Name</SelectItem>
-                  <SelectItem value="size" className={selectItemClass} onClick={() => onSortChange("size")}>Size</SelectItem>
-                  <SelectItem value="lastModified" className={selectItemClass} onClick={() => onSortChange("lastModified")}>Modified</SelectItem>
-                  <SelectItem value="contentType" className={selectItemClass} onClick={() => onSortChange("contentType")}>Type</SelectItem>
-                </SelectList>
-              </SelectContent>
-            </SelectPositioner>
-          </SelectPortal>
-        </SelectRoot>
+          <SelectContent>
+            {sortItems.map((item) => (
+              <SelectItem key={item.value} value={item.value}>
+                {item.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      <div className="flex flex-wrap items-center justify-end gap-2">
+      <div className={cn("flex flex-wrap items-center justify-end gap-2", appearance?.actions)}>
         {selectedCount > 0 ? (
-          <span className="rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
+          <span className={cn("rounded-md border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary", appearance?.selectedBadge)}>
             {selectedCount} selected
           </span>
         ) : null}
         {onRefresh ? (
-          <button type="button" className={actionButton("neutral")} onClick={onRefresh}>
+          <Button type="button" variant="outline" onClick={onRefresh}>
             Refresh
-          </button>
+          </Button>
         ) : null}
-        <button type="button" className={actionButton("primary")} onClick={onCreateFolder}>
+        {onUploadFiles ? (
+          <>
+            <input
+              ref={uploadInputRef}
+              type="file"
+              className="hidden"
+              accept={uploadAccept}
+              multiple={uploadMultiple}
+              onChange={(event) => {
+                const files = Array.from(event.currentTarget.files ?? []);
+                if (files.length === 0) return;
+                void onUploadFiles(files);
+                event.currentTarget.value = "";
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              disabled={uploadDisabled}
+              onClick={() => uploadInputRef.current?.click()}
+            >
+              {uploadLabel}
+            </Button>
+          </>
+        ) : null}
+        <Button type="button" onClick={onCreateFolder}>
           New Folder
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className={actionButton("danger")}
+          variant={selectedCount > 0 ? "destructive" : "outline"}
           onClick={onDeleteSelected}
           disabled={selectedCount === 0}
         >
           Delete ({selectedCount})
-        </button>
+        </Button>
       </div>
     </div>
   );
