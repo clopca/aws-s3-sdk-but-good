@@ -1,4 +1,6 @@
 import { createElement, type CSSProperties } from "react";
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 // ─── Theming Types ──────────────────────────────────────────────────────────
 
@@ -78,12 +80,11 @@ export function resolveClassName<TContentOpts>(
 }
 
 /**
- * Joins class names, skipping empty values.
+ * Merges class names with Tailwind conflict resolution.
+ * Uses clsx for conditional class joining and tailwind-merge for deduplication.
  */
-export function cx(
-  ...parts: Array<string | undefined | null | false>
-): string | undefined {
-  const className = parts.filter(Boolean).join(" ");
+export function cn(...inputs: ClassValue[]): string | undefined {
+  const className = twMerge(clsx(inputs));
   return className || undefined;
 }
 
@@ -92,7 +93,10 @@ export function cx(
  * content options and returns a ReactNode.
  */
 export function renderContent<TContentOpts>(
-  content: React.ReactNode | ((opts: TContentOpts) => React.ReactNode) | undefined,
+  content:
+    | React.ReactNode
+    | ((opts: TContentOpts) => React.ReactNode)
+    | undefined,
   opts: TContentOpts,
   defaultContent: React.ReactNode,
 ): React.ReactNode {
@@ -150,9 +154,7 @@ const FILE_TYPE_TO_ACCEPT: Record<string, string> = {
  * high-level file type categories (e.g. ["image", "pdf"] → "image/*,application/pdf").
  */
 export function generateAcceptString(fileTypes: string[]): string {
-  return fileTypes
-    .map((type) => FILE_TYPE_TO_ACCEPT[type] ?? type)
-    .join(",");
+  return fileTypes.map((type) => FILE_TYPE_TO_ACCEPT[type] ?? type).join(",");
 }
 
 // ─── Allowed Content Text ───────────────────────────────────────────────────

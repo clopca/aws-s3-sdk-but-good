@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import type {
   FileRouter,
   inferEndpointInput,
@@ -63,13 +63,16 @@ export function useUpload<
   const url = uploaderOpts?.url ?? "/api/upload";
 
   // Debounce progress updates via requestAnimationFrame
-  function debouncedSetProgress(value: number) {
+  const debouncedSetProgress = useCallback((value: number) => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(() => {
       setProgress(value);
       rafRef.current = null;
     });
-  }
+  }, []);
+
+  // Memoize the uploader so it's not recreated on every startUpload call
+  const uploader = useMemo(() => genUploader<TRouter>({ url }), [url]);
 
   // Fetch permitted file info from the server GET endpoint on mount
   useEffect(() => {
@@ -141,7 +144,7 @@ export function useUpload<
       setProgress(0);
 
       try {
-        const { uploadFiles } = genUploader<TRouter>(uploaderOpts);
+        const { uploadFiles } = uploader;
 
         const result = await uploadFiles(endpoint, {
           files,
@@ -180,7 +183,7 @@ export function useUpload<
         return undefined;
       }
     },
-    [endpoint, opts, uploaderOpts],
+    [endpoint, opts, uploader, debouncedSetProgress],
   );
 
   const abort = useCallback(() => {

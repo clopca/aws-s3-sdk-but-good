@@ -121,16 +121,16 @@ describe("FileList", () => {
     render(<FileList files={files} />);
 
     const pendingStatus = screen.getByText("Pending");
-    expect(pendingStatus.className).toContain("text-slate-500");
+    expect(pendingStatus.className).toContain("text-muted-foreground");
 
     const uploadingStatus = screen.getByText("Uploading");
-    expect(uploadingStatus.className).toContain("text-blue-500");
+    expect(uploadingStatus.className).toContain("text-primary");
 
     const completeStatus = screen.getByText("Complete");
     expect(completeStatus.className).toContain("text-emerald-500");
 
     const errorStatus = screen.getByText("Error");
-    expect(errorStatus.className).toContain("text-red-500");
+    expect(errorStatus.className).toContain("text-destructive");
   });
 
   // ─── Progress Bar ───────────────────────────────────────────────────────
@@ -273,8 +273,8 @@ describe("FileList", () => {
     render(<FileList files={files} />);
 
     const item = screen.getByRole("listitem");
-    expect(item.className).toContain("border-red-300");
-    expect(item.className).toContain("bg-red-50");
+    expect(item.className).toContain("border-destructive/30");
+    expect(item.className).toContain("bg-destructive/10");
   });
 
   it("test_complete_item_has_complete_styling", () => {
@@ -283,8 +283,8 @@ describe("FileList", () => {
     render(<FileList files={files} />);
 
     const item = screen.getByRole("listitem");
-    expect(item.className).toContain("border-green-300");
-    expect(item.className).toContain("bg-green-50");
+    expect(item.className).toContain("border-emerald-500/30");
+    expect(item.className).toContain("bg-emerald-500/10");
   });
 
   // ─── Theming Support ──────────────────────────────────────────────────

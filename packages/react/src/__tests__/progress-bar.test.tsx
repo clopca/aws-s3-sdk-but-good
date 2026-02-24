@@ -101,7 +101,7 @@ describe("ProgressBar", () => {
 
     const progressbar = screen.getByRole("progressbar");
     const fill = progressbar.firstElementChild as HTMLElement;
-    expect(fill.className).toContain("bg-blue-500");
+    expect(fill.className).toContain("bg-primary");
   });
 
   it("test_data_state_complete", () => {

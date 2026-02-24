@@ -12,10 +12,7 @@ vi.mock("@s3-good/core/client", () => ({
 
 // ─── Mock fetch (for permittedFileInfo in useUpload) ────────────────────────
 
-vi.stubGlobal(
-  "fetch",
-  vi.fn().mockResolvedValue({ ok: false }),
-);
+vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }));
 vi.stubGlobal("requestAnimationFrame", (cb: () => void) => {
   cb();
   return 0;
@@ -72,9 +69,11 @@ describe("generateReactHelpers", () => {
     expect(exports).toHaveProperty("resolveClassName");
     expect(exports).toHaveProperty("renderContent");
     expect(exports).toHaveProperty("UploadIcon");
-    expect(exports).toHaveProperty("defaultButtonStyles");
-    expect(exports).toHaveProperty("defaultDropzoneStyles");
-    expect(exports).toHaveProperty("getDropzoneContainerStyle");
+    expect(exports).toHaveProperty("defaultButtonClasses");
+    expect(exports).toHaveProperty("defaultDropzoneClasses");
+    expect(exports).toHaveProperty("uploadButtonVariants");
+    expect(exports).toHaveProperty("uploadDropzoneVariants");
+    expect(exports).toHaveProperty("cn");
     expect(exports).toHaveProperty("generateReactHelpers");
   });
 });

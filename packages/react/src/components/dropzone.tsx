@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useRef, useState, useCallback, useEffect, forwardRef } from "react";
 import type {
   FileRouter,
   inferEndpointInput,
@@ -15,10 +15,10 @@ import {
   generateAcceptString,
   generateAllowedContentText,
   UploadIcon,
-  cx,
+  cn,
 } from "./shared";
 import type { StyleField } from "./shared";
-import { defaultDropzoneClasses, getDropzoneContainerClass } from "../styles";
+import { defaultDropzoneClasses, uploadDropzoneVariants } from "../styles";
 
 export interface DropzoneContentOpts {
   ready: boolean;
@@ -48,15 +48,11 @@ export interface UploadDropzoneProps<
     uploadIcon?:
       | React.ReactNode
       | ((opts: DropzoneContentOpts) => React.ReactNode);
-    label?:
-      | React.ReactNode
-      | ((opts: DropzoneContentOpts) => React.ReactNode);
+    label?: React.ReactNode | ((opts: DropzoneContentOpts) => React.ReactNode);
     allowedContent?:
       | React.ReactNode
       | ((opts: DropzoneContentOpts) => React.ReactNode);
-    button?:
-      | React.ReactNode
-      | ((opts: DropzoneContentOpts) => React.ReactNode);
+    button?: React.ReactNode | ((opts: DropzoneContentOpts) => React.ReactNode);
   };
   appearance?: UploadDropzoneAppearance;
   className?: string;
@@ -110,6 +106,9 @@ function usePaste(opts: {
   enabled: boolean;
   onPaste: (files: File[]) => void;
 }) {
+  const callbackRef = useRef(opts.onPaste);
+  callbackRef.current = opts.onPaste;
+
   useEffect(() => {
     if (!opts.enabled) return;
 
@@ -117,13 +116,13 @@ function usePaste(opts: {
       const files = Array.from(e.clipboardData?.files ?? []);
       if (files.length > 0) {
         e.preventDefault();
-        opts.onPaste(files);
+        callbackRef.current(files);
       }
     };
 
     document.addEventListener("paste", handler);
     return () => document.removeEventListener("paste", handler);
-  }, [opts.enabled, opts.onPaste]);
+  }, [opts.enabled]);
 }
 
 function useImagePreviews(files: File[]): string[] {
@@ -156,10 +155,13 @@ function getDefaultAllowedText(opts: DropzoneContentOpts): string {
   return `Allowed: ${generateAllowedContentText(opts.fileTypes)}`;
 }
 
-export function UploadDropzone<
+function UploadDropzoneInner<
   TRouter extends FileRouter,
   TEndpoint extends inferEndpoints<TRouter>,
->(props: UploadDropzoneProps<TRouter, TEndpoint>) {
+>(
+  props: UploadDropzoneProps<TRouter, TEndpoint>,
+  ref: React.ForwardedRef<HTMLDivElement>,
+) {
   const {
     endpoint,
     input,
@@ -180,12 +182,10 @@ export function UploadDropzone<
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
-  const {
-    startUpload,
-    isUploading,
-    progress,
-    permittedFileInfo,
-  } = useUpload<TRouter, TEndpoint>(
+  const { startUpload, isUploading, progress, permittedFileInfo } = useUpload<
+    TRouter,
+    TEndpoint
+  >(
     endpoint,
     {
       onUploadBegin,
@@ -251,8 +251,15 @@ export function UploadDropzone<
   };
 
   const containerStyle = resolveStyle(appearance?.container, contentOpts);
-  const containerClassName = cx(
-    getDropzoneContainerClass(contentOpts),
+  const dropzoneState = !ready
+    ? "disabled"
+    : isDragOver
+      ? "dragOver"
+      : isUploading
+        ? "uploading"
+        : "idle";
+  const containerClassName = cn(
+    uploadDropzoneVariants({ state: dropzoneState }),
     resolveClassName(appearance?.container, contentOpts),
   );
 
@@ -263,7 +270,9 @@ export function UploadDropzone<
     }
   };
 
-  const nonImageFiles = selectedFiles.filter((f) => !f.type.startsWith("image/"));
+  const nonImageFiles = selectedFiles.filter(
+    (f) => !f.type.startsWith("image/"),
+  );
 
   const dataState = isUploading
     ? "uploading"
@@ -275,11 +284,12 @@ export function UploadDropzone<
 
   return (
     <div
+      ref={ref}
       role="button"
       tabIndex={ready ? 0 : -1}
       aria-label="Upload dropzone"
       aria-disabled={!ready}
-      className={cx(className, containerClassName)}
+      className={cn(className, containerClassName)}
       style={containerStyle}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -295,11 +305,13 @@ export function UploadDropzone<
         onChange={handleFileInputChange}
         disabled={!ready}
         accept={acceptString}
-        multiple={permittedFileInfo ? permittedFileInfo.maxFileCount > 1 : undefined}
+        multiple={
+          permittedFileInfo ? permittedFileInfo.maxFileCount > 1 : undefined
+        }
       />
 
       <div
-        className={cx(
+        className={cn(
           defaultDropzoneClasses.uploadIcon,
           resolveClassName(appearance?.uploadIcon, contentOpts),
         )}
@@ -309,13 +321,18 @@ export function UploadDropzone<
       </div>
 
       <div
-        className={cx(
+        className={cn(
           defaultDropzoneClasses.label,
           resolveClassName(appearance?.label, contentOpts),
         )}
         style={resolveStyle(appearance?.label, contentOpts)}
+        aria-live={isUploading ? "polite" : undefined}
       >
-        {renderContent(content?.label, contentOpts, getDefaultLabel(contentOpts))}
+        {renderContent(
+          content?.label,
+          contentOpts,
+          getDefaultLabel(contentOpts),
+        )}
       </div>
 
       {previews.length > 0 && (
@@ -351,7 +368,7 @@ export function UploadDropzone<
       )}
 
       <div
-        className={cx(
+        className={cn(
           defaultDropzoneClasses.allowedContent,
           resolveClassName(appearance?.allowedContent, contentOpts),
         )}
@@ -368,7 +385,7 @@ export function UploadDropzone<
         <button
           type="button"
           onClick={handleManualUpload}
-          className={cx(
+          className={cn(
             defaultDropzoneClasses.button,
             resolveClassName(appearance?.button, contentOpts),
           )}
@@ -384,3 +401,18 @@ export function UploadDropzone<
     </div>
   );
 }
+
+/**
+ * Upload dropzone component with drag & drop support.
+ * Supports `ref` forwarding to the root `<div>` element.
+ */
+export const UploadDropzone = forwardRef(UploadDropzoneInner) as <
+  TRouter extends FileRouter,
+  TEndpoint extends inferEndpoints<TRouter>,
+>(
+  props: UploadDropzoneProps<TRouter, TEndpoint> &
+    React.RefAttributes<HTMLDivElement>,
+) => React.ReactElement | null;
+
+// displayName for React DevTools
+(UploadDropzone as React.FC).displayName = "UploadDropzone";

@@ -5,10 +5,15 @@ import {
   renderContent,
 } from "../components/shared";
 import {
-  defaultButtonStyles,
-  defaultDropzoneStyles,
-  getDropzoneContainerStyle,
+  defaultButtonClasses,
+  uploadButtonVariants,
+  defaultDropzoneClasses,
+  uploadDropzoneVariants,
+  progressBarFillVariants,
+  fileListItemVariants,
+  fileListStatusVariants,
 } from "../styles";
+import * as stylesModule from "../styles";
 
 // ─── resolveStyle ───────────────────────────────────────────────────────────
 
@@ -72,72 +77,77 @@ describe("resolveClassName", () => {
   });
 });
 
-// ─── getDropzoneContainerStyle ──────────────────────────────────────────────
+// ─── uploadDropzoneVariants (cva) ───────────────────────────────────────────
 
-describe("getDropzoneContainerStyle", () => {
-  it("test_dropzone_dragover_style", () => {
-    const result = getDropzoneContainerStyle({
-      ready: true,
-      isDragOver: true,
-      isUploading: false,
-    });
-    // Should include the dragOver overlay (blue border)
-    expect(result).toMatchObject({
-      borderColor: defaultDropzoneStyles.containerDragOver.borderColor,
-      backgroundColor:
-        defaultDropzoneStyles.containerDragOver.backgroundColor,
-    });
+describe("uploadDropzoneVariants", () => {
+  it("test_dropzone_dragOver_variant", () => {
+    const result = uploadDropzoneVariants({ state: "dragOver" });
+    expect(result).toContain("border-primary");
+    expect(result).toContain("bg-primary/10");
   });
 
-  it("test_dropzone_disabled_style", () => {
-    const result = getDropzoneContainerStyle({
-      ready: false,
-      isDragOver: false,
-      isUploading: false,
-    });
-    expect(result).toEqual(defaultDropzoneStyles.containerDisabled);
+  it("test_dropzone_disabled_variant", () => {
+    const result = uploadDropzoneVariants({ state: "disabled" });
+    expect(result).toContain("cursor-not-allowed");
+    expect(result).toContain("opacity-60");
   });
 
-  it("test_dropzone_uploading_style", () => {
-    const result = getDropzoneContainerStyle({
-      ready: true,
-      isDragOver: false,
-      isUploading: true,
-    });
-    expect(result).toMatchObject({
-      borderColor: defaultDropzoneStyles.containerUploading.borderColor,
-    });
+  it("test_dropzone_uploading_variant", () => {
+    const result = uploadDropzoneVariants({ state: "uploading" });
+    expect(result).toContain("border-primary/60");
+    expect(result).toContain("cursor-default");
+  });
+
+  it("test_dropzone_idle_variant_is_default", () => {
+    const result = uploadDropzoneVariants();
+    expect(result).toContain("border-border");
+    expect(result).toContain("cursor-pointer");
   });
 });
 
-// ─── Default Styles ─────────────────────────────────────────────────────────
+// ─── uploadButtonVariants (cva) ─────────────────────────────────────────────
 
-describe("defaultButtonStyles", () => {
-  it("test_default_button_styles_exist", () => {
-    expect(defaultButtonStyles).toHaveProperty("container");
-    expect(defaultButtonStyles).toHaveProperty("button");
-    expect(defaultButtonStyles).toHaveProperty("buttonDisabled");
-    expect(defaultButtonStyles).toHaveProperty("buttonUploading");
-    expect(defaultButtonStyles).toHaveProperty("allowedContent");
-    expect(defaultButtonStyles).toHaveProperty("uploadButton");
+describe("uploadButtonVariants", () => {
+  it("test_button_idle_variant", () => {
+    const result = uploadButtonVariants({ state: "idle" });
+    expect(result).toContain("bg-primary");
+    expect(result).toContain("cursor-pointer");
+  });
+
+  it("test_button_disabled_variant", () => {
+    const result = uploadButtonVariants({ state: "disabled" });
+    expect(result).toContain("bg-primary/60");
+    expect(result).toContain("cursor-not-allowed");
+  });
+
+  it("test_button_uploading_variant", () => {
+    const result = uploadButtonVariants({ state: "uploading" });
+    expect(result).toContain("bg-primary");
+    expect(result).toContain("cursor-default");
   });
 });
 
-describe("defaultDropzoneStyles", () => {
-  it("test_default_dropzone_styles_exist", () => {
-    expect(defaultDropzoneStyles).toHaveProperty("container");
-    expect(defaultDropzoneStyles).toHaveProperty("containerDragOver");
-    expect(defaultDropzoneStyles).toHaveProperty("containerUploading");
-    expect(defaultDropzoneStyles).toHaveProperty("containerDisabled");
-    expect(defaultDropzoneStyles).toHaveProperty("uploadIcon");
-    expect(defaultDropzoneStyles).toHaveProperty("label");
-    expect(defaultDropzoneStyles).toHaveProperty("allowedContent");
-    expect(defaultDropzoneStyles).toHaveProperty("button");
-    expect(defaultDropzoneStyles).toHaveProperty("progressBar");
-    expect(defaultDropzoneStyles).toHaveProperty("progressFill");
-    expect(defaultDropzoneStyles).toHaveProperty("previewContainer");
-    expect(defaultDropzoneStyles).toHaveProperty("previewImage");
-    expect(defaultDropzoneStyles).toHaveProperty("fileList");
+// ─── Default Classes ────────────────────────────────────────────────────────
+
+describe("defaultButtonClasses", () => {
+  it("test_default_button_classes_exist", () => {
+    expect(defaultButtonClasses).toHaveProperty("container");
+    expect(defaultButtonClasses).toHaveProperty("allowedContent");
+    expect(defaultButtonClasses).toHaveProperty("uploadButton");
+  });
+});
+
+describe("defaultDropzoneClasses", () => {
+  it("test_default_dropzone_classes_exist", () => {
+    expect(defaultDropzoneClasses).toHaveProperty("uploadIcon");
+    expect(defaultDropzoneClasses).toHaveProperty("label");
+    expect(defaultDropzoneClasses).toHaveProperty("allowedContent");
+    expect(defaultDropzoneClasses).toHaveProperty("button");
+    expect(defaultDropzoneClasses).toHaveProperty("progressBar");
+    expect(defaultDropzoneClasses).toHaveProperty("progressFill");
+    expect(defaultDropzoneClasses).toHaveProperty("previewContainer");
+    expect(defaultDropzoneClasses).toHaveProperty("previewImage");
+    expect(defaultDropzoneClasses).toHaveProperty("fileList");
   });
 });
 
@@ -159,5 +169,88 @@ describe("renderContent", () => {
       opts.ready ? "ready!" : "not ready";
     const result = renderContent(fn, { ready: true }, "default");
     expect(result).toBe("ready!");
+  });
+});
+
+// ─── Task 04: Dead Code Removal ─────────────────────────────────────────────
+
+describe("dead CSS-in-JS exports removed", () => {
+  it("test dead CSS-in-JS exports removed", () => {
+    // These old CSS-in-JS style objects should no longer be exported from styles.ts
+    const exports = stylesModule as Record<string, unknown>;
+    expect(exports).not.toHaveProperty("defaultButtonStyles");
+    expect(exports).not.toHaveProperty("defaultDropzoneStyles");
+    expect(exports).not.toHaveProperty("defaultProgressBarStyles");
+    expect(exports).not.toHaveProperty("defaultFilePreviewStyles");
+    expect(exports).not.toHaveProperty("defaultFileListStyles");
+    // Old inline style objects should be gone
+    expect(exports).not.toHaveProperty("buttonStyles");
+    expect(exports).not.toHaveProperty("dropzoneStyles");
+  });
+
+  it("test active class exports preserved", () => {
+    // All Tailwind class objects and cva variants should still be exported
+    expect(stylesModule).toHaveProperty("defaultButtonClasses");
+    expect(stylesModule).toHaveProperty("uploadButtonVariants");
+    expect(stylesModule).toHaveProperty("defaultDropzoneClasses");
+    expect(stylesModule).toHaveProperty("uploadDropzoneVariants");
+    expect(stylesModule).toHaveProperty("defaultProgressBarClasses");
+    expect(stylesModule).toHaveProperty("progressBarFillVariants");
+    expect(stylesModule).toHaveProperty("defaultFilePreviewClasses");
+    expect(stylesModule).toHaveProperty("defaultFileListClasses");
+    expect(stylesModule).toHaveProperty("fileListItemVariants");
+    expect(stylesModule).toHaveProperty("fileListStatusVariants");
+  });
+});
+
+// ─── Task 04: cva variants produce correct classes ──────────────────────────
+
+describe("cva variants produce correct classes", () => {
+  it("test progressBarFillVariants active state", () => {
+    const result = progressBarFillVariants({ state: "active" });
+    expect(result).toContain("bg-primary");
+  });
+
+  it("test progressBarFillVariants complete state", () => {
+    const result = progressBarFillVariants({ state: "complete" });
+    expect(result).toContain("bg-emerald-500");
+  });
+
+  it("test fileListItemVariants default status", () => {
+    const result = fileListItemVariants({ status: "default" });
+    expect(result).toContain("border-border");
+    expect(result).toContain("bg-card");
+  });
+
+  it("test fileListItemVariants error status", () => {
+    const result = fileListItemVariants({ status: "error" });
+    expect(result).toContain("border-destructive/30");
+    expect(result).toContain("bg-destructive/10");
+  });
+
+  it("test fileListItemVariants complete status", () => {
+    const result = fileListItemVariants({ status: "complete" });
+    expect(result).toContain("border-emerald-500/30");
+    expect(result).toContain("bg-emerald-500/10");
+  });
+
+  it("test fileListStatusVariants pending", () => {
+    const result = fileListStatusVariants({ status: "pending" });
+    expect(result).toContain("text-muted-foreground");
+  });
+
+  it("test fileListStatusVariants uploading", () => {
+    const result = fileListStatusVariants({ status: "uploading" });
+    expect(result).toContain("text-primary");
+  });
+
+  it("test fileListStatusVariants complete", () => {
+    const result = fileListStatusVariants({ status: "complete" });
+    expect(result).toContain("text-emerald-500");
+  });
+
+  it("test fileListStatusVariants error", () => {
+    const result = fileListStatusVariants({ status: "error" });
+    expect(result).toContain("text-destructive");
   });
 });

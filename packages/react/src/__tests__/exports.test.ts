@@ -10,10 +10,7 @@ vi.mock("@s3-good/core/client", () => ({
   }),
 }));
 
-vi.stubGlobal(
-  "fetch",
-  vi.fn().mockResolvedValue({ ok: false }),
-);
+vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }));
 vi.stubGlobal("requestAnimationFrame", (cb: () => void) => {
   cb();
   return 0;
@@ -26,15 +23,24 @@ describe("Phase 2 Exports", () => {
   it("test_exports_new_components", async () => {
     const exports = await import("../index");
 
-    // All three new components SHALL be available
+    // All three new components SHALL be available (forwardRef components are objects)
     expect(exports).toHaveProperty("FilePreview");
-    expect(typeof exports.FilePreview).toBe("function");
+    expect(exports.FilePreview).toBeDefined();
+    expect((exports.FilePreview as { displayName?: string }).displayName).toBe(
+      "FilePreview",
+    );
 
     expect(exports).toHaveProperty("ProgressBar");
-    expect(typeof exports.ProgressBar).toBe("function");
+    expect(exports.ProgressBar).toBeDefined();
+    expect((exports.ProgressBar as { displayName?: string }).displayName).toBe(
+      "ProgressBar",
+    );
 
     expect(exports).toHaveProperty("FileList");
-    expect(typeof exports.FileList).toBe("function");
+    expect(exports.FileList).toBeDefined();
+    expect((exports.FileList as { displayName?: string }).displayName).toBe(
+      "FileList",
+    );
   });
 
   it("test_exports_new_types", async () => {
@@ -55,33 +61,46 @@ describe("Phase 2 Exports", () => {
     expect(typeof exports.generateReactHelpers).toBe("function");
   });
 
-  it("test_exports_new_styles", async () => {
+  it("test_exports_new_classes", async () => {
     const exports = await import("../index");
 
-    // All new style objects SHALL be available
-    expect(exports).toHaveProperty("defaultFilePreviewStyles");
-    expect(typeof exports.defaultFilePreviewStyles).toBe("object");
-    expect(exports.defaultFilePreviewStyles).toHaveProperty("container");
-    expect(exports.defaultFilePreviewStyles).toHaveProperty("thumbnail");
-    expect(exports.defaultFilePreviewStyles).toHaveProperty("icon");
-    expect(exports.defaultFilePreviewStyles).toHaveProperty("fileInfo");
-    expect(exports.defaultFilePreviewStyles).toHaveProperty("fileName");
-    expect(exports.defaultFilePreviewStyles).toHaveProperty("fileSize");
+    // All new class objects SHALL be available
+    expect(exports).toHaveProperty("defaultFilePreviewClasses");
+    expect(typeof exports.defaultFilePreviewClasses).toBe("object");
+    expect(exports.defaultFilePreviewClasses).toHaveProperty("container");
+    expect(exports.defaultFilePreviewClasses).toHaveProperty("thumbnail");
+    expect(exports.defaultFilePreviewClasses).toHaveProperty("icon");
+    expect(exports.defaultFilePreviewClasses).toHaveProperty("fileInfo");
+    expect(exports.defaultFilePreviewClasses).toHaveProperty("fileName");
+    expect(exports.defaultFilePreviewClasses).toHaveProperty("fileSize");
 
-    expect(exports).toHaveProperty("defaultProgressBarStyles");
-    expect(typeof exports.defaultProgressBarStyles).toBe("object");
-    expect(exports.defaultProgressBarStyles).toHaveProperty("container");
-    expect(exports.defaultProgressBarStyles).toHaveProperty("track");
-    expect(exports.defaultProgressBarStyles).toHaveProperty("fill");
-    expect(exports.defaultProgressBarStyles).toHaveProperty("fillComplete");
-    expect(exports.defaultProgressBarStyles).toHaveProperty("label");
+    // ProgressBar: fill/fillComplete moved to progressBarFillVariants (cva)
+    expect(exports).toHaveProperty("defaultProgressBarClasses");
+    expect(typeof exports.defaultProgressBarClasses).toBe("object");
+    expect(exports.defaultProgressBarClasses).toHaveProperty("container");
+    expect(exports.defaultProgressBarClasses).toHaveProperty("track");
+    expect(exports.defaultProgressBarClasses).toHaveProperty("label");
+    expect(exports).toHaveProperty("progressBarFillVariants");
+    expect(typeof exports.progressBarFillVariants).toBe("function");
 
-    expect(exports).toHaveProperty("defaultFileListStyles");
-    expect(typeof exports.defaultFileListStyles).toBe("object");
-    expect(exports.defaultFileListStyles).toHaveProperty("container");
-    expect(exports.defaultFileListStyles).toHaveProperty("item");
-    expect(exports.defaultFileListStyles).toHaveProperty("itemError");
-    expect(exports.defaultFileListStyles).toHaveProperty("itemComplete");
-    expect(exports.defaultFileListStyles).toHaveProperty("removeButton");
+    // FileList: item/itemError/itemComplete moved to fileListItemVariants (cva)
+    expect(exports).toHaveProperty("defaultFileListClasses");
+    expect(typeof exports.defaultFileListClasses).toBe("object");
+    expect(exports.defaultFileListClasses).toHaveProperty("container");
+    expect(exports.defaultFileListClasses).toHaveProperty("removeButton");
+    expect(exports).toHaveProperty("fileListItemVariants");
+    expect(typeof exports.fileListItemVariants).toBe("function");
+    expect(exports).toHaveProperty("fileListStatusVariants");
+    expect(typeof exports.fileListStatusVariants).toBe("function");
+
+    // Button & Dropzone cva variants
+    expect(exports).toHaveProperty("uploadButtonVariants");
+    expect(typeof exports.uploadButtonVariants).toBe("function");
+    expect(exports).toHaveProperty("uploadDropzoneVariants");
+    expect(typeof exports.uploadDropzoneVariants).toBe("function");
+
+    // cn utility
+    expect(exports).toHaveProperty("cn");
+    expect(typeof exports.cn).toBe("function");
   });
 });

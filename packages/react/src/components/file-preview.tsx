@@ -1,6 +1,6 @@
-import { useState, useEffect, createElement } from "react";
+import { useState, useEffect, createElement, forwardRef } from "react";
 import { formatFileSize } from "@s3-good/shared";
-import { resolveStyle, resolveClassName, renderContent, cx } from "./shared";
+import { resolveStyle, resolveClassName, renderContent, cn } from "./shared";
 import type { StyleField } from "./shared";
 import { defaultFilePreviewClasses } from "../styles";
 
@@ -59,7 +59,17 @@ function isImageFile(file: File | string): boolean {
   }
   // URL-based detection via extension
   const ext = file.split("?")[0]?.split(".").pop()?.toLowerCase() ?? "";
-  return ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "ico", "avif"].includes(ext);
+  return [
+    "jpg",
+    "jpeg",
+    "png",
+    "gif",
+    "webp",
+    "svg",
+    "bmp",
+    "ico",
+    "avif",
+  ].includes(ext);
 }
 
 /** Extract file name from a URL */
@@ -98,132 +108,129 @@ function useObjectUrl(file: File | string | undefined): string | undefined {
 // ─── FileIcon SVG Component ─────────────────────────────────────────────────
 
 function FileIcon() {
-  return createElement("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    width: 24, height: 24, viewBox: "0 0 24 24",
-    fill: "none", stroke: "currentColor",
-    strokeWidth: 1.5, strokeLinecap: "round", strokeLinejoin: "round",
-    "aria-hidden": true,
-  },
-    createElement("path", { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" }),
+  return createElement(
+    "svg",
+    {
+      xmlns: "http://www.w3.org/2000/svg",
+      width: 24,
+      height: 24,
+      viewBox: "0 0 24 24",
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: 1.5,
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      "aria-hidden": true,
+    },
+    createElement("path", {
+      d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z",
+    }),
     createElement("polyline", { points: "14 2 14 8 20 8" }),
   );
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
-export function FilePreview(props: FilePreviewProps) {
-  const {
-    file,
-    name,
-    size,
-    appearance,
-    content,
-    className,
-  } = props;
+export const FilePreview = forwardRef<HTMLDivElement, FilePreviewProps>(
+  (props, ref) => {
+    const { file, name, size, appearance, content, className } = props;
 
-  const isImage = isImageFile(file);
-  const thumbnailUrl = useObjectUrl(file);
+    const isImage = isImageFile(file);
+    const thumbnailUrl = useObjectUrl(file);
 
-  const fileName = name
-    ?? (file instanceof File ? file.name : getFileNameFromUrl(file));
-  const fileSize = size
-    ?? (file instanceof File ? file.size : undefined);
+    const fileName =
+      name ?? (file instanceof File ? file.name : getFileNameFromUrl(file));
+    const fileSize = size ?? (file instanceof File ? file.size : undefined);
 
-  const contentOpts: FilePreviewContentOpts = {
-    file,
-    isImage,
-    fileName,
-    fileSize,
-  };
+    const contentOpts: FilePreviewContentOpts = {
+      file,
+      isImage,
+      fileName,
+      fileSize,
+    };
 
-  // Resolve styles
-  const containerStyle = resolveStyle(appearance?.container, contentOpts);
-  const containerClassName = cx(
-    defaultFilePreviewClasses.container,
-    resolveClassName(appearance?.container, contentOpts),
-  );
+    // Resolve styles
+    const containerStyle = resolveStyle(appearance?.container, contentOpts);
+    const containerClassName = cn(
+      defaultFilePreviewClasses.container,
+      resolveClassName(appearance?.container, contentOpts),
+    );
 
-  const thumbnailStyle = resolveStyle(appearance?.thumbnail, contentOpts);
-  const thumbnailClassName = cx(
-    defaultFilePreviewClasses.thumbnail,
-    resolveClassName(appearance?.thumbnail, contentOpts),
-  );
+    const thumbnailStyle = resolveStyle(appearance?.thumbnail, contentOpts);
+    const thumbnailClassName = cn(
+      defaultFilePreviewClasses.thumbnail,
+      resolveClassName(appearance?.thumbnail, contentOpts),
+    );
 
-  const iconStyle = resolveStyle(appearance?.icon, contentOpts);
-  const iconClassName = cx(
-    defaultFilePreviewClasses.icon,
-    resolveClassName(appearance?.icon, contentOpts),
-  );
+    const iconStyle = resolveStyle(appearance?.icon, contentOpts);
+    const iconClassName = cn(
+      defaultFilePreviewClasses.icon,
+      resolveClassName(appearance?.icon, contentOpts),
+    );
 
-  const fileInfoStyle = resolveStyle(appearance?.fileInfo, contentOpts);
-  const fileInfoClassName = cx(
-    defaultFilePreviewClasses.fileInfo,
-    resolveClassName(appearance?.fileInfo, contentOpts),
-  );
+    const fileInfoStyle = resolveStyle(appearance?.fileInfo, contentOpts);
+    const fileInfoClassName = cn(
+      defaultFilePreviewClasses.fileInfo,
+      resolveClassName(appearance?.fileInfo, contentOpts),
+    );
 
-  const fileNameStyle = resolveStyle(appearance?.fileName, contentOpts);
-  const fileNameClassName = cx(
-    defaultFilePreviewClasses.fileName,
-    resolveClassName(appearance?.fileName, contentOpts),
-  );
+    const fileNameStyle = resolveStyle(appearance?.fileName, contentOpts);
+    const fileNameClassName = cn(
+      defaultFilePreviewClasses.fileName,
+      resolveClassName(appearance?.fileName, contentOpts),
+    );
 
-  const fileSizeStyle = resolveStyle(appearance?.fileSize, contentOpts);
-  const fileSizeClassName = cx(
-    defaultFilePreviewClasses.fileSize,
-    resolveClassName(appearance?.fileSize, contentOpts),
-  );
+    const fileSizeStyle = resolveStyle(appearance?.fileSize, contentOpts);
+    const fileSizeClassName = cn(
+      defaultFilePreviewClasses.fileSize,
+      resolveClassName(appearance?.fileSize, contentOpts),
+    );
 
-  return (
-    <div
-      className={cx(className, containerClassName)}
-      style={containerStyle}
-      data-state={isImage ? "image" : "file"}
-    >
-      {/* Thumbnail or Icon */}
-      {isImage && thumbnailUrl ? (
-        <div>
-          {renderContent(
-            content?.thumbnail,
-            contentOpts,
-            <img
-              src={thumbnailUrl}
-              alt={fileName}
-              className={thumbnailClassName}
-              style={thumbnailStyle}
-            />,
-          )}
-        </div>
-      ) : (
-        <div
-          className={iconClassName}
-          style={iconStyle}
-        >
-          {renderContent(content?.icon, contentOpts, <FileIcon />)}
-        </div>
-      )}
-
-      {/* File Info */}
+    return (
       <div
-        className={fileInfoClassName}
-        style={fileInfoStyle}
+        ref={ref}
+        className={cn(className, containerClassName)}
+        style={containerStyle}
+        data-state={isImage ? "image" : "file"}
       >
-        <div
-          className={fileNameClassName}
-          style={fileNameStyle}
-        >
-          {renderContent(content?.fileName, contentOpts, fileName)}
-        </div>
-
-        {fileSize !== undefined && (
-          <div
-            className={fileSizeClassName}
-            style={fileSizeStyle}
-          >
-            {renderContent(content?.fileSize, contentOpts, formatFileSize(fileSize))}
+        {/* Thumbnail or Icon */}
+        {isImage && thumbnailUrl ? (
+          <div>
+            {renderContent(
+              content?.thumbnail,
+              contentOpts,
+              <img
+                src={thumbnailUrl}
+                alt={fileName}
+                className={thumbnailClassName}
+                style={thumbnailStyle}
+              />,
+            )}
+          </div>
+        ) : (
+          <div className={iconClassName} style={iconStyle}>
+            {renderContent(content?.icon, contentOpts, <FileIcon />)}
           </div>
         )}
+
+        {/* File Info */}
+        <div className={fileInfoClassName} style={fileInfoStyle}>
+          <div className={fileNameClassName} style={fileNameStyle}>
+            {renderContent(content?.fileName, contentOpts, fileName)}
+          </div>
+
+          {fileSize !== undefined && (
+            <div className={fileSizeClassName} style={fileSizeStyle}>
+              {renderContent(
+                content?.fileSize,
+                contentOpts,
+                formatFileSize(fileSize),
+              )}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  },
+);
+FilePreview.displayName = "FilePreview";

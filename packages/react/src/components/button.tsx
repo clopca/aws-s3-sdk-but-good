@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useId, useRef, useState, forwardRef } from "react";
 import type {
   FileRouter,
   inferEndpointInput,
@@ -7,9 +7,15 @@ import type {
 import type { UploadFileResponse } from "@s3-good/shared";
 import type { UploadError } from "@s3-good/shared";
 import { useUpload } from "../use-upload";
-import { resolveStyle, resolveClassName, renderContent, generateAcceptString, cx } from "./shared";
+import {
+  resolveStyle,
+  resolveClassName,
+  renderContent,
+  generateAcceptString,
+  cn,
+} from "./shared";
 import type { StyleField } from "./shared";
-import { defaultButtonClasses } from "../styles";
+import { defaultButtonClasses, uploadButtonVariants } from "../styles";
 
 // ─── Content Options ────────────────────────────────────────────────────────
 
@@ -38,9 +44,7 @@ export interface UploadButtonProps<
   input?: inferEndpointInput<TRouter, TEndpoint>;
   mode?: "auto" | "manual";
   content?: {
-    button?:
-      | React.ReactNode
-      | ((opts: ButtonContentOpts) => React.ReactNode);
+    button?: React.ReactNode | ((opts: ButtonContentOpts) => React.ReactNode);
     allowedContent?:
       | React.ReactNode
       | ((opts: ButtonContentOpts) => React.ReactNode);
@@ -48,9 +52,7 @@ export interface UploadButtonProps<
   appearance?: UploadButtonAppearance;
   className?: string;
   disabled?: boolean;
-  onClientUploadComplete?: (
-    res: UploadFileResponse[],
-  ) => void;
+  onClientUploadComplete?: (res: UploadFileResponse[]) => void;
   onUploadError?: (error: UploadError) => void;
   onUploadBegin?: (fileName: string) => void;
   onUploadProgress?: (progress: number) => void;
@@ -73,10 +75,13 @@ function getDefaultAllowedText(opts: ButtonContentOpts): string {
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
-export function UploadButton<
+function UploadButtonInner<
   TRouter extends FileRouter,
   TEndpoint extends inferEndpoints<TRouter>,
->(props: UploadButtonProps<TRouter, TEndpoint>) {
+>(
+  props: UploadButtonProps<TRouter, TEndpoint>,
+  ref: React.ForwardedRef<HTMLDivElement>,
+) {
   const {
     endpoint,
     input,
@@ -95,32 +100,26 @@ export function UploadButton<
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const allowedContentId = useId();
 
-  const {
-    startUpload,
-    isUploading,
-    progress,
-    abort,
-    permittedFileInfo,
-  } = useUpload<TRouter, TEndpoint>(
-    endpoint,
-    {
-      onUploadBegin,
-      onUploadProgress,
-      onClientUploadComplete,
-      onUploadError,
-      headers,
-    },
-    { url: __internal?.url },
-  );
+  const { startUpload, isUploading, progress, abort, permittedFileInfo } =
+    useUpload<TRouter, TEndpoint>(
+      endpoint,
+      {
+        onUploadBegin,
+        onUploadProgress,
+        onClientUploadComplete,
+        onUploadError,
+        headers,
+      },
+      { url: __internal?.url },
+    );
 
   const fileTypes = permittedFileInfo?.fileTypes ?? [];
   const acceptString =
     fileTypes.length > 0 ? generateAcceptString(fileTypes) : undefined;
 
-  const handleFileChange = async (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) return;
 
@@ -141,20 +140,11 @@ export function UploadButton<
     }
   };
 
-  const handleLabelClick = (e: React.MouseEvent<HTMLLabelElement>) => {
-    // If uploading, abort instead of opening file picker
+  const handleButtonClick = () => {
     if (isUploading) {
-      e.preventDefault();
       abort();
-    }
-  };
-
-  const handleLabelKeyDown = (e: React.KeyboardEvent<HTMLLabelElement>) => {
-    if (e.key === "Enter" || e.key === " ") {
-      if (isUploading) {
-        e.preventDefault();
-        abort();
-      }
+    } else {
+      fileInputRef.current?.click();
     }
   };
 
@@ -167,61 +157,78 @@ export function UploadButton<
   };
 
   const containerStyle = resolveStyle(appearance?.container, contentOpts);
-  const containerClassName = cx(
+  const containerClassName = cn(
     defaultButtonClasses.container,
     resolveClassName(appearance?.container, contentOpts),
   );
 
-  const buttonBaseClass = isUploading
-    ? defaultButtonClasses.buttonUploading
-    : ready
-      ? defaultButtonClasses.button
-      : defaultButtonClasses.buttonDisabled;
+  const buttonState = isUploading ? "uploading" : ready ? "idle" : "disabled";
   const buttonStyle = resolveStyle(appearance?.button, contentOpts);
-  const buttonClassName = cx(
-    buttonBaseClass,
+  const buttonClassName = cn(
+    uploadButtonVariants({ state: buttonState }),
     resolveClassName(appearance?.button, contentOpts),
   );
 
-  const allowedContentStyle = resolveStyle(appearance?.allowedContent, contentOpts);
-  const allowedContentClassName = cx(
+  const allowedContentStyle = resolveStyle(
+    appearance?.allowedContent,
+    contentOpts,
+  );
+  const allowedContentClassName = cn(
     defaultButtonClasses.allowedContent,
     resolveClassName(appearance?.allowedContent, contentOpts),
   );
 
+  const allowedText = getDefaultAllowedText(contentOpts);
+  const hasAllowedContent =
+    content?.allowedContent !== undefined || allowedText.length > 0;
+
   return (
     <div
-      className={cx(className, containerClassName)}
+      ref={ref}
+      className={cn(className, containerClassName)}
       style={containerStyle}
       data-state={isUploading ? "uploading" : ready ? "ready" : "disabled"}
     >
-      <label
+      <input
+        ref={fileInputRef}
+        type="file"
+        className={defaultButtonClasses.input}
+        onChange={handleFileChange}
+        disabled={!ready}
+        accept={acceptString}
+        tabIndex={-1}
+        aria-hidden
+        multiple={
+          permittedFileInfo ? permittedFileInfo.maxFileCount > 1 : undefined
+        }
+      />
+      <button
+        type="button"
         className={buttonClassName}
         style={buttonStyle}
-        onClick={handleLabelClick}
-        onKeyDown={handleLabelKeyDown}
+        onClick={handleButtonClick}
+        disabled={disabled && !isUploading}
+        aria-label="Upload file"
+        aria-describedby={hasAllowedContent ? allowedContentId : undefined}
         data-state={isUploading ? "uploading" : ready ? "ready" : "disabled"}
         data-uploading={isUploading || undefined}
       >
-        <input
-          ref={fileInputRef}
-          type="file"
-          className={defaultButtonClasses.input}
-          onChange={handleFileChange}
-          disabled={!ready}
-          accept={acceptString}
-          multiple={
-            permittedFileInfo
-              ? permittedFileInfo.maxFileCount > 1
-              : undefined
-          }
-        />
-        {renderContent(
-          content?.button,
-          contentOpts,
-          getDefaultButtonText(contentOpts),
+        {isUploading ? (
+          <span aria-live="polite">
+            {renderContent(
+              content?.button,
+              contentOpts,
+              getDefaultButtonText(contentOpts),
+            )}
+          </span>
+        ) : (
+          renderContent(
+            content?.button,
+            contentOpts,
+            getDefaultButtonText(contentOpts),
+          )
         )}
-      </label>
+      </button>
 
       {mode === "manual" && selectedFiles.length > 0 && !isUploading && (
         <button
@@ -236,15 +243,27 @@ export function UploadButton<
       )}
 
       <div
+        id={allowedContentId}
         className={allowedContentClassName}
         style={allowedContentStyle}
       >
-        {renderContent(
-          content?.allowedContent,
-          contentOpts,
-          getDefaultAllowedText(contentOpts),
-        )}
+        {renderContent(content?.allowedContent, contentOpts, allowedText)}
       </div>
     </div>
   );
 }
+
+/**
+ * Upload button component with file picker.
+ * Supports `ref` forwarding to the root `<div>` element.
+ */
+export const UploadButton = forwardRef(UploadButtonInner) as <
+  TRouter extends FileRouter,
+  TEndpoint extends inferEndpoints<TRouter>,
+>(
+  props: UploadButtonProps<TRouter, TEndpoint> &
+    React.RefAttributes<HTMLDivElement>,
+) => React.ReactElement | null;
+
+// displayName for React DevTools
+(UploadButton as React.FC).displayName = "UploadButton";
