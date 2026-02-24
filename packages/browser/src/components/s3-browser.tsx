@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { genUploader } from "@s3-good/core/client";
 import type { FileRouter } from "@s3-good/core/server";
 import type { BrowserConfig, BrowserFile, BrowserItem } from "@s3-good/shared";
@@ -35,6 +35,11 @@ export interface S3BrowserProps {
     onUploadError?: (error: Error) => void;
   };
   children?: (ctx: S3BrowserRenderContext) => ReactNode;
+  pagination?: {
+    mode?: "manual" | "infinite";
+    rootMargin?: string;
+    threshold?: number;
+  };
   /**
    * Optional virtualization controls for large directories.
    * Keep disabled for small folders and enable where item counts are high.
@@ -87,7 +92,17 @@ export interface S3BrowserRenderContext {
   clearPreview: () => void;
 }
 
-export function S3Browser({ url, headers, config, className, upload, children, virtualization, appearance }: S3BrowserProps) {
+export function S3Browser({
+  url,
+  headers,
+  config,
+  className,
+  upload,
+  children,
+  pagination,
+  virtualization,
+  appearance,
+}: S3BrowserProps) {
   const browser = useBrowser({ url, headers, config });
   const breadcrumbs = useBreadcrumbs(browser.currentPath, config?.rootPrefix);
   const search = useSearch(browser.store);
@@ -98,6 +113,8 @@ export function S3Browser({ url, headers, config, className, upload, children, v
   const [previewLoading, setPreviewLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const previewRequestIdRef = useRef(0);
+  const loadMoreInFlightRef = useRef(false);
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
 
   const previewFile = browser.previewItem?.kind === "file" ? browser.previewItem : null;
 
@@ -143,6 +160,9 @@ export function S3Browser({ url, headers, config, className, upload, children, v
   };
 
   const canUpload = Boolean(upload?.onUploadFiles || upload?.endpoint);
+  const paginationMode = pagination?.mode ?? "manual";
+  const supportsIntersectionObserver = typeof IntersectionObserver !== "undefined";
+  const useInfinitePagination = paginationMode === "infinite" && supportsIntersectionObserver;
 
   const handleUploadFiles = async (files: File[]) => {
     if (files.length === 0) return;
@@ -252,6 +272,42 @@ export function S3Browser({ url, headers, config, className, upload, children, v
     setPreviewUrl(null);
     setPreviewLoading(false);
   };
+
+  const requestLoadMore = useCallback(() => {
+    if (loadMoreInFlightRef.current) return;
+    loadMoreInFlightRef.current = true;
+    void browser.loadMore().finally(() => {
+      loadMoreInFlightRef.current = false;
+    });
+  }, [browser]);
+
+  useEffect(() => {
+    if (!useInfinitePagination) return;
+    if (!browser.hasMore) return;
+    const sentinel = loadMoreSentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        requestLoadMore();
+      }
+    }, {
+      root: null,
+      rootMargin: pagination?.rootMargin ?? "200px 0px",
+      threshold: pagination?.threshold ?? 0,
+    });
+
+    observer.observe(sentinel);
+    return () => {
+      observer.disconnect();
+    };
+  }, [
+    browser.hasMore,
+    pagination?.rootMargin,
+    pagination?.threshold,
+    requestLoadMore,
+    useInfinitePagination,
+  ]);
 
   const renderContext: S3BrowserRenderContext = {
     browser,
@@ -367,7 +423,7 @@ export function S3Browser({ url, headers, config, className, upload, children, v
         />
       )}
 
-      {browser.hasMore ? (
+      {browser.hasMore && !useInfinitePagination ? (
         <div className={`flex justify-center ${appearance?.loadMoreContainer ?? ""}`.trim()}>
           <Button
             type="button"
@@ -375,12 +431,19 @@ export function S3Browser({ url, headers, config, className, upload, children, v
             disabled={browser.isLoading}
             className={appearance?.loadMoreButton}
             onClick={() => {
-              void browser.loadMore();
+              requestLoadMore();
             }}
           >
             {browser.isLoading ? "Loading..." : "Load more"}
           </Button>
         </div>
+      ) : null}
+      {browser.hasMore && useInfinitePagination ? (
+        <div
+          ref={loadMoreSentinelRef}
+          aria-label="Load more sentinel"
+          className={`h-4 ${appearance?.loadMoreContainer ?? ""}`.trim()}
+        />
       ) : null}
 
       <SelectionBar

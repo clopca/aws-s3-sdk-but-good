@@ -150,4 +150,77 @@ describe("S3Browser", () => {
     expect(secondBody.action).toBe("list");
     expect(secondBody.continuationToken).toBe("next-token");
   });
+
+  it("requests next page automatically in infinite pagination mode", async () => {
+    fetchMock
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        action: "list",
+        success: true,
+        items: [
+          {
+            kind: "file",
+            key: "a.txt",
+            name: "a.txt",
+            size: 1,
+            contentType: "text/plain",
+            lastModified: "2026-01-01T00:00:00.000Z",
+          },
+        ],
+        isTruncated: true,
+        nextContinuationToken: "next-token",
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        action: "list",
+        success: true,
+        items: [],
+        isTruncated: false,
+      }), { status: 200 }));
+
+    let observerCallback: ((entries: Array<{ isIntersecting: boolean }>) => void) | null = null;
+    const originalIntersectionObserver = globalThis.IntersectionObserver;
+    class MockIntersectionObserver {
+      constructor(callback: (entries: Array<{ isIntersecting: boolean }>) => void) {
+        observerCallback = callback;
+      }
+      disconnect() {}
+      observe() {}
+      unobserve() {}
+      takeRecords() { return []; }
+    }
+
+    Object.defineProperty(globalThis, "IntersectionObserver", {
+      configurable: true,
+      writable: true,
+      value: MockIntersectionObserver,
+    });
+
+    try {
+      render(<S3Browser url="/api/browser" pagination={{ mode: "infinite" }} />);
+
+      await waitFor(() => {
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+      });
+
+      expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
+      expect(observerCallback).toBeTruthy();
+      if (!observerCallback) {
+        throw new Error("Expected IntersectionObserver callback to be registered");
+      }
+      const triggerObserver = observerCallback as (entries: Array<{ isIntersecting: boolean }>) => void;
+      triggerObserver([{ isIntersecting: true }]);
+
+      await waitFor(() => {
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+      });
+
+      const secondBody = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body ?? "{}"));
+      expect(secondBody.continuationToken).toBe("next-token");
+    } finally {
+      Object.defineProperty(globalThis, "IntersectionObserver", {
+        configurable: true,
+        writable: true,
+        value: originalIntersectionObserver,
+      });
+    }
+  });
 });

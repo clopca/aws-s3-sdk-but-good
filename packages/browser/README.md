@@ -94,6 +94,18 @@ Notable slots include `grid`, `list`, `loadMoreContainer`, `loadMoreButton`, and
 
 When the backend returns truncated list results, the browser shows a `Load more` control and requests the next page with the continuation token.
 
+You can also enable automatic pagination:
+
+```tsx
+<S3Browser
+  pagination={{
+    mode: "infinite",
+    rootMargin: "240px 0px",
+    threshold: 0,
+  }}
+/>
+```
+
 ## Main Exports
 
 - `S3Browser`
