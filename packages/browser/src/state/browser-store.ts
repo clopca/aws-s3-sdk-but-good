@@ -43,7 +43,34 @@ function itemSortValue(item: BrowserItem, field: SortField): string | number {
   return item.name;
 }
 
-export function createBrowserStore(initialState?: Partial<BrowserState>): BrowserStore {
+/**
+ * Pure function that sorts and filters items based on sort config and search query.
+ * Takes state as input to avoid reading from mutable store (prevents tearing in concurrent mode).
+ */
+export function sortAndFilterItems(
+  items: BrowserItem[],
+  sort: SortConfig,
+  searchQuery: string,
+): BrowserItem[] {
+  const query = searchQuery.trim().toLowerCase();
+
+  const filtered = query
+    ? items.filter((item) => item.name.toLowerCase().includes(query))
+    : items;
+
+  return [...filtered].sort((a, b) => {
+    if (a.kind !== b.kind) return a.kind === "folder" ? -1 : 1;
+    return compareValues(
+      itemSortValue(a, sort.field),
+      itemSortValue(b, sort.field),
+      sort.direction,
+    );
+  });
+}
+
+export function createBrowserStore(
+  initialState?: Partial<BrowserState>,
+): BrowserStore {
   let state: BrowserState = {
     currentPath: "",
     items: [],
@@ -85,7 +112,11 @@ export function createBrowserStore(initialState?: Partial<BrowserState>): Browse
     };
   }
 
-  function resetForNavigation(path: string, newHistory?: string[], historyIndex?: number): void {
+  function resetForNavigation(
+    path: string,
+    newHistory?: string[],
+    historyIndex?: number,
+  ): void {
     setState({
       currentPath: normalizePath(path),
       items: [],
@@ -194,12 +225,11 @@ export function createBrowserStore(initialState?: Partial<BrowserState>): Browse
 
   function setSort(field: SortField, direction?: SortDirection): void {
     const prev = getState();
-    const nextDirection = direction
-      ?? (
-        prev.sort.field === field && prev.sort.direction === "asc"
-          ? "desc"
-          : "asc"
-      );
+    const nextDirection =
+      direction ??
+      (prev.sort.field === field && prev.sort.direction === "asc"
+        ? "desc"
+        : "asc");
 
     setState({
       sort: {
@@ -255,20 +285,11 @@ export function createBrowserStore(initialState?: Partial<BrowserState>): Browse
 
   function getSortedItems(): BrowserItem[] {
     const snapshot = getState();
-    const query = snapshot.searchQuery.trim().toLowerCase();
-
-    const filtered = query
-      ? snapshot.items.filter((item) => item.name.toLowerCase().includes(query))
-      : snapshot.items;
-
-    return [...filtered].sort((a, b) => {
-      if (a.kind !== b.kind) return a.kind === "folder" ? -1 : 1;
-      return compareValues(
-        itemSortValue(a, snapshot.sort.field),
-        itemSortValue(b, snapshot.sort.field),
-        snapshot.sort.direction,
-      );
-    });
+    return sortAndFilterItems(
+      snapshot.items,
+      snapshot.sort,
+      snapshot.searchQuery,
+    );
   }
 
   return {

@@ -1,4 +1,9 @@
-import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useEffect, useRef } from "react";
+import {
+  useVirtualizer,
+  observeElementRect as defaultObserveElementRect,
+} from "@tanstack/react-virtual";
+import type { Rect, Virtualizer } from "@tanstack/react-virtual";
 import type { BrowserItem, SortConfig, SortField } from "@s3-good/shared";
 import type { ContextMenuItem } from "./context-menu";
 import { EmptyState } from "./empty-state";
@@ -62,6 +67,25 @@ function SortHeader({
   );
 }
 
+/**
+ * Creates an `observeElementRect` that falls back to the given dimensions
+ * when the element reports zero size (e.g. in jsdom test environments).
+ */
+function observeElementRectWithFallback(fallback: Rect) {
+  return <T extends Element>(
+    instance: Virtualizer<T, Element>,
+    cb: (rect: Rect) => void,
+  ) => {
+    return defaultObserveElementRect(instance, (rect) => {
+      if (rect.width === 0 && rect.height === 0) {
+        cb(fallback);
+      } else {
+        cb(rect);
+      }
+    });
+  };
+}
+
 const FileListView = forwardRef<HTMLDivElement, FileListViewProps>(
   (
     {
@@ -81,10 +105,6 @@ const FileListView = forwardRef<HTMLDivElement, FileListViewProps>(
     ref,
   ) => {
     const scrollRef = useRef<HTMLDivElement | null>(null);
-    const [scrollTop, setScrollTop] = useState(0);
-    const [viewportHeight, setViewportHeight] = useState(
-      FALLBACK_VIEWPORT_HEIGHT,
-    );
 
     const rowHeight = Math.max(
       1,
@@ -101,68 +121,31 @@ const FileListView = forwardRef<HTMLDivElement, FileListViewProps>(
     const shouldVirtualize =
       Boolean(virtualization?.enabled) && items.length >= threshold;
 
+    const virtualizer = useVirtualizer({
+      count: shouldVirtualize ? items.length : 0,
+      getScrollElement: () => scrollRef.current,
+      estimateSize: () => rowHeight,
+      overscan,
+      observeElementRect: observeElementRectWithFallback({
+        width: 0,
+        height: FALLBACK_VIEWPORT_HEIGHT,
+      }),
+    });
+
+    // Reset scroll position when item list changes
     useEffect(() => {
-      const element = scrollRef.current;
-      if (!element) return;
-
-      const updateViewport = () => {
-        const measured = element.clientHeight || FALLBACK_VIEWPORT_HEIGHT;
-        setViewportHeight(measured);
-      };
-
-      updateViewport();
-      if (typeof ResizeObserver === "undefined") return;
-      const observer = new ResizeObserver(updateViewport);
-      observer.observe(element);
-
-      return () => {
-        observer.disconnect();
-      };
-    }, []);
-
-    useEffect(() => {
-      setScrollTop(0);
       if (scrollRef.current) {
         scrollRef.current.scrollTop = 0;
       }
-    }, [items, shouldVirtualize, rowHeight, overscan, threshold]);
-
-    const visibleRange = useMemo(() => {
-      if (!shouldVirtualize) {
-        return {
-          start: 0,
-          end: items.length,
-          totalHeight: 0,
-        };
+      if (shouldVirtualize) {
+        virtualizer.scrollToOffset(0);
       }
-
-      const firstVisibleRow = Math.floor(scrollTop / rowHeight);
-      const visibleCount = Math.ceil(viewportHeight / rowHeight);
-      const start = Math.max(0, firstVisibleRow - overscan);
-      const end = Math.min(
-        items.length,
-        firstVisibleRow + visibleCount + overscan,
-      );
-      return {
-        start,
-        end,
-        totalHeight: items.length * rowHeight,
-      };
-    }, [
-      items.length,
-      overscan,
-      rowHeight,
-      scrollTop,
-      shouldVirtualize,
-      viewportHeight,
-    ]);
-
-    const visibleItems = shouldVirtualize
-      ? items.slice(visibleRange.start, visibleRange.end)
-      : items;
+    }, [items, shouldVirtualize, virtualizer]);
 
     if (isLoading) return <FileListSkeleton />;
     if (items.length === 0) return <EmptyState isSearching={isSearching} />;
+
+    const virtualItems = virtualizer.getVirtualItems();
 
     return (
       <div
@@ -193,49 +176,50 @@ const FileListView = forwardRef<HTMLDivElement, FileListViewProps>(
           </div>
         </div>
         <div
-          ref={(node) => {
-            scrollRef.current = node;
-          }}
+          ref={scrollRef}
           className={cn(
             "max-h-[60vh] overflow-auto",
             !shouldVirtualize && "divide-y divide-border/60",
           )}
-          onScroll={(event) => {
-            if (!shouldVirtualize) return;
-            setScrollTop(event.currentTarget.scrollTop);
-          }}
         >
           {shouldVirtualize ? (
             <div
               style={{
-                height: `${visibleRange.totalHeight}px`,
+                height: `${virtualizer.getTotalSize()}px`,
                 position: "relative",
+                width: "100%",
               }}
             >
-              <div
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  right: 0,
-                  top: `${visibleRange.start * rowHeight}px`,
-                }}
-              >
-                {visibleItems.map((item) => (
-                  <FileItem
+              {virtualItems.map((virtualRow) => {
+                const item = items[virtualRow.index];
+                if (!item) return null;
+                return (
+                  <div
                     key={item.key}
-                    item={item}
-                    isSelected={selectedKeys.has(item.key)}
-                    viewMode="list"
-                    contextMenuItems={getContextMenuItems?.(item)}
-                    onClick={(event) => onItemClick(item.key, event)}
-                    onDoubleClick={() => onItemDoubleClick(item)}
-                    onContextMenu={(event) => onItemContextMenu(item, event)}
-                  />
-                ))}
-              </div>
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      height: `${virtualRow.size}px`,
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                  >
+                    <FileItem
+                      item={item}
+                      isSelected={selectedKeys.has(item.key)}
+                      viewMode="list"
+                      contextMenuItems={getContextMenuItems?.(item)}
+                      onClick={(event) => onItemClick(item.key, event)}
+                      onDoubleClick={() => onItemDoubleClick(item)}
+                      onContextMenu={(event) => onItemContextMenu(item, event)}
+                    />
+                  </div>
+                );
+              })}
             </div>
           ) : (
-            visibleItems.map((item) => (
+            items.map((item) => (
               <FileItem
                 key={item.key}
                 item={item}

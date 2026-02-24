@@ -1,4 +1,9 @@
-import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useEffect, useRef, useState } from "react";
+import {
+  useVirtualizer,
+  observeElementRect as defaultObserveElementRect,
+} from "@tanstack/react-virtual";
+import type { Rect, Virtualizer } from "@tanstack/react-virtual";
 import type { BrowserItem } from "@s3-good/shared";
 import type { ContextMenuItem } from "./context-menu";
 import { EmptyState } from "./empty-state";
@@ -11,8 +16,8 @@ const DEFAULT_GRID_ROW_HEIGHT = 152;
 const DEFAULT_GRID_GAP = 12;
 const DEFAULT_GRID_OVERSCAN_ROWS = 2;
 const DEFAULT_GRID_VIRTUALIZATION_THRESHOLD = 180;
-const FALLBACK_GRID_VIEWPORT_HEIGHT = 480;
 const FALLBACK_GRID_CONTAINER_WIDTH = 960;
+const FALLBACK_GRID_VIEWPORT_HEIGHT = 480;
 
 export interface FileGridVirtualizationOptions {
   enabled?: boolean;
@@ -37,6 +42,25 @@ export interface FileGridProps {
   virtualization?: FileGridVirtualizationOptions;
 }
 
+/**
+ * Creates an `observeElementRect` that falls back to the given dimensions
+ * when the element reports zero size (e.g. in jsdom test environments).
+ */
+function observeElementRectWithFallback(fallback: Rect) {
+  return <T extends Element>(
+    instance: Virtualizer<T, Element>,
+    cb: (rect: Rect) => void,
+  ) => {
+    return defaultObserveElementRect(instance, (rect) => {
+      if (rect.width === 0 && rect.height === 0) {
+        cb(fallback);
+      } else {
+        cb(rect);
+      }
+    });
+  };
+}
+
 const FileGrid = forwardRef<HTMLDivElement, FileGridProps>(
   (
     {
@@ -55,10 +79,6 @@ const FileGrid = forwardRef<HTMLDivElement, FileGridProps>(
     ref,
   ) => {
     const scrollRef = useRef<HTMLDivElement | null>(null);
-    const [scrollTop, setScrollTop] = useState(0);
-    const [viewportHeight, setViewportHeight] = useState(
-      FALLBACK_GRID_VIEWPORT_HEIGHT,
-    );
     const [containerWidth, setContainerWidth] = useState(
       FALLBACK_GRID_CONTAINER_WIDTH,
     );
@@ -83,22 +103,20 @@ const FileGrid = forwardRef<HTMLDivElement, FileGridProps>(
     const shouldVirtualize =
       Boolean(virtualization?.enabled) && items.length >= threshold;
 
+    // Track container width via ResizeObserver for column calculation
     useEffect(() => {
       const element = scrollRef.current;
       if (!element) return;
 
-      const updateMeasurements = () => {
-        const measuredHeight =
-          element.clientHeight || FALLBACK_GRID_VIEWPORT_HEIGHT;
+      const updateWidth = () => {
         const measuredWidth =
           element.clientWidth || FALLBACK_GRID_CONTAINER_WIDTH;
-        setViewportHeight(measuredHeight);
         setContainerWidth(measuredWidth);
       };
 
-      updateMeasurements();
+      updateWidth();
       if (typeof ResizeObserver === "undefined") return;
-      const observer = new ResizeObserver(updateMeasurements);
+      const observer = new ResizeObserver(updateWidth);
       observer.observe(element);
 
       return () => {
@@ -106,71 +124,37 @@ const FileGrid = forwardRef<HTMLDivElement, FileGridProps>(
       };
     }, []);
 
-    useEffect(() => {
-      setScrollTop(0);
-      if (scrollRef.current) {
-        scrollRef.current.scrollTop = 0;
-      }
-    }, [
-      items,
-      shouldVirtualize,
-      itemMinWidth,
-      rowHeight,
-      gap,
-      overscanRows,
-      threshold,
-    ]);
-
-    const itemCount = items.length;
     const columnCount = Math.max(
       1,
       Math.floor((containerWidth + gap) / (itemMinWidth + gap)),
     );
     const rowCount = Math.ceil(items.length / columnCount);
 
-    const virtualWindow = useMemo(() => {
-      if (!shouldVirtualize) {
-        return {
-          startIndex: 0,
-          endIndex: itemCount,
-          offsetTop: 0,
-          totalHeight: 0,
-        };
+    const virtualizer = useVirtualizer({
+      count: shouldVirtualize ? rowCount : 0,
+      getScrollElement: () => scrollRef.current,
+      estimateSize: () => rowHeight,
+      overscan: overscanRows,
+      observeElementRect: observeElementRectWithFallback({
+        width: FALLBACK_GRID_CONTAINER_WIDTH,
+        height: FALLBACK_GRID_VIEWPORT_HEIGHT,
+      }),
+    });
+
+    // Reset scroll position when item list changes
+    useEffect(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = 0;
       }
-
-      const firstVisibleRow = Math.floor(scrollTop / rowHeight);
-      const visibleRowCount = Math.ceil(viewportHeight / rowHeight);
-      const startRow = Math.max(0, firstVisibleRow - overscanRows);
-      const endRow = Math.min(
-        rowCount,
-        firstVisibleRow + visibleRowCount + overscanRows,
-      );
-      const startIndex = startRow * columnCount;
-      const endIndex = Math.min(itemCount, endRow * columnCount);
-
-      return {
-        startIndex,
-        endIndex,
-        offsetTop: startRow * rowHeight,
-        totalHeight: rowCount * rowHeight,
-      };
-    }, [
-      shouldVirtualize,
-      itemCount,
-      scrollTop,
-      rowHeight,
-      viewportHeight,
-      overscanRows,
-      rowCount,
-      columnCount,
-    ]);
-
-    const visibleItems = shouldVirtualize
-      ? items.slice(virtualWindow.startIndex, virtualWindow.endIndex)
-      : items;
+      if (shouldVirtualize) {
+        virtualizer.scrollToOffset(0);
+      }
+    }, [items, shouldVirtualize, virtualizer]);
 
     if (isLoading) return <FileGridSkeleton />;
-    if (itemCount === 0) return <EmptyState isSearching={isSearching} />;
+    if (items.length === 0) return <EmptyState isSearching={isSearching} />;
+
+    const virtualRows = virtualizer.getVirtualItems();
 
     return (
       <div
@@ -184,43 +168,53 @@ const FileGrid = forwardRef<HTMLDivElement, FileGridProps>(
           shouldVirtualize && "max-h-[60vh] overflow-auto",
           className,
         )}
-        onScroll={(event) => {
-          if (!shouldVirtualize) return;
-          setScrollTop(event.currentTarget.scrollTop);
-        }}
       >
         {shouldVirtualize ? (
           <div
             style={{
-              height: `${virtualWindow.totalHeight}px`,
+              height: `${virtualizer.getTotalSize()}px`,
               position: "relative",
+              width: "100%",
             }}
           >
-            <div
-              className="grid p-1"
-              style={{
-                position: "absolute",
-                left: 0,
-                right: 0,
-                top: `${virtualWindow.offsetTop}px`,
-                gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
-                gap: `${gap}px`,
-              }}
-            >
-              {visibleItems.map((item) => (
-                <FileItem
-                  key={item.key}
-                  item={item}
-                  isSelected={selectedKeys.has(item.key)}
-                  viewMode="grid"
-                  contextMenuItems={getContextMenuItems?.(item)}
-                  getPreviewUrl={getPreviewUrl}
-                  onClick={(event) => onItemClick(item.key, event)}
-                  onDoubleClick={() => onItemDoubleClick(item)}
-                  onContextMenu={(event) => onItemContextMenu(item, event)}
-                />
-              ))}
-            </div>
+            {virtualRows.map((virtualRow) => {
+              const startIndex = virtualRow.index * columnCount;
+              const rowItems = items.slice(
+                startIndex,
+                startIndex + columnCount,
+              );
+
+              return (
+                <div
+                  key={virtualRow.index}
+                  className="grid p-1"
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: `${virtualRow.size}px`,
+                    transform: `translateY(${virtualRow.start}px)`,
+                    gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
+                    gap: `${gap}px`,
+                  }}
+                >
+                  {rowItems.map((item) => (
+                    <FileItem
+                      key={item.key}
+                      item={item}
+                      isSelected={selectedKeys.has(item.key)}
+                      viewMode="grid"
+                      contextMenuItems={getContextMenuItems?.(item)}
+                      getPreviewUrl={getPreviewUrl}
+                      onClick={(event) => onItemClick(item.key, event)}
+                      onDoubleClick={() => onItemDoubleClick(item)}
+                      onContextMenu={(event) => onItemContextMenu(item, event)}
+                    />
+                  ))}
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div
@@ -228,7 +222,7 @@ const FileGrid = forwardRef<HTMLDivElement, FileGridProps>(
               "grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3 p-1",
             )}
           >
-            {visibleItems.map((item) => (
+            {items.map((item) => (
               <FileItem
                 key={item.key}
                 item={item}
