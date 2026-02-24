@@ -5,7 +5,7 @@ description: Integrate @s3-good with Next.js applications.
 
 import { Aside, Steps } from "@astrojs/starlight/components";
 
-The Next.js adapter provides a `createRouteHandler` for App Router API routes, plus helper functions to generate typed components and hooks bound to your file router.
+The Next.js adapter provides `createRouteHandler` and `createBrowserRouteHandler` for App Router API routes. Typed client helper factories are available from `@s3-good/core/next-client`.
 
 ## Setup
 
@@ -50,20 +50,22 @@ The Next.js adapter provides a `createRouteHandler` for App Router API routes, p
     });
     ```
 
-3. **Generate typed components**
+3. **Generate typed client helpers**
 
     ```typescript title="src/lib/upload.ts"
     import {
       generateUploadButton,
       generateUploadDropzone,
       generateNextHelpers,
-    } from "@s3-good/core/next";
+    } from "@s3-good/core/next-client";
     import type { OurFileRouter } from "~/server/upload-router";
 
-    export const UploadButton = generateUploadButton<OurFileRouter>();
-    export const UploadDropzone = generateUploadDropzone<OurFileRouter>();
-    export const { useUpload, uploadFiles } =
-      generateNextHelpers<OurFileRouter>();
+    export async function createUploadUi() {
+      const UploadButton = await generateUploadButton<OurFileRouter>();
+      const UploadDropzone = await generateUploadDropzone<OurFileRouter>();
+      const helpers = await generateNextHelpers<OurFileRouter>();
+      return { UploadButton, UploadDropzone, ...helpers };
+    }
     ```
 
 4. **Use in a client component**
@@ -136,13 +138,13 @@ export const { GET, POST } = createRouteHandler({
 Creates a pre-typed `UploadButton` component with the API URL pre-configured:
 
 ```typescript
-import { generateUploadButton } from "@s3-good/core/next";
+import { generateUploadButton } from "@s3-good/core/next-client";
 import type { OurFileRouter } from "~/server/upload-router";
 
-export const UploadButton = generateUploadButton<OurFileRouter>();
+const UploadButton = await generateUploadButton<OurFileRouter>();
 
 // With custom API URL
-export const UploadButton = generateUploadButton<OurFileRouter>({
+const UploadButtonWithCustomUrl = await generateUploadButton<OurFileRouter>({
   url: "/api/custom-upload",
 });
 ```
@@ -154,10 +156,10 @@ The returned component has the `endpoint` prop autocompleted with your route nam
 Creates a pre-typed `UploadDropzone` component with the API URL pre-configured:
 
 ```typescript
-import { generateUploadDropzone } from "@s3-good/core/next";
+import { generateUploadDropzone } from "@s3-good/core/next-client";
 import type { OurFileRouter } from "~/server/upload-router";
 
-export const UploadDropzone = generateUploadDropzone<OurFileRouter>();
+const UploadDropzone = await generateUploadDropzone<OurFileRouter>();
 ```
 
 See [UploadDropzone](/components/upload-dropzone/) for full props documentation.
@@ -167,11 +169,11 @@ See [UploadDropzone](/components/upload-dropzone/) for full props documentation.
 Creates typed React hooks and upload functions with Next.js defaults (`/api/upload`):
 
 ```typescript
-import { generateNextHelpers } from "@s3-good/core/next";
+import { generateNextHelpers } from "@s3-good/core/next-client";
 import type { OurFileRouter } from "~/server/upload-router";
 
-export const { useUpload, uploadFiles, createUpload } =
-  generateNextHelpers<OurFileRouter>();
+const { useUpload, uploadFiles, createUpload } =
+  await generateNextHelpers<OurFileRouter>();
 ```
 
 This is a convenience wrapper around `generateReactHelpers` from `@s3-good/react` with the URL defaulting to `/api/upload`. It returns:
@@ -190,16 +192,16 @@ By default, all helpers use `/api/upload` as the API URL. To use a different pat
 
 ```typescript
 // API route at a custom path
-// src/app/api/upload/route.ts
+// src/app/api/custom-upload/route.ts
 export const { GET, POST } = createRouteHandler({ ... });
 
 // Generate helpers with the custom URL
-export const UploadButton = generateUploadButton<OurFileRouter>({
-  url: "/api/upload",
+const UploadButton = await generateUploadButton<OurFileRouter>({
+  url: "/api/custom-upload",
 });
 
-export const { useUpload } = generateNextHelpers<OurFileRouter>({
-  url: "/api/upload",
+const { useUpload } = await generateNextHelpers<OurFileRouter>({
+  url: "/api/custom-upload",
 });
 ```
 

@@ -72,19 +72,20 @@ This guide walks you through building a working file upload from scratch. By the
     });
     ```
 
-3. **Generate typed components**
+3. **Create typed upload helpers**
 
-    Create typed upload components that are bound to your file router. This gives you autocomplete on endpoint names and type-safe input/output.
+    Create typed upload helpers bound to your file router. Keep UI components from `@s3-good/react` and typed logic from `generateReactHelpers`.
 
     ```typescript title="src/lib/upload.ts"
-    import {
-      generateUploadButton,
-      generateUploadDropzone,
-    } from "@s3-good/core/next";
+    import { generateReactHelpers, UploadButton, UploadDropzone } from "@s3-good/react";
     import type { OurFileRouter } from "~/server/upload-router";
 
-    export const UploadButton = generateUploadButton<OurFileRouter>();
-    export const UploadDropzone = generateUploadDropzone<OurFileRouter>();
+    export { UploadButton, UploadDropzone };
+
+    export const { useUpload, uploadFiles } =
+      generateReactHelpers<OurFileRouter>({
+        url: "/api/upload",
+      });
     ```
 
 4. **Use the upload component**

@@ -12,7 +12,8 @@ Complete API reference for the `@s3-good/core` package. This package provides th
 | Import path | Environment | Description |
 |-------------|-------------|-------------|
 | `@s3-good/core/server` | Server | File router builder, route handler, middleware helpers |
-| `@s3-good/core/next` | Server | Next.js App Router adapter and component generators |
+| `@s3-good/core/next` | Server | Next.js App Router adapter and browser/upload route handlers |
+| `@s3-good/core/next-client` | Client | Next.js helper factories for typed React helpers/components |
 | `@s3-good/core/hono` | Server | Hono framework adapter |
 | `@s3-good/core/client` | Browser | Client-side upload functions |
 | `@s3-good/core/types` | Both | Type exports for inference utilities |
@@ -120,38 +121,60 @@ interface NextRouteHandlerOptions {
 }
 ```
 
-### generateUploadButton
+### createBrowserRouteHandler
 
-Creates a pre-typed `UploadButton` component bound to a FileRouter.
+Creates Next.js App Router `{ GET, POST }` handlers for browser actions.
 
 ```typescript
-function generateUploadButton<TRouter extends FileRouter>(
+function createBrowserRouteHandler(
+  opts: NextBrowserRouteHandlerOptions,
+): {
+  GET: (req: Request) => Promise<Response>;
+  POST: (req: Request) => Promise<Response>;
+}
+
+interface NextBrowserRouteHandlerOptions {
+  browser: BrowserBuilder<unknown>;
+  config: S3Config;
+}
+```
+
+---
+
+## @s3-good/core/next-client
+
+### generateUploadButton
+
+Creates a pre-typed `UploadButton` helper component factory.
+
+```typescript
+async function generateUploadButton<TRouter extends FileRouter>(
   opts?: { url?: string },
-): React.ComponentType<UploadButtonProps>
+): Promise<(props: UploadButtonProps) => unknown>
 ```
 
 ### generateUploadDropzone
 
-Creates a pre-typed `UploadDropzone` component bound to a FileRouter.
+Creates a pre-typed `UploadDropzone` helper component factory.
 
 ```typescript
-function generateUploadDropzone<TRouter extends FileRouter>(
+async function generateUploadDropzone<TRouter extends FileRouter>(
   opts?: { url?: string },
-): React.ComponentType<UploadDropzoneProps>
+): Promise<(props: UploadDropzoneProps) => unknown>
 ```
 
 ### generateNextHelpers
 
-Creates typed React helpers with Next.js defaults.
+Creates typed React helpers with Next.js defaults (`/api/upload`).
 
 ```typescript
-function generateNextHelpers<TRouter extends FileRouter>(
+async function generateNextHelpers<TRouter extends FileRouter>(
   opts?: { url?: string },
-): {
+): Promise<{
   useUpload: TypedUseUpload;
   uploadFiles: TypedUploadFiles;
   createUpload: TypedCreateUpload;
-}
+}>
 ```
 
 ---

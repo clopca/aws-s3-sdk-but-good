@@ -164,9 +164,15 @@ import "@s3-good/browser/styles.css";
 // Server — createUploader, createRouteHandler, FileRouter type
 import { createUploader, createRouteHandler } from "@s3-good/core/server";
 
-// Next.js — framework-specific route handler + component generators
+// Next.js server route handlers
 import { createRouteHandler } from "@s3-good/core/next";
-import { generateUploadButton, generateUploadDropzone } from "@s3-good/core/next";
+
+// Next.js client helper factories (async)
+import {
+  generateUploadButton,
+  generateUploadDropzone,
+  generateNextHelpers,
+} from "@s3-good/core/next-client";
 
 // Hono — framework-specific route handler
 import { createRouteHandler } from "@s3-good/core/hono";

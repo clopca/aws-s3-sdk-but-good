@@ -125,8 +125,8 @@ The Hono adapter is simpler than the Next.js adapter because Hono already uses W
 |---------|---------|------|
 | Import | `@s3-good/core/next` | `@s3-good/core/hono` |
 | Handler args | `Request` | `Context` |
-| Component generators | `generateUploadButton`, `generateUploadDropzone` | Use `@s3-good/react` directly |
-| React helpers | `generateNextHelpers` | Use `generateReactHelpers` from `@s3-good/react` |
+| Component generators | `@s3-good/core/next-client` (`generateUploadButton`, `generateUploadDropzone`) | Use `@s3-good/react` directly |
+| React helpers | `@s3-good/core/next-client` (`generateNextHelpers`) | Use `generateReactHelpers` from `@s3-good/react` |
 | Default API URL | `/api/upload` | You choose the path |
 
 <Aside>
