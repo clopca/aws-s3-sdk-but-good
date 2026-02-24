@@ -3,6 +3,7 @@ import type { BrowserItem, SortConfig, SortField } from "@s3-good/shared";
 import type { ContextMenuItem } from "./context-menu";
 import { EmptyState } from "./empty-state";
 import { FileItem } from "./file-item";
+import { FileListSkeleton } from "./skeleton";
 
 const DEFAULT_LIST_ROW_HEIGHT = 46;
 const DEFAULT_LIST_OVERSCAN = 6;
@@ -58,19 +59,6 @@ function SortHeader({
   );
 }
 
-function LoadingRows() {
-  return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card">
-      {Array.from({ length: 8 }).map((_, index) => (
-        <div key={index} className="flex h-11 items-center gap-3 border-b border-border/60 px-3">
-          <div className="h-5 w-5 animate-pulse rounded bg-muted" />
-          <div className="h-3.5 flex-1 animate-pulse rounded bg-muted" style={{ maxWidth: `${180 + index * 20}px` }} />
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export function FileListView({
   items,
   selectedKeys,
@@ -120,9 +108,6 @@ export function FileListView({
     }
   }, [items, shouldVirtualize, rowHeight, overscan, threshold]);
 
-  if (isLoading) return <LoadingRows />;
-  if (items.length === 0) return <EmptyState isSearching={isSearching} />;
-
   const visibleRange = useMemo(() => {
     if (!shouldVirtualize) {
       return {
@@ -146,6 +131,9 @@ export function FileListView({
   const visibleItems = shouldVirtualize
     ? items.slice(visibleRange.start, visibleRange.end)
     : items;
+
+  if (isLoading) return <FileListSkeleton />;
+  if (items.length === 0) return <EmptyState isSearching={isSearching} />;
 
   return (
     <div className={`overflow-hidden rounded-xl border border-border bg-card shadow-sm ${className ?? ""}`.trim()}>

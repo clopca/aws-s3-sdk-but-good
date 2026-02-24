@@ -143,6 +143,36 @@ describe("file views components", () => {
     expect(screen.queryByText("file-219.txt")).toBeNull();
   });
 
+  it("test_FileListView_loading_to_loaded_keeps_hook_order", () => {
+    const { rerender } = render(
+      <FileListView
+        items={[]}
+        selectedKeys={new Set()}
+        sort={{ field: "name", direction: "asc" }}
+        onSort={vi.fn()}
+        onItemClick={vi.fn()}
+        onItemDoubleClick={vi.fn()}
+        onItemContextMenu={vi.fn()}
+        isLoading
+      />,
+    );
+
+    rerender(
+      <FileListView
+        items={items}
+        selectedKeys={new Set()}
+        sort={{ field: "name", direction: "asc" }}
+        onSort={vi.fn()}
+        onItemClick={vi.fn()}
+        onItemDoubleClick={vi.fn()}
+        onItemContextMenu={vi.fn()}
+        isLoading={false}
+      />,
+    );
+
+    expect(screen.getByText("notes.txt")).toBeTruthy();
+  });
+
   it("test_EmptyState_messages", () => {
     const { rerender } = render(<EmptyState />);
     expect(screen.getByText("This folder is empty")).toBeTruthy();
