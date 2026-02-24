@@ -26,6 +26,7 @@ pnpm build
 ## Architecture
 
 - System architecture and design decisions: [`architecture.md`](./architecture.md)
+- Maintainer release/operations runbook: [`maintainers.md`](./maintainers.md)
 
 ## Writing guidance
 

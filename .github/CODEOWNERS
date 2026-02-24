@@ -1,0 +1,9 @@
+# Default ownership
+* @clopca
+
+# Package-specific ownership (adjust as team evolves)
+/packages/core/ @clopca
+/packages/react/ @clopca
+/packages/browser/ @clopca
+/packages/shared/ @clopca
+/docs/ @clopca

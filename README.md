@@ -149,6 +149,7 @@ pnpm --filter @s3-good/react build
 
 - Product docs: [`/docs`](./docs)
 - Architecture: [`docs/architecture.md`](./docs/architecture.md)
+- Maintainer runbook: [`docs/maintainers.md`](./docs/maintainers.md)
 - S3 setup guide: [`docs/src/content/docs/getting-started/s3-setup.mdx`](./docs/src/content/docs/getting-started/s3-setup.mdx)
 - Next.js example app: [`/examples/nextjs`](./examples/nextjs)
 
@@ -177,4 +178,4 @@ Please report vulnerabilities via [SECURITY.md](./SECURITY.md).
 
 ## License
 
-MIT
+MIT ([LICENSE](./LICENSE))

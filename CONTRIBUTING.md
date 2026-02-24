@@ -59,6 +59,7 @@ pnpm changeset
 ```
 
 - Commit the generated file under `.changeset/`.
+- Maintainer release flow is documented in [docs/maintainers.md](./docs/maintainers.md).
 
 ## Coding expectations
 
