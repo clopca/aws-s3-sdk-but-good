@@ -148,6 +148,7 @@ pnpm --filter @s3-good/react build
 ## Documentation
 
 - Product docs: [`/docs`](./docs)
+- Architecture: [`docs/architecture.md`](./docs/architecture.md)
 - S3 setup guide: [`docs/src/content/docs/getting-started/s3-setup.mdx`](./docs/src/content/docs/getting-started/s3-setup.mdx)
 - Next.js example app: [`/examples/nextjs`](./examples/nextjs)
 

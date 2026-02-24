@@ -23,6 +23,10 @@ pnpm build
 - Astro config: `docs/astro.config.mjs`
 - Styles: `docs/src/styles/tailwind.css`
 
+## Architecture
+
+- System architecture and design decisions: [`architecture.md`](./architecture.md)
+
 ## Writing guidance
 
 - Keep examples aligned with current exports from each package.
