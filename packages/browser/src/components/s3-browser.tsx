@@ -15,6 +15,7 @@ import { PreviewModal } from "./preview/preview-modal";
 import { SearchBar } from "./search-bar";
 import { SelectionBar } from "./selection-bar";
 import { Toolbar } from "./toolbar";
+import { Button } from "./ui";
 
 export interface S3BrowserProps {
   url?: string;
@@ -45,6 +46,8 @@ export interface S3BrowserProps {
     toolbar: string;
     grid: string;
     list: string;
+    loadMoreContainer: string;
+    loadMoreButton: string;
     selectionBar: string;
     createFolderDialog: string;
     renameDialog: string;
@@ -352,6 +355,22 @@ export function S3Browser({ url, headers, config, className, upload, children, v
           className={appearance?.list}
         />
       )}
+
+      {browser.hasMore ? (
+        <div className={`flex justify-center ${appearance?.loadMoreContainer ?? ""}`.trim()}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={browser.isLoading}
+            className={appearance?.loadMoreButton}
+            onClick={() => {
+              void browser.loadMore();
+            }}
+          >
+            {browser.isLoading ? "Loading..." : "Load more"}
+          </Button>
+        </div>
+      ) : null}
 
       <SelectionBar
         count={browser.selectedKeys.size}

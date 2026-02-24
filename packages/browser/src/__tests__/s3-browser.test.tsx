@@ -1,5 +1,5 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { S3Browser } from "../components";
 
 const fetchMock = vi.fn();
@@ -16,6 +16,10 @@ describe("S3Browser", () => {
     }), { status: 200 }));
   });
 
+  afterEach(() => {
+    cleanup();
+  });
+
   it("renders toolbar and bucket selector and fetches list", async () => {
     render(
       <S3Browser
@@ -25,10 +29,77 @@ describe("S3Browser", () => {
     );
 
     expect(screen.getByRole("button", { name: "Grid" })).toBeTruthy();
-    expect(screen.getByText("Bucket: bucket-a")).toBeTruthy();
+    expect(screen.getByText("bucket-a")).toBeTruthy();
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalled();
+    });
+  });
+
+  it("invokes custom upload handler on drop", async () => {
+    const onUploadFiles = vi.fn().mockResolvedValue(undefined);
+
+    const { container } = render(
+      <S3Browser
+        url="/api/browser"
+        upload={{ onUploadFiles }}
+      />,
+    );
+
+    const root = container.firstElementChild as HTMLElement;
+    const file = new File(["hello"], "drop.txt", { type: "text/plain" });
+    fireEvent.drop(root, {
+      dataTransfer: {
+        files: [file],
+      },
+    });
+
+    await waitFor(() => {
+      expect(onUploadFiles).toHaveBeenCalled();
+    });
+  });
+
+  it("supports render-prop composition API", async () => {
+    const { container } = render(
+      <S3Browser url="/api/browser">
+        {(ctx) => (
+          <div>
+            <span data-testid="path">{ctx.browser.currentPath}</span>
+          </div>
+        )}
+      </S3Browser>,
+    );
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalled();
+    });
+
+    expect(within(container).queryByRole("button", { name: "Grid" })).toBeNull();
+    expect(within(container).getByTestId("path")).toBeTruthy();
+  });
+
+  it("shows load more button when server marks list as truncated", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({
+      action: "list",
+      success: true,
+      items: [
+        {
+          kind: "file",
+          key: "a.txt",
+          name: "a.txt",
+          size: 1,
+          contentType: "text/plain",
+          lastModified: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+      isTruncated: true,
+      nextContinuationToken: "next-token",
+    }), { status: 200 }));
+
+    render(<S3Browser url="/api/browser" />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Load more" })).toBeTruthy();
     });
   });
 });

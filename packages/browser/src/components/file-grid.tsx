@@ -100,9 +100,7 @@ export function FileGrid({
     }
   }, [items, shouldVirtualize, itemMinWidth, rowHeight, gap, overscanRows, threshold]);
 
-  if (isLoading) return <LoadingSkeleton />;
-  if (items.length === 0) return <EmptyState isSearching={isSearching} />;
-
+  const itemCount = items.length;
   const columnCount = Math.max(1, Math.floor((containerWidth + gap) / (itemMinWidth + gap)));
   const rowCount = Math.ceil(items.length / columnCount);
 
@@ -110,7 +108,7 @@ export function FileGrid({
     if (!shouldVirtualize) {
       return {
         startIndex: 0,
-        endIndex: items.length,
+        endIndex: itemCount,
         offsetTop: 0,
         totalHeight: 0,
       };
@@ -121,7 +119,7 @@ export function FileGrid({
     const startRow = Math.max(0, firstVisibleRow - overscanRows);
     const endRow = Math.min(rowCount, firstVisibleRow + visibleRowCount + overscanRows);
     const startIndex = startRow * columnCount;
-    const endIndex = Math.min(items.length, endRow * columnCount);
+    const endIndex = Math.min(itemCount, endRow * columnCount);
 
     return {
       startIndex,
@@ -129,13 +127,16 @@ export function FileGrid({
       offsetTop: startRow * rowHeight,
       totalHeight: rowCount * rowHeight,
     };
-  }, [shouldVirtualize, items.length, scrollTop, rowHeight, viewportHeight, overscanRows, rowCount, columnCount]);
+  }, [shouldVirtualize, itemCount, scrollTop, rowHeight, viewportHeight, overscanRows, rowCount, columnCount]);
 
   const visibleItems = shouldVirtualize
     ? items.slice(virtualWindow.startIndex, virtualWindow.endIndex)
     : items;
 
   const regularGridClassName = `grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3 p-1 ${className ?? ""}`.trim();
+
+  if (isLoading) return <LoadingSkeleton />;
+  if (itemCount === 0) return <EmptyState isSearching={isSearching} />;
 
   return (
     <div
