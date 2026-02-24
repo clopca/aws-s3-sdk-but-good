@@ -8,6 +8,7 @@ import type { ContextMenuItem } from "./context-menu";
 import { Breadcrumbs } from "./breadcrumbs";
 import { ConfirmDialog, CreateFolderDialog, RenameDialog } from "./dialogs";
 import { FileGrid } from "./file-grid";
+import type { FileGridVirtualizationOptions } from "./file-grid";
 import { FileListView } from "./file-list-view";
 import type { FileListVirtualizationOptions } from "./file-list-view";
 import { PreviewModal } from "./preview/preview-modal";
@@ -34,6 +35,7 @@ export interface S3BrowserProps {
   };
   children?: (ctx: S3BrowserRenderContext) => ReactNode;
   virtualization?: Partial<{
+    grid: FileGridVirtualizationOptions;
     list: FileListVirtualizationOptions;
   }>;
   appearance?: Partial<{
@@ -325,6 +327,7 @@ export function S3Browser({ url, headers, config, className, upload, children, v
           getContextMenuItems={getContextMenuItems}
           isLoading={browser.isLoading}
           isSearching={Boolean(browser.searchQuery)}
+          virtualization={virtualization?.grid}
           className={appearance?.grid}
         />
       ) : (

@@ -69,6 +69,32 @@ describe("file views components", () => {
     expect(folder.getAttribute("aria-pressed")).toBe("true");
   });
 
+  it("test_FileGrid_virtualization_renders_visible_subset", () => {
+    const manyItems: BrowserItem[] = Array.from({ length: 260 }).map((_, index) => ({
+      kind: "file",
+      key: `grid-file-${index}.txt`,
+      name: `grid-file-${index}.txt`,
+      size: index + 1,
+      lastModified: new Date("2026-01-01T00:00:00.000Z"),
+      contentType: "text/plain",
+    }));
+
+    render(
+      <FileGrid
+        items={manyItems}
+        selectedKeys={new Set()}
+        onItemClick={vi.fn()}
+        onItemDoubleClick={vi.fn()}
+        onItemContextMenu={vi.fn()}
+        isLoading={false}
+        virtualization={{ enabled: true, threshold: 1, itemMinWidth: 140, rowHeight: 152, overscanRows: 1 }}
+      />,
+    );
+
+    expect(screen.getByText("grid-file-0.txt")).toBeTruthy();
+    expect(screen.queryByText("grid-file-259.txt")).toBeNull();
+  });
+
   it("test_FileListView_renders_headers_and_sort", () => {
     const onSort = vi.fn();
 

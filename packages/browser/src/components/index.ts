@@ -1,6 +1,7 @@
 export { FileIcon, FolderIcon } from "./file-icon";
 export { FileItem } from "./file-item";
 export { FileGrid } from "./file-grid";
+export type { FileGridVirtualizationOptions } from "./file-grid";
 export { FileListView } from "./file-list-view";
 export type { FileListVirtualizationOptions } from "./file-list-view";
 export { EmptyState } from "./empty-state";
