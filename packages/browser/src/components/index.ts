@@ -18,6 +18,7 @@ export type {
   S3BrowserPaginationOptions,
   S3BrowserRenderContext,
   S3BrowserProps,
+  S3BrowserRootProps,
 } from "./s3-browser";
 export { S3BrowserRoot, useS3BrowserContext } from "./s3-browser-root";
 export * from "./dialogs";
@@ -25,6 +26,8 @@ export * from "./ui";
 export { PreviewModal } from "./preview/preview-modal";
 export { getPreviewComponent } from "./preview";
 export type { PreviewRendererProps } from "./preview";
+export { UploadOverlay } from "./upload-overlay";
+export type { UploadOverlayProps } from "./upload-overlay";
 
 // Compound sub-components (context-connected)
 export {
@@ -34,6 +37,7 @@ export {
   BrowserFileView,
   BrowserSelectionBar,
   BrowserPreviewModal,
+  BrowserUploadButton,
 } from "./compound";
 export type {
   BrowserToolbarProps,
@@ -42,4 +46,5 @@ export type {
   BrowserFileViewProps,
   BrowserSelectionBarProps,
   BrowserPreviewModalProps,
+  BrowserUploadButtonProps,
 } from "./compound";

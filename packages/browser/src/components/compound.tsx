@@ -7,7 +7,7 @@
  * overrides so the presentational components remain usable standalone.
  */
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import type { BrowserFile, BrowserItem } from "@s3-good/shared";
 import { useBrowserContext } from "../context/browser-context";
 import { Breadcrumbs } from "./breadcrumbs";
@@ -21,6 +21,7 @@ import { PreviewModal } from "./preview/preview-modal";
 import { SearchBar } from "./search-bar";
 import { SelectionBar } from "./selection-bar";
 import { Toolbar } from "./toolbar";
+import { Button, cn } from "./ui";
 
 // ---------------------------------------------------------------------------
 // BrowserToolbar
@@ -62,29 +63,51 @@ export function BrowserToolbar({
     setViewMode,
     setSort,
     refresh,
+    uploadEnabled,
+    uploadFiles,
+    isUploading,
+    uploadProgress,
   } = useBrowserContext();
 
+  // Use context upload when no explicit handler is provided
+  const effectiveUploadHandler =
+    onUploadFiles ?? (uploadEnabled ? uploadFiles : undefined);
+  const effectiveUploadDisabled = uploadDisabled ?? isUploading;
+
   return (
-    <Toolbar
-      buckets={availableBuckets}
-      activeBucket={activeBucket}
-      viewMode={viewMode}
-      sort={sort}
-      selectedCount={selectedCount}
-      onBucketChange={setActiveBucket}
-      onViewModeChange={setViewMode}
-      onSortChange={setSort}
-      onCreateFolder={onCreateFolder ?? (() => {})}
-      onDeleteSelected={onDeleteSelected ?? (() => {})}
-      onUploadFiles={onUploadFiles}
-      uploadLabel={uploadLabel}
-      uploadAccept={uploadAccept}
-      uploadMultiple={uploadMultiple}
-      uploadDisabled={uploadDisabled}
-      onRefresh={() => void refresh()}
-      className={className}
-      appearance={appearance}
-    />
+    <>
+      <Toolbar
+        buckets={availableBuckets}
+        activeBucket={activeBucket}
+        viewMode={viewMode}
+        sort={sort}
+        selectedCount={selectedCount}
+        onBucketChange={setActiveBucket}
+        onViewModeChange={setViewMode}
+        onSortChange={setSort}
+        onCreateFolder={onCreateFolder ?? (() => {})}
+        onDeleteSelected={onDeleteSelected ?? (() => {})}
+        onUploadFiles={effectiveUploadHandler}
+        uploadLabel={uploadLabel}
+        uploadAccept={uploadAccept}
+        uploadMultiple={uploadMultiple}
+        uploadDisabled={effectiveUploadDisabled}
+        onRefresh={() => void refresh()}
+        className={className}
+        appearance={appearance}
+      />
+      {isUploading && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="h-1.5 w-24 overflow-hidden rounded bg-muted">
+            <div
+              className="h-full bg-primary transition-[width]"
+              style={{ width: `${uploadProgress}%` }}
+            />
+          </div>
+          {Math.round(uploadProgress)}%
+        </div>
+      )}
+    </>
   );
 }
 
@@ -99,16 +122,13 @@ export interface BrowserBreadcrumbsProps {
 export function BrowserBreadcrumbs({ className }: BrowserBreadcrumbsProps) {
   const { breadcrumbs, navigateTo } = useBrowserContext();
 
-  const breadcrumbsEl = (
-    <Breadcrumbs segments={breadcrumbs} onNavigate={navigateTo} />
+  return (
+    <Breadcrumbs
+      segments={breadcrumbs}
+      onNavigate={navigateTo}
+      className={className}
+    />
   );
-
-  // Breadcrumbs doesn't accept className – wrap when styling is needed
-  if (className) {
-    return <div className={className}>{breadcrumbsEl}</div>;
-  }
-
-  return breadcrumbsEl;
 }
 
 // ---------------------------------------------------------------------------
@@ -341,5 +361,97 @@ export function BrowserPreviewModal({
       hasPrev={hasPrev}
       hasNext={hasNext}
     />
+  );
+}
+
+// ---------------------------------------------------------------------------
+// BrowserUploadButton
+// ---------------------------------------------------------------------------
+
+export interface BrowserUploadButtonProps {
+  /** Override the upload handler. Defaults to context `uploadFiles`. */
+  onUploadFiles?: (files: File[]) => void | Promise<void>;
+  /** Button label. Defaults to "Upload". */
+  label?: string;
+  /** Accepted file types (e.g. "image/*,.pdf"). */
+  accept?: string;
+  /** Allow selecting multiple files. Defaults to true. */
+  multiple?: boolean;
+  /** Force disabled state. Defaults to `isUploading` from context. */
+  disabled?: boolean;
+  /** Show upload progress bar. Defaults to true when uploading. */
+  showProgress?: boolean;
+  className?: string;
+}
+
+/**
+ * Standalone upload button that reads upload state from BrowserContext.
+ *
+ * Renders nothing when upload is not enabled (no `upload` config on provider)
+ * and no explicit `onUploadFiles` prop is provided.
+ *
+ * Usage:
+ * ```tsx
+ * <S3Browser.Root url="/api/browser" upload={{ endpoint: "myUploader" }}>
+ *   <S3Browser.UploadButton />
+ * </S3Browser.Root>
+ * ```
+ */
+export function BrowserUploadButton({
+  onUploadFiles,
+  label = "Upload",
+  accept,
+  multiple = true,
+  disabled,
+  showProgress = true,
+  className,
+}: BrowserUploadButtonProps) {
+  const { uploadFiles, uploadEnabled, isUploading, uploadProgress } =
+    useBrowserContext();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const effectiveHandler =
+    onUploadFiles ?? (uploadEnabled ? uploadFiles : null);
+
+  if (!effectiveHandler) return null;
+
+  const effectiveDisabled = disabled ?? isUploading;
+
+  return (
+    <div className={cn("inline-flex items-center gap-2", className)}>
+      <input
+        ref={inputRef}
+        type="file"
+        className="hidden"
+        accept={accept}
+        multiple={multiple}
+        onChange={(event) => {
+          const files = Array.from(event.currentTarget.files ?? []);
+          if (files.length === 0) return;
+          void effectiveHandler(files);
+          event.currentTarget.value = "";
+        }}
+      />
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={effectiveDisabled}
+        onClick={() => inputRef.current?.click()}
+      >
+        {label}
+      </Button>
+      {showProgress && isUploading && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="h-1.5 w-24 overflow-hidden rounded bg-muted">
+            <div
+              className="h-full bg-primary transition-[width]"
+              style={{ width: `${uploadProgress}%` }}
+            />
+          </div>
+          {Math.round(uploadProgress)}%
+        </div>
+      )}
+    </div>
   );
 }

@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -5,6 +6,7 @@ import {
   AlertDialogFooter,
   AlertDialogTitle,
   Button,
+  cn,
 } from "../ui";
 
 export interface ConfirmDialogProps {
@@ -18,37 +20,50 @@ export interface ConfirmDialogProps {
   className?: string;
 }
 
-export function ConfirmDialog({
-  open,
-  title,
-  description,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
-  onConfirm,
-  onCancel,
-  className,
-}: ConfirmDialogProps) {
-  return (
-    <AlertDialog
-      open={open}
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen) onCancel();
-      }}
-    >
-      <AlertDialogContent className={className}>
-        <AlertDialogTitle>{title}</AlertDialogTitle>
-        {description ? (
-          <AlertDialogDescription className="mt-2">{description}</AlertDialogDescription>
-        ) : null}
-        <AlertDialogFooter>
-          <Button variant="outline" onClick={onCancel}>
-            {cancelLabel}
-          </Button>
-          <Button variant="destructive" onClick={onConfirm}>
-            {confirmLabel}
-          </Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
+const ConfirmDialog = forwardRef<HTMLDivElement, ConfirmDialogProps>(
+  (
+    {
+      open,
+      title,
+      description,
+      confirmLabel = "Confirm",
+      cancelLabel = "Cancel",
+      onConfirm,
+      onCancel,
+      className,
+    },
+    _ref,
+  ) => {
+    return (
+      <AlertDialog
+        open={open}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) onCancel();
+        }}
+      >
+        <AlertDialogContent
+          className={cn(className)}
+          data-state={open ? "open" : "closed"}
+        >
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          {description ? (
+            <AlertDialogDescription className="mt-2">
+              {description}
+            </AlertDialogDescription>
+          ) : null}
+          <AlertDialogFooter>
+            <Button variant="outline" onClick={onCancel}>
+              {cancelLabel}
+            </Button>
+            <Button variant="destructive" onClick={onConfirm}>
+              {confirmLabel}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    );
+  },
+);
+ConfirmDialog.displayName = "ConfirmDialog";
+
+export { ConfirmDialog };

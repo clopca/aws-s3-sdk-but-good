@@ -73,6 +73,7 @@ export {
   useS3BrowserContext,
   Toolbar,
   getPreviewComponent,
+  UploadOverlay,
   // Compound sub-components (context-connected)
   BrowserToolbar,
   BrowserBreadcrumbs,
@@ -80,6 +81,7 @@ export {
   BrowserFileView,
   BrowserSelectionBar,
   BrowserPreviewModal,
+  BrowserUploadButton,
 } from "./components";
 
 export type {
@@ -90,6 +92,8 @@ export type {
   S3BrowserPaginationOptions,
   S3BrowserProps,
   S3BrowserRenderContext,
+  S3BrowserRootProps,
+  UploadOverlayProps,
   // Compound sub-component prop types
   BrowserToolbarProps,
   BrowserBreadcrumbsProps,
@@ -97,9 +101,14 @@ export type {
   BrowserFileViewProps,
   BrowserSelectionBarProps,
   BrowserPreviewModalProps,
+  BrowserUploadButtonProps,
 } from "./components";
 export { BrowserProvider, useBrowserContext } from "./context";
-export type { BrowserContextValue, BrowserProviderProps } from "./context";
+export type {
+  BrowserContextValue,
+  BrowserProviderProps,
+  BrowserUploadConfig,
+} from "./context";
 
 export { generateBrowserHelpers } from "./generate-helpers";
 export type { GenerateBrowserHelpersOptions } from "./generate-helpers";

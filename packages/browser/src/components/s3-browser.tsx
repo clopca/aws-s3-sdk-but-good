@@ -1,9 +1,30 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { genUploader } from "@s3-good/core/client";
 import type { FileRouter } from "@s3-good/core/server";
 import type { BrowserConfig, BrowserFile, BrowserItem } from "@s3-good/shared";
-import { useBreadcrumbs, useBrowser, useKeyboardShortcuts, useSearch } from "../hooks";
-import type { BreadcrumbSegment, UseSearchReturn, UseBrowserReturn } from "../hooks";
+import {
+  useBreadcrumbs,
+  useBrowser,
+  useKeyboardShortcuts,
+  useSearch,
+} from "../hooks";
+import type {
+  BreadcrumbSegment,
+  UseSearchReturn,
+  UseBrowserReturn,
+} from "../hooks";
+import {
+  BrowserProvider,
+  useBrowserContext,
+  type BrowserProviderProps,
+} from "../context/browser-context";
 import type { ContextMenuItem } from "./context-menu";
 import { Breadcrumbs } from "./breadcrumbs";
 import { ConfirmDialog, CreateFolderDialog, RenameDialog } from "./dialogs";
@@ -16,6 +37,21 @@ import { SearchBar } from "./search-bar";
 import { SelectionBar } from "./selection-bar";
 import { Toolbar } from "./toolbar";
 import { Button } from "./ui";
+import { cn } from "./ui/utils";
+import { UploadOverlay } from "./upload-overlay";
+import {
+  BrowserToolbar,
+  BrowserBreadcrumbs,
+  BrowserSearchBar,
+  BrowserFileView,
+  BrowserSelectionBar,
+  BrowserPreviewModal,
+  BrowserUploadButton,
+} from "./compound";
+
+// ---------------------------------------------------------------------------
+// Public types
+// ---------------------------------------------------------------------------
 
 export interface S3BrowserPaginationOptions {
   mode?: "manual" | "infinite";
@@ -41,12 +77,17 @@ export interface S3BrowserProps {
   upload?: {
     endpoint?: string;
     url?: string;
-    input?: unknown | ((ctx: { currentPath: string; activeBucket?: string }) => unknown);
+    input?:
+      | unknown
+      | ((ctx: { currentPath: string; activeBucket?: string }) => unknown);
     headers?: HeadersInit | (() => Promise<HeadersInit> | HeadersInit);
     accept?: string;
     multiple?: boolean;
     label?: string;
-    onUploadFiles?: (files: File[], ctx: { currentPath: string; activeBucket?: string }) => void | Promise<void>;
+    onUploadFiles?: (
+      files: File[],
+      ctx: { currentPath: string; activeBucket?: string },
+    ) => void | Promise<void>;
     onUploadComplete?: () => void;
     onUploadError?: (error: Error) => void;
   };
@@ -104,7 +145,103 @@ export interface S3BrowserRenderContext {
   clearPreview: () => void;
 }
 
-export function S3Browser({
+// ---------------------------------------------------------------------------
+// S3BrowserRoot – compound root that wraps children in BrowserProvider
+// ---------------------------------------------------------------------------
+
+export interface S3BrowserRootProps extends BrowserProviderProps {
+  className?: string;
+}
+
+/**
+ * Compound root component. Wraps children in `BrowserProvider` and renders
+ * a styled container with `data-state` reflecting the browser state.
+ *
+ * Usage:
+ * ```tsx
+ * <S3Browser.Root url="/api/browser" config={config}>
+ *   <S3Browser.Toolbar />
+ *   <S3Browser.Breadcrumbs />
+ *   <S3Browser.FileView />
+ *   <S3Browser.SelectionBar />
+ *   <S3Browser.PreviewModal />
+ * </S3Browser.Root>
+ * ```
+ */
+function S3BrowserCompoundRoot({
+  children,
+  className,
+  ...providerProps
+}: S3BrowserRootProps) {
+  return (
+    <BrowserProvider {...providerProps}>
+      <S3BrowserRootContainer className={className}>
+        {children}
+      </S3BrowserRootContainer>
+    </BrowserProvider>
+  );
+}
+
+/** Inner container that reads context to set data-state and wire drag-and-drop. */
+function S3BrowserRootContainer({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  const {
+    isLoading,
+    error,
+    uploadEnabled,
+    isDragOver,
+    handleDragEnter,
+    handleDragLeave,
+    handleDragOver,
+    handleDrop,
+  } = useBrowserContext();
+  const dataState = isLoading ? "loading" : error ? "error" : "ready";
+
+  return (
+    <div
+      className={cn(
+        "relative space-y-4 rounded-2xl border border-border bg-card p-4 text-card-foreground shadow-sm md:p-5",
+        className,
+      )}
+      data-state={dataState}
+      onDragEnter={uploadEnabled ? handleDragEnter : undefined}
+      onDragLeave={uploadEnabled ? handleDragLeave : undefined}
+      onDragOver={uploadEnabled ? handleDragOver : undefined}
+      onDrop={uploadEnabled ? handleDrop : undefined}
+    >
+      {children}
+      {uploadEnabled && <UploadOverlay isDragOver={isDragOver} />}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// S3BrowserDefault – backward-compatible default layout
+// ---------------------------------------------------------------------------
+
+/**
+ * Default `S3Browser` component. Renders the full standard layout with
+ * toolbar, breadcrumbs, file view, selection bar, dialogs, and preview modal.
+ *
+ * This is the backward-compatible API:
+ * ```tsx
+ * <S3Browser url="/api/browser" config={config} />
+ * ```
+ *
+ * For custom layouts, use the compound API:
+ * ```tsx
+ * <S3Browser.Root url="/api/browser">
+ *   <S3Browser.Toolbar />
+ *   <S3Browser.FileView />
+ * </S3Browser.Root>
+ * ```
+ */
+function S3BrowserDefault({
   url,
   headers,
   config,
@@ -129,10 +266,12 @@ export function S3Browser({
   const loadMoreInFlightRef = useRef(false);
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
 
-  const previewFile = browser.previewItem?.kind === "file" ? browser.previewItem : null;
+  const previewFile =
+    browser.previewItem?.kind === "file" ? browser.previewItem : null;
 
   const files = useMemo(
-    () => browser.items.filter((item): item is BrowserFile => item.kind === "file"),
+    () =>
+      browser.items.filter((item): item is BrowserFile => item.kind === "file"),
     [browser.items],
   );
 
@@ -144,7 +283,10 @@ export function S3Browser({
     const requestId = ++previewRequestIdRef.current;
     setPreviewLoading(true);
     try {
-      const urlValue = await browser.client.getPreviewUrl(key, browser.activeBucket || undefined);
+      const urlValue = await browser.client.getPreviewUrl(
+        key,
+        browser.activeBucket || undefined,
+      );
       if (requestId !== previewRequestIdRef.current) return;
       setPreviewUrl(urlValue);
     } finally {
@@ -174,11 +316,13 @@ export function S3Browser({
 
   const canUpload = Boolean(upload?.onUploadFiles || upload?.endpoint);
   const paginationMode = pagination?.mode ?? "manual";
-  const supportsIntersectionObserver = typeof IntersectionObserver !== "undefined";
-  const useInfinitePagination = paginationMode === "infinite" && supportsIntersectionObserver;
+  const supportsIntersectionObserver =
+    typeof IntersectionObserver !== "undefined";
+  const useInfinitePagination =
+    paginationMode === "infinite" && supportsIntersectionObserver;
 
-  const handleUploadFiles = async (files: File[]) => {
-    if (files.length === 0) return;
+  const handleUploadFiles = async (uploadedFiles: File[]) => {
+    if (uploadedFiles.length === 0) return;
     if (!canUpload) return;
 
     const context = {
@@ -189,14 +333,15 @@ export function S3Browser({
     setIsUploading(true);
     try {
       if (upload?.onUploadFiles) {
-        await upload.onUploadFiles(files, context);
+        await upload.onUploadFiles(uploadedFiles, context);
       } else if (upload?.endpoint) {
         const { uploadFiles } = genUploader<FileRouter>({ url: upload.url });
-        const resolvedInput = typeof upload.input === "function"
-          ? upload.input(context)
-          : upload.input;
+        const resolvedInput =
+          typeof upload.input === "function"
+            ? upload.input(context)
+            : upload.input;
         await uploadFiles(upload.endpoint, {
-          files,
+          files: uploadedFiles,
           input: resolvedInput,
           headers: upload.headers,
         });
@@ -205,7 +350,8 @@ export function S3Browser({
       await browser.refresh();
       upload?.onUploadComplete?.();
     } catch (error) {
-      const normalized = error instanceof Error ? error : new Error("Upload failed");
+      const normalized =
+        error instanceof Error ? error : new Error("Upload failed");
       browser.store.setError(normalized.message);
       upload?.onUploadError?.(normalized);
     } finally {
@@ -273,7 +419,10 @@ export function S3Browser({
     void openPreview(item);
   };
 
-  const handleItemContextMenu = (item: BrowserItem, event: React.SyntheticEvent) => {
+  const handleItemContextMenu = (
+    item: BrowserItem,
+    event: React.SyntheticEvent,
+  ) => {
     event.preventDefault();
     browser.deselectAll();
     browser.select(item.key);
@@ -287,7 +436,8 @@ export function S3Browser({
   };
 
   const getThumbnailUrl = useCallback(
-    (key: string) => browser.client.getPreviewUrl(key, browser.activeBucket || undefined),
+    (key: string) =>
+      browser.client.getPreviewUrl(key, browser.activeBucket || undefined),
     [browser.client, browser.activeBucket],
   );
 
@@ -323,15 +473,18 @@ export function S3Browser({
     const sentinel = loadMoreSentinelRef.current;
     if (!sentinel) return;
 
-    const observer = new IntersectionObserver((entries) => {
-      if (entries.some((entry) => entry.isIntersecting)) {
-        requestLoadMore();
-      }
-    }, {
-      root: null,
-      rootMargin: pagination?.rootMargin ?? "200px 0px",
-      threshold: pagination?.threshold ?? 0,
-    });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          requestLoadMore();
+        }
+      },
+      {
+        root: null,
+        rootMargin: pagination?.rootMargin ?? "200px 0px",
+        threshold: pagination?.threshold ?? 0,
+      },
+    );
 
     observer.observe(sentinel);
     return () => {
@@ -375,7 +528,14 @@ export function S3Browser({
 
   return (
     <div
-      className={`space-y-4 rounded-2xl border border-border bg-card p-4 text-card-foreground shadow-sm md:p-5 ${appearance?.container ?? ""} ${className ?? ""}`.trim()}
+      className={cn(
+        "space-y-4 rounded-2xl border border-border bg-card p-4 text-card-foreground shadow-sm md:p-5",
+        appearance?.container,
+        className,
+      )}
+      data-state={
+        browser.isLoading ? "loading" : browser.error ? "error" : "ready"
+      }
       onDragOver={(event) => {
         if (!canUpload) return;
         event.preventDefault();
@@ -383,13 +543,18 @@ export function S3Browser({
       onDrop={(event) => {
         if (!canUpload) return;
         event.preventDefault();
-        const files = Array.from(event.dataTransfer?.files ?? []);
-        if (files.length > 0) {
-          void handleUploadFiles(files);
+        const droppedFiles = Array.from(event.dataTransfer?.files ?? []);
+        if (droppedFiles.length > 0) {
+          void handleUploadFiles(droppedFiles);
         }
       }}
     >
-      <div className={`grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-center ${appearance?.header ?? ""}`.trim()}>
+      <div
+        className={cn(
+          "grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-center",
+          appearance?.header,
+        )}
+      >
         <Breadcrumbs segments={breadcrumbs} onNavigate={browser.navigateTo} />
         <SearchBar
           value={search.inputValue}
@@ -423,7 +588,10 @@ export function S3Browser({
         <div
           role="alert"
           aria-live="assertive"
-          className={`rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive ${appearance?.error ?? ""}`.trim()}
+          className={cn(
+            "rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive",
+            appearance?.error,
+          )}
         >
           {browser.error}
         </div>
@@ -461,7 +629,9 @@ export function S3Browser({
       )}
 
       {browser.hasMore && !useInfinitePagination ? (
-        <div className={`flex justify-center ${appearance?.loadMoreContainer ?? ""}`.trim()}>
+        <div
+          className={cn("flex justify-center", appearance?.loadMoreContainer)}
+        >
           <Button
             type="button"
             variant="outline"
@@ -479,7 +649,7 @@ export function S3Browser({
         <div
           ref={loadMoreSentinelRef}
           aria-label="Load more sentinel"
-          className={`h-4 ${appearance?.loadMoreContainer ?? ""}`.trim()}
+          className={cn("h-4", appearance?.loadMoreContainer)}
         />
       ) : null}
 
@@ -498,7 +668,10 @@ export function S3Browser({
           void browser.createFolder(name).then(
             () => onNotify?.({ type: "success", message: "Folder created" }),
             (error: unknown) => {
-              const message = error instanceof Error ? error.message : "Failed to create folder";
+              const message =
+                error instanceof Error
+                  ? error.message
+                  : "Failed to create folder";
               onNotify?.({ type: "error", message });
             },
           );
@@ -517,7 +690,10 @@ export function S3Browser({
           void browser.renameItem(targetKey, newName).then(
             () => onNotify?.({ type: "success", message: "Item renamed" }),
             (error: unknown) => {
-              const message = error instanceof Error ? error.message : "Failed to rename item";
+              const message =
+                error instanceof Error
+                  ? error.message
+                  : "Failed to rename item";
               onNotify?.({ type: "error", message });
             },
           );
@@ -536,7 +712,10 @@ export function S3Browser({
           void browser.deleteSelected().then(
             () => onNotify?.({ type: "success", message: "Items deleted" }),
             (error: unknown) => {
-              const message = error instanceof Error ? error.message : "Failed to delete items";
+              const message =
+                error instanceof Error
+                  ? error.message
+                  : "Failed to delete items";
               onNotify?.({ type: "error", message });
             },
           );
@@ -562,3 +741,47 @@ export function S3Browser({
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Compound component assembly via Object.assign
+// ---------------------------------------------------------------------------
+
+/**
+ * S3Browser compound component.
+ *
+ * **Easy mode** (backward compatible – renders the full default layout):
+ * ```tsx
+ * <S3Browser url="/api/browser" config={config} />
+ * ```
+ *
+ * **Custom mode** (composable – pick and arrange sub-components):
+ * ```tsx
+ * <S3Browser.Root url="/api/browser" config={config}>
+ *   <S3Browser.Toolbar />
+ *   <S3Browser.Breadcrumbs />
+ *   <S3Browser.FileView />
+ *   <S3Browser.SelectionBar />
+ *   <S3Browser.PreviewModal />
+ * </S3Browser.Root>
+ * ```
+ *
+ * Sub-components:
+ * - `S3Browser.Root` – wraps children in `BrowserProvider` with a styled container
+ * - `S3Browser.Toolbar` – bucket selector, view mode, sort, actions
+ * - `S3Browser.Breadcrumbs` – path breadcrumbs
+ * - `S3Browser.SearchBar` – search input
+ * - `S3Browser.FileView` – grid/list file view
+ * - `S3Browser.SelectionBar` – selection count + bulk actions
+ * - `S3Browser.PreviewModal` – file preview overlay
+ */
+export const S3Browser = Object.assign(S3BrowserDefault, {
+  Root: S3BrowserCompoundRoot,
+  Toolbar: BrowserToolbar,
+  Breadcrumbs: BrowserBreadcrumbs,
+  SearchBar: BrowserSearchBar,
+  FileView: BrowserFileView,
+  SelectionBar: BrowserSelectionBar,
+  PreviewModal: BrowserPreviewModal,
+  UploadButton: BrowserUploadButton,
+  UploadZone: UploadOverlay,
+});

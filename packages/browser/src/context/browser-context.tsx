@@ -1,4 +1,14 @@
-import { createContext, useContext, useMemo, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { genUploader } from "@s3-good/core/client";
+import type { FileRouter } from "@s3-good/core/server";
 import type {
   BrowserConfig,
   BrowserItem,
@@ -96,6 +106,19 @@ export interface BrowserContextValue {
   handleSearchChange: (value: string) => void;
   clearSearch: () => void;
 
+  // Upload
+  isUploading: boolean;
+  uploadProgress: number;
+  uploadFiles: (files: File[]) => Promise<void>;
+  uploadEnabled: boolean;
+
+  // Drag-and-drop
+  isDragOver: boolean;
+  handleDragEnter: (e: React.DragEvent) => void;
+  handleDragLeave: (e: React.DragEvent) => void;
+  handleDragOver: (e: React.DragEvent) => void;
+  handleDrop: (e: React.DragEvent) => void;
+
   // Config
   config?: BrowserConfig;
 
@@ -131,6 +154,30 @@ export function useBrowserContext(): BrowserContextValue {
 }
 
 // ---------------------------------------------------------------------------
+// Upload configuration
+// ---------------------------------------------------------------------------
+
+export interface BrowserUploadConfig {
+  /** URL for the upload API endpoint (passed to genUploader). */
+  url?: string;
+  /** The file-router endpoint slug (e.g. "imageUploader"). */
+  endpoint?: string;
+  /** Extra headers sent with upload requests. */
+  headers?: HeadersInit | (() => Promise<HeadersInit> | HeadersInit);
+  /**
+   * Additional input passed to the upload endpoint.
+   * Can be a static value or a function that receives the current browser context.
+   */
+  input?:
+    | unknown
+    | ((ctx: { currentPath: string; activeBucket?: string }) => unknown);
+  /** Called when upload completes successfully. */
+  onUploadComplete?: () => void;
+  /** Called when upload fails. */
+  onUploadError?: (error: Error) => void;
+}
+
+// ---------------------------------------------------------------------------
 // Provider
 // ---------------------------------------------------------------------------
 
@@ -138,6 +185,8 @@ export interface BrowserProviderProps {
   url?: string;
   headers?: UseBrowserOptions["headers"];
   config?: BrowserConfig;
+  /** Upload configuration. When provided, upload is enabled in the context. */
+  upload?: BrowserUploadConfig;
   children: ReactNode;
 }
 
@@ -145,6 +194,7 @@ export function BrowserProvider({
   url,
   headers,
   config,
+  upload,
   children,
 }: BrowserProviderProps) {
   const browser = useBrowser({ url, headers, config });
@@ -155,6 +205,98 @@ export function BrowserProvider({
     browser.store,
     browser.client,
     browser.activeBucket,
+  );
+
+  // Upload state
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  const uploadEnabled = Boolean(upload?.endpoint);
+
+  const uploader = useMemo(() => {
+    if (!upload?.endpoint) return null;
+    return genUploader<FileRouter>({ url: upload.url });
+  }, [upload?.endpoint, upload?.url]);
+
+  const handleUploadFiles = useCallback(
+    async (files: File[]) => {
+      if (!uploader || !upload?.endpoint || files.length === 0) return;
+
+      const context = {
+        currentPath: browser.currentPath,
+        activeBucket: browser.activeBucket || undefined,
+      };
+
+      setIsUploading(true);
+      setUploadProgress(0);
+      try {
+        const resolvedInput =
+          typeof upload.input === "function"
+            ? upload.input(context)
+            : upload.input;
+
+        await uploader.uploadFiles(upload.endpoint, {
+          files,
+          input: resolvedInput,
+          headers: upload.headers,
+          onUploadProgress: ({ percentage }) => {
+            setUploadProgress(percentage ?? 0);
+          },
+        });
+
+        // Refresh file list after upload
+        await browser.refresh();
+        upload.onUploadComplete?.();
+      } catch (error) {
+        const normalized =
+          error instanceof Error ? error : new Error("Upload failed");
+        browser.store.setError(normalized.message);
+        upload.onUploadError?.(normalized);
+      } finally {
+        setIsUploading(false);
+        setUploadProgress(0);
+      }
+    },
+    [uploader, upload, browser],
+  );
+
+  // Drag-and-drop state
+  const [isDragOver, setIsDragOver] = useState(false);
+  const dragCounterRef = useRef(0);
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounterRef.current++;
+    if (e.dataTransfer.types.includes("Files")) {
+      setIsDragOver(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounterRef.current--;
+    if (dragCounterRef.current === 0) {
+      setIsDragOver(false);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      dragCounterRef.current = 0;
+      setIsDragOver(false);
+
+      const files = Array.from(e.dataTransfer.files);
+      if (files.length > 0) {
+        void handleUploadFiles(files);
+      }
+    },
+    [handleUploadFiles],
   );
 
   const value: BrowserContextValue = useMemo(
@@ -228,6 +370,19 @@ export function BrowserProvider({
       handleSearchChange: search.handleChange,
       clearSearch: search.clear,
 
+      // Upload
+      isUploading,
+      uploadProgress,
+      uploadFiles: handleUploadFiles,
+      uploadEnabled,
+
+      // Drag-and-drop
+      isDragOver,
+      handleDragEnter,
+      handleDragLeave,
+      handleDragOver,
+      handleDrop,
+
       // Config
       config,
 
@@ -235,7 +390,23 @@ export function BrowserProvider({
       store: browser.store,
       client: browser.client,
     }),
-    [browser, breadcrumbs, selection, preview, search, config],
+    [
+      browser,
+      breadcrumbs,
+      selection,
+      preview,
+      search,
+      config,
+      isUploading,
+      uploadProgress,
+      handleUploadFiles,
+      uploadEnabled,
+      isDragOver,
+      handleDragEnter,
+      handleDragLeave,
+      handleDragOver,
+      handleDrop,
+    ],
   );
 
   return (

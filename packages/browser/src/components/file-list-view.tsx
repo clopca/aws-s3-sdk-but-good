@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import type { BrowserItem, SortConfig, SortField } from "@s3-good/shared";
 import type { ContextMenuItem } from "./context-menu";
 import { EmptyState } from "./empty-state";
 import { FileItem } from "./file-item";
 import { FileListSkeleton } from "./skeleton";
+import { cn } from "./ui";
 
 const DEFAULT_LIST_ROW_HEIGHT = 46;
 const DEFAULT_LIST_OVERSCAN = 6;
@@ -49,151 +50,209 @@ function SortHeader({
   return (
     <button
       type="button"
-      className={`rounded-md px-1 py-0.5 text-left text-xs font-semibold uppercase tracking-wide transition-colors hover:text-foreground ${
-        isActive ? "text-foreground" : "text-muted-foreground"
-      }`}
+      className={cn(
+        "rounded-md px-1 py-0.5 text-left text-xs font-semibold uppercase tracking-wide transition-colors hover:text-foreground",
+        isActive ? "text-foreground" : "text-muted-foreground",
+      )}
       onClick={() => onSort(field)}
     >
-      {label}{arrow}
+      {label}
+      {arrow}
     </button>
   );
 }
 
-export function FileListView({
-  items,
-  selectedKeys,
-  sort,
-  onSort,
-  onItemClick,
-  onItemDoubleClick,
-  onItemContextMenu,
-  getContextMenuItems,
-  isLoading,
-  isSearching,
-  className,
-  virtualization,
-}: FileListViewProps) {
-  const scrollRef = useRef<HTMLDivElement | null>(null);
-  const [scrollTop, setScrollTop] = useState(0);
-  const [viewportHeight, setViewportHeight] = useState(FALLBACK_VIEWPORT_HEIGHT);
+const FileListView = forwardRef<HTMLDivElement, FileListViewProps>(
+  (
+    {
+      items,
+      selectedKeys,
+      sort,
+      onSort,
+      onItemClick,
+      onItemDoubleClick,
+      onItemContextMenu,
+      getContextMenuItems,
+      isLoading,
+      isSearching,
+      className,
+      virtualization,
+    },
+    ref,
+  ) => {
+    const scrollRef = useRef<HTMLDivElement | null>(null);
+    const [scrollTop, setScrollTop] = useState(0);
+    const [viewportHeight, setViewportHeight] = useState(
+      FALLBACK_VIEWPORT_HEIGHT,
+    );
 
-  const rowHeight = Math.max(1, virtualization?.rowHeight ?? DEFAULT_LIST_ROW_HEIGHT);
-  const overscan = Math.max(0, virtualization?.overscan ?? DEFAULT_LIST_OVERSCAN);
-  const threshold = Math.max(0, virtualization?.threshold ?? DEFAULT_LIST_VIRTUALIZATION_THRESHOLD);
-  const shouldVirtualize = Boolean(virtualization?.enabled) && items.length >= threshold;
+    const rowHeight = Math.max(
+      1,
+      virtualization?.rowHeight ?? DEFAULT_LIST_ROW_HEIGHT,
+    );
+    const overscan = Math.max(
+      0,
+      virtualization?.overscan ?? DEFAULT_LIST_OVERSCAN,
+    );
+    const threshold = Math.max(
+      0,
+      virtualization?.threshold ?? DEFAULT_LIST_VIRTUALIZATION_THRESHOLD,
+    );
+    const shouldVirtualize =
+      Boolean(virtualization?.enabled) && items.length >= threshold;
 
-  useEffect(() => {
-    const element = scrollRef.current;
-    if (!element) return;
+    useEffect(() => {
+      const element = scrollRef.current;
+      if (!element) return;
 
-    const updateViewport = () => {
-      const measured = element.clientHeight || FALLBACK_VIEWPORT_HEIGHT;
-      setViewportHeight(measured);
-    };
-
-    updateViewport();
-    if (typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(updateViewport);
-    observer.observe(element);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-
-  useEffect(() => {
-    setScrollTop(0);
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = 0;
-    }
-  }, [items, shouldVirtualize, rowHeight, overscan, threshold]);
-
-  const visibleRange = useMemo(() => {
-    if (!shouldVirtualize) {
-      return {
-        start: 0,
-        end: items.length,
-        totalHeight: 0,
+      const updateViewport = () => {
+        const measured = element.clientHeight || FALLBACK_VIEWPORT_HEIGHT;
+        setViewportHeight(measured);
       };
-    }
 
-    const firstVisibleRow = Math.floor(scrollTop / rowHeight);
-    const visibleCount = Math.ceil(viewportHeight / rowHeight);
-    const start = Math.max(0, firstVisibleRow - overscan);
-    const end = Math.min(items.length, firstVisibleRow + visibleCount + overscan);
-    return {
-      start,
-      end,
-      totalHeight: items.length * rowHeight,
-    };
-  }, [items.length, overscan, rowHeight, scrollTop, shouldVirtualize, viewportHeight]);
+      updateViewport();
+      if (typeof ResizeObserver === "undefined") return;
+      const observer = new ResizeObserver(updateViewport);
+      observer.observe(element);
 
-  const visibleItems = shouldVirtualize
-    ? items.slice(visibleRange.start, visibleRange.end)
-    : items;
+      return () => {
+        observer.disconnect();
+      };
+    }, []);
 
-  if (isLoading) return <FileListSkeleton />;
-  if (items.length === 0) return <EmptyState isSearching={isSearching} />;
+    useEffect(() => {
+      setScrollTop(0);
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = 0;
+      }
+    }, [items, shouldVirtualize, rowHeight, overscan, threshold]);
 
-  return (
-    <div className={`overflow-hidden rounded-xl border border-border bg-card shadow-sm ${className ?? ""}`.trim()}>
-      <div className="grid grid-cols-[minmax(0,1fr)_92px] items-center gap-3 border-b border-border bg-muted/40 px-3 py-2.5 md:grid-cols-[minmax(0,1fr)_110px_150px_120px]">
-        <SortHeader field="name" label="Name" sort={sort} onSort={onSort} />
-        <SortHeader field="size" label="Size" sort={sort} onSort={onSort} />
-        <div className="hidden md:block">
-          <SortHeader field="lastModified" label="Modified" sort={sort} onSort={onSort} />
-        </div>
-        <div className="hidden md:block">
-          <SortHeader field="contentType" label="Type" sort={sort} onSort={onSort} />
-        </div>
-      </div>
+    const visibleRange = useMemo(() => {
+      if (!shouldVirtualize) {
+        return {
+          start: 0,
+          end: items.length,
+          totalHeight: 0,
+        };
+      }
+
+      const firstVisibleRow = Math.floor(scrollTop / rowHeight);
+      const visibleCount = Math.ceil(viewportHeight / rowHeight);
+      const start = Math.max(0, firstVisibleRow - overscan);
+      const end = Math.min(
+        items.length,
+        firstVisibleRow + visibleCount + overscan,
+      );
+      return {
+        start,
+        end,
+        totalHeight: items.length * rowHeight,
+      };
+    }, [
+      items.length,
+      overscan,
+      rowHeight,
+      scrollTop,
+      shouldVirtualize,
+      viewportHeight,
+    ]);
+
+    const visibleItems = shouldVirtualize
+      ? items.slice(visibleRange.start, visibleRange.end)
+      : items;
+
+    if (isLoading) return <FileListSkeleton />;
+    if (items.length === 0) return <EmptyState isSearching={isSearching} />;
+
+    return (
       <div
-        ref={scrollRef}
-        className={`max-h-[60vh] overflow-auto ${shouldVirtualize ? "" : "divide-y divide-border/60"}`}
-        onScroll={(event) => {
-          if (!shouldVirtualize) return;
-          setScrollTop(event.currentTarget.scrollTop);
-        }}
+        ref={ref}
+        className={cn(
+          "overflow-hidden rounded-xl border border-border bg-card shadow-sm",
+          className,
+        )}
       >
-        {shouldVirtualize ? (
-          <div style={{ height: `${visibleRange.totalHeight}px`, position: "relative" }}>
+        <div className="grid grid-cols-[minmax(0,1fr)_92px] items-center gap-3 border-b border-border bg-muted/40 px-3 py-2.5 md:grid-cols-[minmax(0,1fr)_110px_150px_120px]">
+          <SortHeader field="name" label="Name" sort={sort} onSort={onSort} />
+          <SortHeader field="size" label="Size" sort={sort} onSort={onSort} />
+          <div className="hidden md:block">
+            <SortHeader
+              field="lastModified"
+              label="Modified"
+              sort={sort}
+              onSort={onSort}
+            />
+          </div>
+          <div className="hidden md:block">
+            <SortHeader
+              field="contentType"
+              label="Type"
+              sort={sort}
+              onSort={onSort}
+            />
+          </div>
+        </div>
+        <div
+          ref={(node) => {
+            scrollRef.current = node;
+          }}
+          className={cn(
+            "max-h-[60vh] overflow-auto",
+            !shouldVirtualize && "divide-y divide-border/60",
+          )}
+          onScroll={(event) => {
+            if (!shouldVirtualize) return;
+            setScrollTop(event.currentTarget.scrollTop);
+          }}
+        >
+          {shouldVirtualize ? (
             <div
               style={{
-                position: "absolute",
-                left: 0,
-                right: 0,
-                top: `${visibleRange.start * rowHeight}px`,
+                height: `${visibleRange.totalHeight}px`,
+                position: "relative",
               }}
             >
-              {visibleItems.map((item) => (
-                <FileItem
-                  key={item.key}
-                  item={item}
-                  isSelected={selectedKeys.has(item.key)}
-                  viewMode="list"
-                  contextMenuItems={getContextMenuItems?.(item)}
-                  onClick={(event) => onItemClick(item.key, event)}
-                  onDoubleClick={() => onItemDoubleClick(item)}
-                  onContextMenu={(event) => onItemContextMenu(item, event)}
-                />
-              ))}
+              <div
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  right: 0,
+                  top: `${visibleRange.start * rowHeight}px`,
+                }}
+              >
+                {visibleItems.map((item) => (
+                  <FileItem
+                    key={item.key}
+                    item={item}
+                    isSelected={selectedKeys.has(item.key)}
+                    viewMode="list"
+                    contextMenuItems={getContextMenuItems?.(item)}
+                    onClick={(event) => onItemClick(item.key, event)}
+                    onDoubleClick={() => onItemDoubleClick(item)}
+                    onContextMenu={(event) => onItemContextMenu(item, event)}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-        ) : (
-          visibleItems.map((item) => (
-            <FileItem
-              key={item.key}
-              item={item}
-              isSelected={selectedKeys.has(item.key)}
-              viewMode="list"
-              contextMenuItems={getContextMenuItems?.(item)}
-              onClick={(event) => onItemClick(item.key, event)}
-              onDoubleClick={() => onItemDoubleClick(item)}
-              onContextMenu={(event) => onItemContextMenu(item, event)}
-            />
-          ))
-        )}
+          ) : (
+            visibleItems.map((item) => (
+              <FileItem
+                key={item.key}
+                item={item}
+                isSelected={selectedKeys.has(item.key)}
+                viewMode="list"
+                contextMenuItems={getContextMenuItems?.(item)}
+                onClick={(event) => onItemClick(item.key, event)}
+                onDoubleClick={() => onItemDoubleClick(item)}
+                onContextMenu={(event) => onItemContextMenu(item, event)}
+              />
+            ))
+          )}
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  },
+);
+FileListView.displayName = "FileListView";
+
+export { FileListView };
