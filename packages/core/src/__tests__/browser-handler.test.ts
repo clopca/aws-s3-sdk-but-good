@@ -18,7 +18,10 @@ import {
   listObjects,
   putEmptyObject,
 } from "../_internal/s3";
-import { handleBrowserAction, parseBrowserRequest } from "../_internal/browser-handler";
+import {
+  handleBrowserAction,
+  parseBrowserRequest,
+} from "../_internal/browser-handler";
 import type { BrowserRouteConfig } from "../_internal/browser-types";
 
 const config = {
@@ -41,16 +44,20 @@ describe("browser handler", () => {
 
     const payload = await parseBrowserRequest(req);
 
-    expect(payload).toEqual(expect.objectContaining({
-      action: "list",
-      prefix: "photos/",
-      continuationToken: "abc",
-      search: "cat",
-    }));
-    expect(payload.filters).toEqual(expect.objectContaining({
-      prefix: "photos/",
-      search: "cat",
-    }));
+    expect(payload).toEqual(
+      expect.objectContaining({
+        action: "list",
+        prefix: "photos/",
+        continuationToken: "abc",
+        search: "cat",
+      }),
+    );
+    expect(payload.filters).toEqual(
+      expect.objectContaining({
+        prefix: "photos/",
+        search: "cat",
+      }),
+    );
   });
 
   it("test_parseBrowserRequest_POST", async () => {
@@ -72,7 +79,9 @@ describe("browser handler", () => {
     });
 
     const response = await handleBrowserAction(
-      new Request("http://localhost/api/browser?action=list", { method: "GET" }),
+      new Request("http://localhost/api/browser?action=list", {
+        method: "GET",
+      }),
       {
         route: { buckets: ["bucket-a", "bucket-b"], defaultBucket: "bucket-b" },
         config,
@@ -80,9 +89,12 @@ describe("browser handler", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(listObjects).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-      bucket: "bucket-b",
-    }));
+    expect(listObjects).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        bucket: "bucket-b",
+      }),
+    );
   });
 
   it("test_handleBrowserAction_rejects_disallowed_bucket", async () => {
@@ -121,7 +133,9 @@ describe("browser handler", () => {
 
     const body = await response.json();
     expect(response.status).toBe(400);
-    expect(body.error).toContain("Tag filtering is not available without Athena");
+    expect(body.error).toContain(
+      "Tag filtering is not available without Athena",
+    );
   });
 
   it("test_handleBrowserAction_runs_middleware", async () => {
@@ -133,7 +147,9 @@ describe("browser handler", () => {
     const middleware = vi.fn().mockResolvedValue({ userId: "u1" });
 
     const response = await handleBrowserAction(
-      new Request("http://localhost/api/browser?action=list", { method: "GET" }),
+      new Request("http://localhost/api/browser?action=list", {
+        method: "GET",
+      }),
       {
         route: { middleware },
         config,
@@ -146,7 +162,9 @@ describe("browser handler", () => {
 
   it("test_handleBrowserAction_checks_permissions", async () => {
     const response = await handleBrowserAction(
-      new Request("http://localhost/api/browser?action=list", { method: "GET" }),
+      new Request("http://localhost/api/browser?action=list", {
+        method: "GET",
+      }),
       {
         route: {
           middleware: vi.fn().mockResolvedValue({ userId: "u1" }),
@@ -195,6 +213,52 @@ describe("browser handler", () => {
     expect(body.error).toContain("outside the configured root prefix");
   });
 
+  it("test_handleList_returns_items_with_no_root_prefix", async () => {
+    vi.mocked(listObjects).mockResolvedValueOnce({
+      objects: [
+        {
+          key: "photo.jpg",
+          size: 10,
+          lastModified: new Date("2026-01-01"),
+          etag: '"1"',
+        },
+        {
+          key: "notes.txt",
+          size: 5,
+          lastModified: new Date("2026-01-01"),
+          etag: '"2"',
+        },
+      ],
+      folders: ["folder-a/"],
+      isTruncated: false,
+      nextContinuationToken: undefined,
+    });
+
+    const response = await handleBrowserAction(
+      new Request("http://localhost/api/browser?action=list", {
+        method: "GET",
+      }),
+      {
+        route: {},
+        config,
+      },
+    );
+
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body.items).toHaveLength(3);
+    const photo = body.items.find((item: { name: string }) => item.name === "photo.jpg");
+    const notes = body.items.find((item: { name: string }) => item.name === "notes.txt");
+    expect(photo?.contentType).toBe("image/jpeg");
+    expect(notes?.contentType).toBe("text/plain");
+    expect(listObjects).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        prefix: "",
+      }),
+    );
+  });
+
   it("test_handleList_returns_items_and_search_filter", async () => {
     vi.mocked(listObjects).mockResolvedValueOnce({
       objects: [
@@ -217,9 +281,12 @@ describe("browser handler", () => {
     });
 
     const response = await handleBrowserAction(
-      new Request("http://localhost/api/browser?action=list&prefix=uploads/&search=cat", {
-        method: "GET",
-      }),
+      new Request(
+        "http://localhost/api/browser?action=list&prefix=uploads/&search=cat",
+        {
+          method: "GET",
+        },
+      ),
       {
         route: {},
         config,
@@ -231,7 +298,9 @@ describe("browser handler", () => {
     expect(body.action).toBe("list");
     expect(body.items).toHaveLength(1);
     expect(body.items[0].name).toContain("cat");
-    expect(body.meta).toEqual({ mode: "s3-list", bucket: "bucket" });
+    expect(body.meta).toEqual(
+      expect.objectContaining({ mode: "s3-list", bucket: "bucket" }),
+    );
   });
 
   it("test_handleDelete_removes_file", async () => {
@@ -271,7 +340,11 @@ describe("browser handler", () => {
       isTruncated: false,
     });
     vi.mocked(deleteObjects).mockResolvedValueOnce({
-      deleted: ["uploads/folder/", "uploads/folder/a.txt", "uploads/folder/nested/b.txt"],
+      deleted: [
+        "uploads/folder/",
+        "uploads/folder/a.txt",
+        "uploads/folder/nested/b.txt",
+      ],
       errors: [],
     });
 
@@ -286,16 +359,27 @@ describe("browser handler", () => {
 
     const body = await response.json();
     expect(response.status).toBe(200);
-    expect(listObjects).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-      bucket: "bucket",
-      prefix: "uploads/folder/",
-      delimiter: "",
-    }));
+    expect(listObjects).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        bucket: "bucket",
+        prefix: "uploads/folder/",
+        delimiter: "",
+      }),
+    );
     expect(deleteObjects).toHaveBeenCalledWith(expect.anything(), {
       bucket: "bucket",
-      keys: ["uploads/folder/", "uploads/folder/a.txt", "uploads/folder/nested/b.txt"],
+      keys: [
+        "uploads/folder/",
+        "uploads/folder/a.txt",
+        "uploads/folder/nested/b.txt",
+      ],
     });
-    expect(body.deleted).toEqual(["uploads/folder/", "uploads/folder/a.txt", "uploads/folder/nested/b.txt"]);
+    expect(body.deleted).toEqual([
+      "uploads/folder/",
+      "uploads/folder/a.txt",
+      "uploads/folder/nested/b.txt",
+    ]);
   });
 
   it("test_handleDelete_uses_explicit_allowed_bucket", async () => {
@@ -305,9 +389,16 @@ describe("browser handler", () => {
       new Request("http://localhost/api/browser", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "delete", key: "uploads/a.txt", bucket: "bucket-b" }),
+        body: JSON.stringify({
+          action: "delete",
+          key: "uploads/a.txt",
+          bucket: "bucket-b",
+        }),
       }),
-      { route: { rootPrefix: "uploads/", buckets: ["bucket", "bucket-b"] }, config },
+      {
+        route: { rootPrefix: "uploads/", buckets: ["bucket", "bucket-b"] },
+        config,
+      },
     );
 
     expect(response.status).toBe(200);
@@ -327,7 +418,10 @@ describe("browser handler", () => {
       new Request("http://localhost/api/browser", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "delete-many", keys: ["uploads/a.txt", "uploads/b.txt"] }),
+        body: JSON.stringify({
+          action: "delete-many",
+          keys: ["uploads/a.txt", "uploads/b.txt"],
+        }),
       }),
       { route: { rootPrefix: "uploads/" }, config },
     );
@@ -335,6 +429,72 @@ describe("browser handler", () => {
     const body = await response.json();
     expect(response.status).toBe(200);
     expect(body.deleted).toEqual(["uploads/a.txt", "uploads/b.txt"]);
+  });
+
+  it("test_handleDeleteMany_expands_folder_prefixes_recursively", async () => {
+    vi.mocked(listObjects).mockResolvedValueOnce({
+      objects: [
+        {
+          key: "uploads/photos/a.jpg",
+          size: 1,
+          lastModified: new Date("2026-01-01"),
+        },
+        {
+          key: "uploads/photos/nested/b.jpg",
+          size: 1,
+          lastModified: new Date("2026-01-01"),
+        },
+      ],
+      folders: [],
+      isTruncated: false,
+    });
+    vi.mocked(deleteObjects).mockResolvedValueOnce({
+      deleted: [
+        "uploads/photos/",
+        "uploads/photos/a.jpg",
+        "uploads/photos/nested/b.jpg",
+        "uploads/a.txt",
+      ],
+      errors: [],
+    });
+
+    const response = await handleBrowserAction(
+      new Request("http://localhost/api/browser", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "delete-many",
+          keys: ["uploads/photos/", "uploads/a.txt"],
+        }),
+      }),
+      { route: { rootPrefix: "uploads/" }, config },
+    );
+
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(listObjects).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        bucket: "bucket",
+        prefix: "uploads/photos/",
+        delimiter: "",
+      }),
+    );
+    expect(deleteObjects).toHaveBeenCalledWith(expect.anything(), {
+      bucket: "bucket",
+      keys: [
+        "uploads/photos/",
+        "uploads/photos/a.jpg",
+        "uploads/photos/nested/b.jpg",
+        "uploads/a.txt",
+      ],
+    });
+    expect(body.deleted).toEqual([
+      "uploads/photos/",
+      "uploads/photos/a.jpg",
+      "uploads/photos/nested/b.jpg",
+      "uploads/a.txt",
+    ]);
   });
 
   it("test_handleRename_copies_and_deletes", async () => {
@@ -345,7 +505,11 @@ describe("browser handler", () => {
       new Request("http://localhost/api/browser", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "rename", key: "uploads/old.txt", newName: "new.txt" }),
+        body: JSON.stringify({
+          action: "rename",
+          key: "uploads/old.txt",
+          newName: "new.txt",
+        }),
       }),
       { route: { rootPrefix: "uploads/" }, config },
     );
@@ -357,6 +521,26 @@ describe("browser handler", () => {
       destinationKey: "uploads/new.txt",
     });
     expect(deleteObject).toHaveBeenCalled();
+  });
+
+  it("test_handleRename_rejects_path_traversal_name", async () => {
+    const response = await handleBrowserAction(
+      new Request("http://localhost/api/browser", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "rename",
+          key: "uploads/old.txt",
+          newName: "..",
+        }),
+      }),
+      { route: { rootPrefix: "uploads/" }, config },
+    );
+
+    const body = await response.json();
+    expect(response.status).toBe(400);
+    expect(body.error).toContain("traversal");
+    expect(copyObject).not.toHaveBeenCalled();
   });
 
   it("test_handleRename_folder_recursively", async () => {
@@ -381,7 +565,11 @@ describe("browser handler", () => {
       new Request("http://localhost/api/browser", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "rename", key: "uploads/photos/", newName: "images" }),
+        body: JSON.stringify({
+          action: "rename",
+          key: "uploads/photos/",
+          newName: "images",
+        }),
       }),
       { route: { rootPrefix: "uploads/" }, config },
     );
@@ -406,7 +594,11 @@ describe("browser handler", () => {
       new Request("http://localhost/api/browser", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "move", key: "uploads/a.txt", destination: "uploads/folder/" }),
+        body: JSON.stringify({
+          action: "move",
+          key: "uploads/a.txt",
+          destination: "uploads/folder/",
+        }),
       }),
       { route: { rootPrefix: "uploads/" }, config },
     );
@@ -415,7 +607,11 @@ describe("browser handler", () => {
       new Request("http://localhost/api/browser", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "copy", key: "uploads/a.txt", destination: "uploads/copy.txt" }),
+        body: JSON.stringify({
+          action: "copy",
+          key: "uploads/a.txt",
+          destination: "uploads/copy.txt",
+        }),
       }),
       { route: { rootPrefix: "uploads/" }, config },
     );
@@ -451,7 +647,11 @@ describe("browser handler", () => {
       new Request("http://localhost/api/browser", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "move", key: "uploads/photos/", destination: "uploads/archive/" }),
+        body: JSON.stringify({
+          action: "move",
+          key: "uploads/photos/",
+          destination: "uploads/archive/",
+        }),
       }),
       { route: { rootPrefix: "uploads/" }, config },
     );
@@ -475,7 +675,11 @@ describe("browser handler", () => {
       new Request("http://localhost/api/browser", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "create-folder", prefix: "uploads/", folderName: "new" }),
+        body: JSON.stringify({
+          action: "create-folder",
+          prefix: "uploads/",
+          folderName: "new",
+        }),
       }),
       { route: { rootPrefix: "uploads/" }, config },
     );
@@ -487,6 +691,26 @@ describe("browser handler", () => {
     });
   });
 
+  it("test_handleCreateFolder_rejects_path_traversal_name", async () => {
+    const response = await handleBrowserAction(
+      new Request("http://localhost/api/browser", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "create-folder",
+          prefix: "uploads/",
+          folderName: "..",
+        }),
+      }),
+      { route: { rootPrefix: "uploads/" }, config },
+    );
+
+    const body = await response.json();
+    expect(response.status).toBe(400);
+    expect(body.error).toContain("traversal");
+    expect(putEmptyObject).not.toHaveBeenCalled();
+  });
+
   it("test_handleGetDownloadUrl_and_preview", async () => {
     vi.mocked(generatePresignedGetUrl)
       .mockResolvedValueOnce("https://download-url")
@@ -496,7 +720,10 @@ describe("browser handler", () => {
       new Request("http://localhost/api/browser", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "get-download-url", key: "uploads/file.txt" }),
+        body: JSON.stringify({
+          action: "get-download-url",
+          key: "uploads/file.txt",
+        }),
       }),
       { route: { rootPrefix: "uploads/" }, config },
     );
@@ -505,23 +732,34 @@ describe("browser handler", () => {
       new Request("http://localhost/api/browser", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "get-preview-url", key: "uploads/file.txt" }),
+        body: JSON.stringify({
+          action: "get-preview-url",
+          key: "uploads/file.txt",
+        }),
       }),
       { route: { rootPrefix: "uploads/" }, config },
     );
 
     expect((await downloadResponse.json()).url).toBe("https://download-url");
     expect((await previewResponse.json()).url).toBe("https://preview-url");
-    expect(generatePresignedGetUrl).toHaveBeenNthCalledWith(1, expect.anything(), {
-      bucket: "bucket",
-      key: "uploads/file.txt",
-      forceDownload: true,
-    });
-    expect(generatePresignedGetUrl).toHaveBeenNthCalledWith(2, expect.anything(), {
-      bucket: "bucket",
-      key: "uploads/file.txt",
-      forceDownload: false,
-    });
+    expect(generatePresignedGetUrl).toHaveBeenNthCalledWith(
+      1,
+      expect.anything(),
+      {
+        bucket: "bucket",
+        key: "uploads/file.txt",
+        forceDownload: true,
+      },
+    );
+    expect(generatePresignedGetUrl).toHaveBeenNthCalledWith(
+      2,
+      expect.anything(),
+      {
+        bucket: "bucket",
+        key: "uploads/file.txt",
+        forceDownload: false,
+      },
+    );
   });
 
   it("test_handleBrowserAction_error_handling", async () => {

@@ -14,6 +14,8 @@ export interface S3Config {
   forcePathStyle?: boolean;
   /** Base URL for constructing public file URLs */
   baseUrl?: string;
+  /** Optional dedicated signing secret for metadata tokens. Falls back to secretAccessKey. */
+  signingSecret?: string;
 }
 
 /**
@@ -201,6 +203,8 @@ export interface BrowserActionResponse {
   meta?: {
     mode: "s3-list";
     bucket: string;
+    buckets?: string[];
+    defaultBucket?: string;
   };
 }
 
@@ -234,14 +238,47 @@ export function getPreviewType(
   contentType: string,
   fileName: string,
 ): PreviewType {
-  const normalizedType = contentType.toLowerCase();
+  const normalizedType = contentType.toLowerCase().split(";")[0]?.trim() ?? "";
   const extension = getLowerExtension(fileName);
+  const imageExtensions = new Set([
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".gif",
+    ".webp",
+    ".svg",
+    ".avif",
+    ".bmp",
+    ".ico",
+    ".tif",
+    ".tiff",
+  ]);
+  const videoExtensions = new Set([
+    ".mp4",
+    ".webm",
+    ".ogg",
+    ".ogv",
+    ".mov",
+    ".avi",
+    ".mkv",
+    ".m4v",
+  ]);
+  const audioExtensions = new Set([
+    ".mp3",
+    ".wav",
+    ".flac",
+    ".aac",
+    ".oga",
+    ".ogg",
+    ".m4a",
+    ".wma",
+  ]);
 
-  if (normalizedType.startsWith("image/")) return "image";
-  if (normalizedType.startsWith("video/")) return "video";
-  if (normalizedType.startsWith("audio/")) return "audio";
-  if (normalizedType === "application/pdf") return "pdf";
-  if (normalizedType === "application/json") return "json";
+  if (normalizedType.startsWith("image/") || imageExtensions.has(extension)) return "image";
+  if (normalizedType.startsWith("video/") || videoExtensions.has(extension)) return "video";
+  if (normalizedType.startsWith("audio/") || audioExtensions.has(extension)) return "audio";
+  if (normalizedType === "application/pdf" || extension === ".pdf") return "pdf";
+  if (normalizedType === "application/json" || extension === ".json") return "json";
   if (normalizedType === "text/csv" || extension === ".csv") return "csv";
 
   const codeExtensions = new Set([

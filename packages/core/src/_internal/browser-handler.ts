@@ -8,6 +8,7 @@ import type {
   BrowserListFilters,
   S3Config,
 } from "@s3-good/shared";
+import { getMimeType } from "@s3-good/shared";
 import type { BrowserHandlerConfig, BrowserRouteConfig } from "./browser-types";
 import {
   copyObject,
@@ -81,14 +82,21 @@ function normalizeFolderPrefix(key: string): string {
   return key.endsWith("/") ? key : `${key}/`;
 }
 
-function destinationPrefixForFolder(sourcePrefix: string, destination: string): string {
+function destinationPrefixForFolder(
+  sourcePrefix: string,
+  destination: string,
+): string {
   if (destination.endsWith("/")) {
     return `${destination}${getNameFromKey(sourcePrefix)}/`;
   }
   return normalizeFolderPrefix(destination);
 }
 
-function mapFolderObjectKey(sourcePrefix: string, destinationPrefix: string, key: string): string {
+function mapFolderObjectKey(
+  sourcePrefix: string,
+  destinationPrefix: string,
+  key: string,
+): string {
   return `${destinationPrefix}${key.slice(sourcePrefix.length)}`;
 }
 
@@ -108,13 +116,15 @@ function makeFileItem(
   lastModified: Date,
   etag?: string,
 ): BrowserFile {
+  const inferredContentType = getMimeType(getNameFromKey(key));
+
   return {
     kind: "file",
     key,
     name: getNameFromKey(key),
     size,
     lastModified,
-    contentType: "application/octet-stream",
+    contentType: inferredContentType,
     etag,
   };
 }
@@ -127,7 +137,10 @@ function makeFolderItem(key: string): BrowserFolder {
   };
 }
 
-function applySearchFilter(items: BrowserItem[], search?: string): BrowserItem[] {
+function applySearchFilter(
+  items: BrowserItem[],
+  search?: string,
+): BrowserItem[] {
   if (!search) return items;
   const query = search.toLowerCase();
   return items.filter((item) => item.name.toLowerCase().includes(query));
@@ -147,9 +160,41 @@ function requireDestination(payload: BrowserActionPayload): string {
   return payload.destination;
 }
 
-function resolveBucket(payload: BrowserActionPayload, route: BrowserRouteConfig, config: S3Config): string {
-  const allowedBuckets = route.buckets?.length ? route.buckets : [config.bucket];
-  const defaultBucket = route.defaultBucket ?? allowedBuckets[0] ?? config.bucket;
+function sanitizePathSegment(value: string, fieldName: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new BrowserError(`${fieldName} cannot be empty`, 400);
+  }
+
+  // Reject path separators to prevent writing outside the intended directory.
+  if (trimmed.includes("/") || trimmed.includes("\\")) {
+    throw new BrowserError(
+      `${fieldName} must not contain path separators`,
+      400,
+    );
+  }
+
+  // Reject traversal sequences to prevent escaping the root prefix boundary.
+  if (trimmed === "." || trimmed === ".." || trimmed.includes("..")) {
+    throw new BrowserError(
+      `${fieldName} must not contain path traversal sequences`,
+      400,
+    );
+  }
+
+  return trimmed;
+}
+
+function resolveBucket(
+  payload: BrowserActionPayload,
+  route: BrowserRouteConfig,
+  config: S3Config,
+): string {
+  const allowedBuckets = route.buckets?.length
+    ? route.buckets
+    : [config.bucket];
+  const defaultBucket =
+    route.defaultBucket ?? allowedBuckets[0] ?? config.bucket;
   const requestedBucket = payload.bucket ?? defaultBucket;
 
   if (!allowedBuckets.includes(requestedBucket)) {
@@ -159,8 +204,17 @@ function resolveBucket(payload: BrowserActionPayload, route: BrowserRouteConfig,
   return requestedBucket;
 }
 
+function resolveAllowedBuckets(
+  route: BrowserRouteConfig,
+  config: S3Config,
+): string[] {
+  return route.buckets?.length ? route.buckets : [config.bucket];
+}
+
 function resolveListFilters(payload: BrowserActionPayload): BrowserListFilters {
-  const filters: BrowserListFilters = payload.filters ? { ...payload.filters } : {};
+  const filters: BrowserListFilters = payload.filters
+    ? { ...payload.filters }
+    : {};
 
   if (!filters.prefix && payload.prefix) {
     filters.prefix = payload.prefix;
@@ -175,7 +229,10 @@ function resolveListFilters(payload: BrowserActionPayload): BrowserListFilters {
 
 function validateListFilters(filters: BrowserListFilters): void {
   if (filters.tags && filters.tags.length > 0) {
-    throw new BrowserError("Tag filtering is not available without Athena", 400);
+    throw new BrowserError(
+      "Tag filtering is not available without Athena",
+      400,
+    );
   }
 }
 
@@ -219,7 +276,11 @@ async function copyFolderPrefix(
     await copyObject(s3, {
       bucket,
       sourceKey,
-      destinationKey: mapFolderObjectKey(sourcePrefix, destinationPrefix, sourceKey),
+      destinationKey: mapFolderObjectKey(
+        sourcePrefix,
+        destinationPrefix,
+        sourceKey,
+      ),
     });
   }
 
@@ -243,7 +304,10 @@ export async function parseBrowserRequest(
         prefix: url.searchParams.get("prefix") ?? undefined,
         search: url.searchParams.get("search") ?? undefined,
         contentTypes: contentTypes
-          ? contentTypes.split(",").map((value) => value.trim()).filter(Boolean)
+          ? contentTypes
+              .split(",")
+              .map((value) => value.trim())
+              .filter(Boolean)
           : undefined,
       },
     };
@@ -261,13 +325,17 @@ export async function parseBrowserRequest(
 
 async function handleList(
   s3: ReturnType<typeof getS3Client>,
+  config: S3Config,
   bucket: string,
   payload: BrowserActionPayload,
   route: BrowserRouteConfig,
 ): Promise<BrowserActionResponse> {
   const filters = resolveListFilters(payload);
   validateListFilters(filters);
-  const prefix = enforceRootPrefix(filters.prefix ?? route.rootPrefix ?? "", route.rootPrefix);
+  const prefix = enforceRootPrefix(
+    filters.prefix ?? route.rootPrefix ?? "",
+    route.rootPrefix,
+  );
 
   const pageSize = Math.max(
     1,
@@ -288,6 +356,15 @@ async function handleList(
 
   const search = filters.search ?? payload.search;
 
+  const allowedBuckets = resolveAllowedBuckets(route, config);
+  const defaultBucket = route.defaultBucket ?? allowedBuckets[0] ?? bucket;
+  const meta = {
+    mode: "s3-list",
+    bucket,
+    buckets: allowedBuckets,
+    defaultBucket,
+  } as BrowserActionResponse["meta"];
+
   return {
     action: "list",
     success: true,
@@ -295,7 +372,7 @@ async function handleList(
     nextContinuationToken: result.nextContinuationToken,
     nextCursor: result.nextContinuationToken,
     isTruncated: result.isTruncated,
-    meta: { mode: "s3-list", bucket },
+    meta,
   };
 }
 
@@ -309,7 +386,11 @@ async function handleDelete(
   let deletedKeys: string[] = [key];
 
   if (key.endsWith("/")) {
-    const keys = await listAllObjectKeysInPrefix(s3, bucket, normalizeFolderPrefix(key));
+    const keys = await listAllObjectKeysInPrefix(
+      s3,
+      bucket,
+      normalizeFolderPrefix(key),
+    );
     const targets = Array.from(new Set([normalizeFolderPrefix(key), ...keys]));
     await deleteObjects(s3, { bucket, keys: targets });
     deletedKeys = targets;
@@ -337,9 +418,29 @@ async function handleDeleteMany(
   }
 
   const keys = payload.keys.map((key) => enforceRootPrefix(key, rootPrefix));
+  const targets = new Set<string>();
+
+  for (const key of keys) {
+    if (!key.endsWith("/")) {
+      targets.add(key);
+      continue;
+    }
+
+    const sourcePrefix = normalizeFolderPrefix(key);
+    targets.add(sourcePrefix);
+    const nestedKeys = await listAllObjectKeysInPrefix(
+      s3,
+      bucket,
+      sourcePrefix,
+    );
+    for (const nestedKey of nestedKeys) {
+      targets.add(nestedKey);
+    }
+  }
+
   const result = await deleteObjects(s3, {
     bucket,
-    keys,
+    keys: Array.from(targets),
   });
 
   return {
@@ -360,14 +461,23 @@ async function handleRename(
   if (!payload.newName) {
     throw new BrowserError("Missing newName", 400);
   }
+  const nextName = sanitizePathSegment(payload.newName, "newName");
 
   if (key.endsWith("/")) {
     const sourcePrefix = normalizeFolderPrefix(key);
     const withoutSlash = sourcePrefix.slice(0, -1);
     const slash = withoutSlash.lastIndexOf("/");
     const parentPrefix = slash >= 0 ? withoutSlash.slice(0, slash + 1) : "";
-    const destinationPrefix = `${parentPrefix}${payload.newName}/`;
-    const copiedKeys = await copyFolderPrefix(s3, bucket, sourcePrefix, destinationPrefix);
+    const destinationPrefix = enforceRootPrefix(
+      `${parentPrefix}${nextName}/`,
+      rootPrefix,
+    );
+    const copiedKeys = await copyFolderPrefix(
+      s3,
+      bucket,
+      sourcePrefix,
+      destinationPrefix,
+    );
     const deleteTargets = Array.from(new Set([sourcePrefix, ...copiedKeys]));
     await deleteObjects(s3, { bucket, keys: deleteTargets });
     return {
@@ -378,7 +488,10 @@ async function handleRename(
 
   const slash = key.lastIndexOf("/");
   const parentPrefix = slash >= 0 ? key.slice(0, slash + 1) : "";
-  const destinationKey = `${parentPrefix}${payload.newName}`;
+  const destinationKey = enforceRootPrefix(
+    `${parentPrefix}${nextName}`,
+    rootPrefix,
+  );
 
   await copyObject(s3, {
     bucket,
@@ -404,12 +517,23 @@ async function handleMoveOrCopy(
   rootPrefix?: string,
 ): Promise<BrowserActionResponse> {
   const key = enforceRootPrefix(requireKey(payload), rootPrefix);
-  const destination = enforceRootPrefix(requireDestination(payload), rootPrefix);
+  const destination = enforceRootPrefix(
+    requireDestination(payload),
+    rootPrefix,
+  );
 
   if (key.endsWith("/")) {
     const sourcePrefix = normalizeFolderPrefix(key);
-    const destinationPrefix = destinationPrefixForFolder(sourcePrefix, destination);
-    const copiedKeys = await copyFolderPrefix(s3, bucket, sourcePrefix, destinationPrefix);
+    const destinationPrefix = destinationPrefixForFolder(
+      sourcePrefix,
+      destination,
+    );
+    const copiedKeys = await copyFolderPrefix(
+      s3,
+      bucket,
+      sourcePrefix,
+      destinationPrefix,
+    );
     if (action === "move") {
       const deleteTargets = Array.from(new Set([sourcePrefix, ...copiedKeys]));
       await deleteObjects(s3, { bucket, keys: deleteTargets });
@@ -450,11 +574,19 @@ async function handleCreateFolder(
   if (!payload.folderName) {
     throw new BrowserError("Missing folderName", 400);
   }
-  const basePrefix = enforceRootPrefix(payload.prefix ?? rootPrefix ?? "", rootPrefix);
-  const normalizedBase = basePrefix === "" || basePrefix.endsWith("/")
-    ? basePrefix
-    : `${basePrefix}/`;
-  const folderKey = `${normalizedBase}${payload.folderName}/`;
+  const folderName = sanitizePathSegment(payload.folderName, "folderName");
+  const basePrefix = enforceRootPrefix(
+    payload.prefix ?? rootPrefix ?? "",
+    rootPrefix,
+  );
+  const normalizedBase =
+    basePrefix === "" || basePrefix.endsWith("/")
+      ? basePrefix
+      : `${basePrefix}/`;
+  const folderKey = enforceRootPrefix(
+    `${normalizedBase}${folderName}/`,
+    rootPrefix,
+  );
 
   await putEmptyObject(s3, {
     bucket,
@@ -490,13 +622,14 @@ async function handleGetUrl(
 
 async function executeAction(
   s3: ReturnType<typeof getS3Client>,
+  config: S3Config,
   bucket: string,
   payload: BrowserActionPayload,
   route: BrowserRouteConfig,
 ): Promise<BrowserActionResponse> {
   switch (payload.action) {
     case "list":
-      return handleList(s3, bucket, payload, route);
+      return handleList(s3, config, bucket, payload, route);
     case "delete":
       return handleDelete(s3, bucket, payload, route.rootPrefix);
     case "delete-many":
@@ -510,9 +643,21 @@ async function executeAction(
     case "create-folder":
       return handleCreateFolder(s3, bucket, payload, route.rootPrefix);
     case "get-download-url":
-      return handleGetUrl("get-download-url", s3, bucket, payload, route.rootPrefix);
+      return handleGetUrl(
+        "get-download-url",
+        s3,
+        bucket,
+        payload,
+        route.rootPrefix,
+      );
     case "get-preview-url":
-      return handleGetUrl("get-preview-url", s3, bucket, payload, route.rootPrefix);
+      return handleGetUrl(
+        "get-preview-url",
+        s3,
+        bucket,
+        payload,
+        route.rootPrefix,
+      );
     default:
       throw new BrowserError(`Unknown action: ${payload.action}`, 400);
   }
@@ -550,18 +695,28 @@ export async function handleBrowserAction(
       }
     }
 
-    const bucket = resolveBucket(payload, handlerConfig.route, handlerConfig.config);
+    const bucket = resolveBucket(
+      payload,
+      handlerConfig.route,
+      handlerConfig.config,
+    );
     const s3 = getS3Client(handlerConfig.config);
-    const response = await executeAction(s3, bucket, payload, handlerConfig.route);
+    const response = await executeAction(
+      s3,
+      handlerConfig.config,
+      bucket,
+      payload,
+      handlerConfig.route,
+    );
     return Response.json(response);
   } catch (error) {
     if (error instanceof BrowserError) {
       return Response.json(
         {
-        action,
-        success: false,
-        error: error.message,
-      } satisfies BrowserActionResponse,
+          action,
+          success: false,
+          error: error.message,
+        } satisfies BrowserActionResponse,
         { status: error.status },
       );
     }

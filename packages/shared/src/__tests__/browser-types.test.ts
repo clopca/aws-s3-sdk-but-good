@@ -41,6 +41,14 @@ describe("getPreviewType", () => {
   it("test_getPreviewType_unknown", () => {
     expect(getPreviewType("application/octet-stream", "file.bin")).toBe("unknown");
   });
+
+  it("test_getPreviewType_fallback_to_extension_for_image", () => {
+    expect(getPreviewType("application/octet-stream", "photo.png")).toBe("image");
+  });
+
+  it("test_getPreviewType_handles_mime_parameters", () => {
+    expect(getPreviewType("application/json; charset=utf-8", "data.txt")).toBe("json");
+  });
 });
 
 describe("getCodeLanguage", () => {
