@@ -33,3 +33,4 @@ pnpm build
 - Keep examples aligned with current exports from each package.
 - Prefer copy-paste runnable snippets.
 - For API changes, update both package README and docs pages in the same PR.
+- Validate docs snippets locally with `pnpm test:docs-snippets`.

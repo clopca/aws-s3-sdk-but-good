@@ -17,9 +17,12 @@ export default defineConfig({
         {
           label: "Getting Started",
           items: [
+            { label: "Start in 5 minutes", slug: "getting-started/start-in-5-minutes" },
             { label: "Installation", slug: "getting-started/installation" },
             { label: "Quick Start", slug: "getting-started/quick-start" },
             { label: "S3 Setup", slug: "getting-started/s3-setup" },
+            { label: "Common Errors", slug: "getting-started/common-errors" },
+            { label: "Scenarios", slug: "getting-started/scenarios" },
           ],
         },
         {

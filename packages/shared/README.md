@@ -127,6 +127,36 @@ parseFileSize("4MB");   // 4194304
 generateId();            // short unique id
 ```
 
+## Quick usage
+
+- Import shared types in application contracts and adapters.
+- Reuse error classes for consistent API error payloads.
+- Use MIME helpers to validate uploads before transfer.
+
+## Edge cases
+
+- Unknown file extensions may map to fallback MIME types.
+- Browser and server MIME inference can differ for uncommon formats.
+- Keep `S3Config` aligned with provider-specific endpoint requirements.
+
+## Troubleshooting
+
+- Unexpected MIME match failures: inspect provided MIME string and extension.
+- File size parsing errors: use values like `4MB`, `16MB`, `1GB`.
+- Error serialization issues: ensure custom handlers preserve `code` and `status`.
+
+## Compatibility
+
+- Runtime: Node.js `>=20`.
+- Module formats: ESM and CJS exports supported.
+- Intended for shared use across core/react/browser packages.
+
+## Security notes
+
+- Treat all client-provided metadata as untrusted.
+- Avoid exposing internal stack traces when wrapping errors.
+- Keep signing secrets and credentials outside shared runtime bundles.
+
 ## License
 
 MIT

@@ -118,7 +118,7 @@ export default function FilesPage() {
 
 ### Requirements
 
-- Node.js `>=18`
+- Node.js `>=20`
 - `pnpm@9`
 
 ### Setup

@@ -1,9 +1,8 @@
 # Release workflow — automates npm publishing via changesets
 #
-# Required secrets:
-#   NPM_TOKEN  — npm access token with publish scope for @s3-good
-#                (must be manually configured as a repository secret)
-#   GITHUB_TOKEN — automatically provided by GitHub Actions (no configuration needed)
+# Required setup:
+#   - npm trusted publishing configured for this repository
+#   - GITHUB_TOKEN is automatically provided by GitHub Actions
 
 name: Release
 
@@ -18,6 +17,7 @@ concurrency:
 permissions:
   contents: write
   pull-requests: write
+  id-token: write
 
 jobs:
   release:
@@ -40,11 +40,6 @@ jobs:
 
       - run: pnpm typecheck
 
-      - name: Configure npm auth
-        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> .npmrc
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       - name: Create Release Pull Request or Publish
         id: changesets
         uses: changesets/action@v1
@@ -55,4 +50,4 @@ jobs:
           commit: "chore: version packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: "true"

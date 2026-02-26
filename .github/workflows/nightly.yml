@@ -1,13 +1,12 @@
-name: CI
+name: Nightly Quality
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
 
 jobs:
-  build:
+  quality:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -27,28 +26,13 @@ jobs:
       - run: pnpm lint
       - run: pnpm test:docs-snippets
       - run: pnpm test
-
-  bundle-size:
-    name: Bundle Size
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
+      - run: pnpm test:coverage
       - run: pnpm size:check
 
   package-quality:
     name: Package Quality
     runs-on: ubuntu-latest
-    needs: build
+    needs: quality
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -69,18 +53,9 @@ jobs:
       - run: find .tmp/packs -mindepth 1 -maxdepth 1 -type f -delete
       - run: for pkg in packages/core packages/react packages/browser packages/shared; do pnpm --dir "$pkg" pack --pack-destination ../../.tmp/packs; done
 
-  # E2E tests run against real AWS S3.
-  # Required secrets:
-  #   - AWS_ROLE_ARN        (optional — for OIDC-based credential federation)
-  #   - S3_TEST_BUCKET      (required — target bucket for E2E tests)
-  #   - AWS_ACCESS_KEY_ID   (fallback if OIDC is not configured)
-  #   - AWS_SECRET_ACCESS_KEY (fallback if OIDC is not configured)
-  #
-  # E2E failures are non-blocking in pull requests, but blocking on main.
   e2e:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
-    needs: [build, package-quality]
+    needs: [quality, package-quality]
     environment: e2e-testing
     permissions:
       id-token: write
@@ -111,4 +86,3 @@ jobs:
           S3_TEST_REGION: us-east-1
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-    continue-on-error: ${{ github.event_name == 'pull_request' }}

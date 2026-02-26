@@ -130,7 +130,9 @@ describe("E2E CI Integration (Task 15)", () => {
   it("test_ci_e2e_continue_on_error", () => {
     const content = readFile(ciPath);
     // E2E job must not block PRs
-    expect(content).toContain("continue-on-error: true");
+    expect(content).toMatch(
+      /continue-on-error:\s*(true|\$\{\{\s*github\.event_name\s*==\s*'pull_request'\s*\}\})/,
+    );
   });
 });
 

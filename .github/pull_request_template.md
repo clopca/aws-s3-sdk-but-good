@@ -25,3 +25,6 @@ If you ran package-scoped commands instead, list them:
 - [ ] Tests added/updated
 - [ ] README/docs updated
 - [ ] Breaking changes documented
+- [ ] Public exports/API changes documented
+- [ ] Compatibility changes documented (runtime/node/framework)
+- [ ] Docs snippets validated (`pnpm test:docs-snippets`)

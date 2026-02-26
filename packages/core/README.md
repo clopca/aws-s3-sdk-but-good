@@ -12,6 +12,7 @@ pnpm add @s3-good/core zod
 
 | Import path | Use for |
 | --- | --- |
+| `@s3-good/core` | Root alias for server entrypoint |
 | `@s3-good/core/server` | Route builder, framework-agnostic handlers, browser route builder |
 | `@s3-good/core/client` | Typed upload client factory (`genUploader`) |
 | `@s3-good/core/next` | Next.js server route handlers (`createRouteHandler`, `createBrowserRouteHandler`) |
@@ -186,6 +187,36 @@ app.post("/api/upload", (c) => POST(c));
 - `setupBucket` - configure CORS/lifecycle defaults
 - `validateBucketCors` - verify CORS rules
 - `S3Api` - low-level helpers
+
+## Quick usage
+
+- Build server routes with `createUploader` and expose `GET`/`POST` via framework adapter.
+- Use `genUploader` from `@s3-good/core/client` for typed uploads without React bindings.
+- Keep route definitions and client helpers in shared typed modules.
+
+## Edge cases
+
+- Use provider-specific `endpoint` and `forcePathStyle` for S3-compatible services.
+- For large files, prefer resumable/multipart route settings and verify bucket limits.
+- If using `next-client` helpers, generate them only in client modules.
+
+## Troubleshooting
+
+- 404 on upload route: verify App Router path is `app/api/upload/route.ts`.
+- Auth/signature errors: verify runtime env vars and bucket credentials.
+- Browser failures: re-check bucket CORS and allowed headers.
+
+## Compatibility
+
+- Runtime: Node.js `>=20`.
+- Adapters: Next.js App Router and Hono supported.
+- Module formats: ESM and CJS entry points exposed via package exports.
+
+## Security notes
+
+- Keep AWS credentials server-side only.
+- Use middleware for auth/authorization before presign and completion callbacks.
+- Prefer scoped IAM policies limited to target bucket/prefixes.
 
 ## Environment variables
 

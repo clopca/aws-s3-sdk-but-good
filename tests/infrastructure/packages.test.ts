@@ -51,10 +51,7 @@ describe("Publish Readiness (Task 18)", () => {
     for (const pkg of packages) {
       it(`${pkg.scope} exports all have import and types fields`, () => {
         const pkgJson = readJson(`packages/${pkg.name}/package.json`);
-        const exports = pkgJson.exports as Record<
-          string,
-          Record<string, string>
-        >;
+        const exports = pkgJson.exports as Record<string, unknown>;
 
         expect(exports).toBeDefined();
         for (const [entryPoint, config] of Object.entries(exports)) {
@@ -63,16 +60,45 @@ describe("Publish Readiness (Task 18)", () => {
             expect(config).toMatch(/\.css$/);
             continue;
           }
+          const exportConfig = config as
+            | Record<string, string>
+            | {
+                import?: { types?: string; default?: string };
+                require?: { types?: string; default?: string };
+              };
+
+          if (
+            exportConfig.import &&
+            typeof exportConfig.import === "object" &&
+            "default" in exportConfig.import
+          ) {
+            expect(
+              exportConfig.import.default,
+              `${pkg.scope} ${entryPoint} should have "import.default" field`,
+            ).toMatch(/\.js$/);
+            expect(
+              exportConfig.import.types,
+              `${pkg.scope} ${entryPoint} should have "import.types" field`,
+            ).toMatch(/\.d\.ts$/);
+            expect(
+              exportConfig.require?.default,
+              `${pkg.scope} ${entryPoint} should have "require.default" field`,
+            ).toMatch(/\.cjs$/);
+            expect(
+              exportConfig.require?.types,
+              `${pkg.scope} ${entryPoint} should have "require.types" field`,
+            ).toMatch(/\.d\.cts$/);
+            continue;
+          }
+
           expect(
-            config.import,
+            (exportConfig as Record<string, string>).import,
             `${pkg.scope} ${entryPoint} should have "import" field`,
-          ).toBeDefined();
-          expect(config.import).toMatch(/\.js$/);
+          ).toMatch(/\.js$/);
           expect(
-            config.types,
+            (exportConfig as Record<string, string>).types,
             `${pkg.scope} ${entryPoint} should have "types" field`,
-          ).toBeDefined();
-          expect(config.types).toMatch(/\.d\.ts$/);
+          ).toMatch(/\.d\.ts$/);
         }
       });
     }
@@ -143,10 +169,11 @@ describe("Publish Readiness (Task 18)", () => {
 
 describe("Package Scaffolds (Tasks 03-05)", () => {
   describe("@s3-good/core (Task 03)", () => {
-    it("has 6 entry points including hono", () => {
+    it("has root export plus subpath entry points including hono", () => {
       const pkg = readJson("packages/core/package.json");
       const exports = pkg.exports as Record<string, unknown>;
 
+      expect(exports["."]).toBeDefined();
       expect(exports["./server"]).toBeDefined();
       expect(exports["./client"]).toBeDefined();
       expect(exports["./next"]).toBeDefined();
@@ -157,14 +184,25 @@ describe("Package Scaffolds (Tasks 03-05)", () => {
 
     it("each export has a types field for TypeScript support", () => {
       const pkg = readJson("packages/core/package.json");
-      const exports = pkg.exports as Record<string, Record<string, string>>;
+      const exports = pkg.exports as Record<string, unknown>;
 
       for (const [entryPoint, config] of Object.entries(exports)) {
-        expect(
-          config.types,
-          `${entryPoint} should have a "types" field`,
-        ).toBeDefined();
-        expect(config.types).toMatch(/\.d\.ts$/);
+        if (typeof config !== "object" || config === null) continue;
+        const typedConfig = config as {
+          types?: string;
+          import?: { types?: string };
+          require?: { types?: string };
+        };
+
+        if (typedConfig.import?.types) {
+          expect(typedConfig.import.types).toMatch(/\.d\.ts$/);
+          expect(typedConfig.require?.types).toMatch(/\.d\.cts$/);
+          continue;
+        }
+
+        expect(typedConfig.types, `${entryPoint} should have a "types" field`).toMatch(
+          /\.d\.ts$/,
+        );
       }
     });
   });
@@ -179,11 +217,18 @@ describe("Package Scaffolds (Tasks 03-05)", () => {
 
     it("test_hono_export_has_types", () => {
       const pkg = readJson("packages/core/package.json");
-      const exports = pkg.exports as Record<string, Record<string, string>>;
+      const exports = pkg.exports as Record<
+        string,
+        { types?: string; import?: { types?: string }; require?: { types?: string } }
+      >;
       const honoExport = exports["./hono"];
 
       expect(honoExport).toBeDefined();
-      expect(honoExport.types).toBeDefined();
+      if (honoExport.import?.types) {
+        expect(honoExport.import.types).toMatch(/\.d\.ts$/);
+        expect(honoExport.require?.types).toMatch(/\.d\.cts$/);
+        return;
+      }
       expect(honoExport.types).toMatch(/\.d\.ts$/);
     });
 

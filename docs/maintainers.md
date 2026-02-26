@@ -6,7 +6,7 @@ This runbook covers release flow and quality gates for maintainers.
 
 - Versioning: Changesets
 - Publish trigger: `main` branch via `.github/workflows/release.yml`
-- Registry auth: `NPM_TOKEN` repository secret
+- Registry auth: npm trusted publishing (OIDC provenance)
 
 ## Required checks before merge
 
@@ -15,8 +15,16 @@ pnpm build
 pnpm typecheck
 pnpm lint
 pnpm test
+pnpm test:docs-snippets
+pnpm test:package-quality
 pnpm size:check
 ```
+
+## Maintainer SLA
+
+- New issues: first triage response within 2 business days.
+- New pull requests: first review pass within 2 business days.
+- Release-blocking bugs: acknowledge within 1 business day and assign owner.
 
 ## Making a release
 
@@ -37,7 +45,20 @@ pnpm release
 
 - CI workflow: `.github/workflows/ci.yml`
 - Release workflow: `.github/workflows/release.yml`
-- E2E currently runs with `continue-on-error: true` until stabilized.
+- Nightly quality workflow: `.github/workflows/nightly.yml`
+- E2E is non-blocking in PRs but blocking in nightly runs.
+
+## Release checklist (mandatory)
+
+- [ ] `pnpm build` green
+- [ ] `pnpm typecheck` green
+- [ ] `pnpm lint` green
+- [ ] `pnpm test` green
+- [ ] `pnpm test:docs-snippets` green
+- [ ] Package quality checks green (`publint`, ATTW, pack validation)
+- [ ] Nightly E2E run green (or equivalent manual rerun)
+- [ ] Package README/docs updated for user-visible changes
+- [ ] Changeset included for public behavior/API changes
 
 ## Incident response checklist
 

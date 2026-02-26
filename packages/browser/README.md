@@ -140,6 +140,36 @@ import {
 </S3BrowserRoot>;
 ```
 
+## Quick usage
+
+- Expose `/api/browser` with `createBrowserRouteHandler` on the server.
+- Render `S3Browser` for an opinionated UI, or compose `S3BrowserRoot` primitives.
+- Add optional upload integration by passing `upload` config.
+
+## Edge cases
+
+- Large buckets: enable virtualization and tune row/item sizing.
+- S3-compatible providers may require custom endpoint/path-style config on server.
+- Preview behavior depends on MIME type and browser capabilities.
+
+## Troubleshooting
+
+- Empty listing: verify configured bucket names and permissions.
+- Preview failures: confirm presigned URL generation and CORS config.
+- Dialog/overlay issues: ensure styles are imported once from `styles.css`.
+
+## Compatibility
+
+- Runtime: Node.js `>=20` for server route environment.
+- Peer dependencies: `react >=18`, `react-dom >=18`.
+- Works with Next.js and any React app that can call the browser API endpoint.
+
+## Security notes
+
+- Keep browser route server-side and enforce auth in middleware.
+- Restrict destructive actions (delete/move/copy) by user role.
+- Limit bucket/prefix access per tenant where applicable.
+
 ## Main exports
 
 - `S3Browser`

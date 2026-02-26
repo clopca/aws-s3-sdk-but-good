@@ -1,0 +1,75 @@
+---
+title: Common Errors
+description: Most frequent setup/runtime issues and exact fixes.
+---
+
+## Missing AWS credentials
+
+Symptom:
+
+- Upload route returns auth or signature errors.
+
+Fix:
+
+```bash
+AWS_REGION=us-east-1
+AWS_BUCKET=my-bucket
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+```
+
+Verify those variables are available where your server route runs.
+
+## CORS errors in browser
+
+Symptom:
+
+- Browser blocks upload request with CORS message.
+
+Fix:
+
+- Apply recommended bucket CORS from [S3 Setup](/getting-started/s3-setup/).
+- Confirm API origin and frontend origin are both allowed.
+- Re-check `allowedHeaders` for any custom auth headers.
+
+## Next.js route not reachable
+
+Symptom:
+
+- `POST /api/upload` returns 404.
+
+Fix:
+
+- Ensure file path is exactly `app/api/upload/route.ts`.
+- Export `GET` and `POST` from `createRouteHandler`.
+- Restart dev server after creating route files.
+
+## Hono handler mismatch
+
+Symptom:
+
+- Hono route exists but requests fail with method/handler errors.
+
+Fix:
+
+```ts
+app.get("/api/upload", (c) => GET(c));
+app.post("/api/upload", (c) => POST(c));
+```
+
+Use the handler from `@s3-good/core/hono` when running with Hono.
+
+## File rejected by limits
+
+Symptom:
+
+- Upload fails with `FILE_TOO_LARGE`, `TOO_MANY_FILES`, or invalid type.
+
+Fix:
+
+- Match frontend expectations with server route constraints:
+  - `maxFileSize`
+  - `maxFileCount`
+  - allowed file categories
+
+If you changed route config, restart server so new route metadata is applied.

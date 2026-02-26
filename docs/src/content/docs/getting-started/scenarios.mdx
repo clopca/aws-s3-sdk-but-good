@@ -1,0 +1,41 @@
+---
+title: Scenarios
+description: Minimal implementation paths by framework and S3 provider.
+---
+
+## Next.js (App Router) + AWS S3
+
+- Server route: `@s3-good/core/next`
+- Client/UI: `@s3-good/react` or `@s3-good/browser`
+- Endpoint shape: `/api/upload` and optional `/api/browser`
+
+Start here: [Quick Start](/getting-started/quick-start/).
+
+## Hono + AWS S3
+
+- Server route: `@s3-good/core/hono`
+- Client: `@s3-good/core/client` or `@s3-good/react`
+- Bind `GET/POST` manually into your app routes
+
+Reference: [Hono guide](/server/hono/).
+
+## S3-compatible providers (R2 / MinIO / Spaces)
+
+Use the same route builder and supply endpoint config.
+
+```ts title="src/server/s3-config.ts"
+export const s3Config = {
+  region: "auto",
+  bucket: process.env.AWS_BUCKET!,
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  endpoint: process.env.S3_ENDPOINT!,
+  forcePathStyle: true,
+};
+```
+
+Notes:
+
+- Cloudflare R2 usually uses `region: "auto"`.
+- MinIO commonly needs `forcePathStyle: true`.
+- Validate CORS and presigned URL behavior per provider.

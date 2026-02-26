@@ -142,6 +142,36 @@ const nextConfig: NextConfig = {
 export default nextConfig;
 ```
 
+## Quick usage
+
+- Generate typed helpers once with `generateReactHelpers<YourFileRouter>()`.
+- Use `UploadButton`/`UploadDropzone` for default UI and `useUpload` for custom UX.
+- Keep upload endpoint URL consistent with server route path.
+
+## Edge cases
+
+- Mixed route constraints require endpoint-specific file input handling.
+- For complex auth headers, pass `headers` as a function to avoid stale tokens.
+- For manual flows, use `mode="manual"` and call upload explicitly.
+
+## Troubleshooting
+
+- Component not rendering styles: ensure `@s3-good/react/styles.css` is imported once.
+- Endpoint type mismatch: confirm `OurFileRouter` is exported from server module.
+- Upload stalls: inspect `onUploadError` and verify server middleware behavior.
+
+## Compatibility
+
+- Runtime: Node.js `>=20` in server environment.
+- Peer dependencies: `react >=18`, `react-dom >=18`.
+- Supports modern React/Next.js client components.
+
+## Security notes
+
+- Do not inject secrets into client components.
+- Validate user auth/permissions in server middleware, not in the browser.
+- Treat upload callbacks as untrusted input boundaries.
+
 ## License
 
 MIT

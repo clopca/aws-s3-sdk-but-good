@@ -7,6 +7,9 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test && vitest run tests/infrastructure/",
+    "test:coverage": "for pkg in packages/core packages/react packages/browser packages/shared; do pnpm --dir \"$pkg\" run test:coverage; done",
+    "test:docs-snippets": "node tests/docs-snippets/validate-snippets.mjs",
+    "test:package-quality": "pnpm -r build && pnpm dlx publint packages/core packages/react packages/browser packages/shared && pnpm dlx @arethetypeswrong/cli --pack --profile node16 packages/core && pnpm dlx @arethetypeswrong/cli --pack --profile node16 --exclude-entrypoints=./styles.css packages/react && pnpm dlx @arethetypeswrong/cli --pack --profile node16 --exclude-entrypoints=./styles.css packages/browser && pnpm dlx @arethetypeswrong/cli --pack --profile node16 packages/shared && mkdir -p .tmp/packs && find .tmp/packs -mindepth 1 -maxdepth 1 -type f -delete && for pkg in packages/core packages/react packages/browser packages/shared; do pnpm --dir \"$pkg\" pack --pack-destination ../../.tmp/packs; done",
     "test:e2e": "vitest run --config tests/e2e/vitest.config.ts",
     "clean": "turbo run clean",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
@@ -22,13 +25,15 @@
     "@changesets/cli": "^2.27.0",
     "@s3-good/shared": "workspace:*",
     "@size-limit/file": "^12.0.0",
+    "@vitest/coverage-v8": "^2.0.0",
     "prettier": "^3.0.0",
     "size-limit": "^12.0.0",
+    "typescript": "^5.5.0",
     "turbo": "^2.0.0",
     "vitest": "^2.0.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "packageManager": "pnpm@9.0.0"
 }
