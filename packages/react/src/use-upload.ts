@@ -88,6 +88,23 @@ function areJobSnapshotsEqual(
   return true;
 }
 
+function parseFileSizeToBytes(size: string | undefined): number {
+  if (!size) return 0;
+  const match = size.trim().match(/^(\d+(?:\.\d+)?)(B|KB|MB|GB|TB)$/i);
+  if (!match) return 0;
+  const value = Number(match[1]);
+  const unit = match[2]?.toUpperCase();
+  if (!Number.isFinite(value) || !unit) return 0;
+  const scale: Record<string, number> = {
+    B: 1,
+    KB: 1024,
+    MB: 1024 ** 2,
+    GB: 1024 ** 3,
+    TB: 1024 ** 4,
+  };
+  return value * (scale[unit] ?? 0);
+}
+
 // ─── Hook Implementation ────────────────────────────────────────────────────
 
 export function useUpload<
@@ -208,8 +225,10 @@ export function useUpload<
         const fileTypes = Object.keys(config);
         const maxFileSize = Object.values(config).reduce(
           (max, v) => {
-            return v.maxFileSize && v.maxFileSize > max
-              ? v.maxFileSize
+            const candidate = v.maxFileSize;
+            if (!candidate) return max;
+            return parseFileSizeToBytes(candidate) > parseFileSizeToBytes(max)
+              ? candidate
               : max;
           },
           "0MB",
@@ -369,14 +388,29 @@ export function useUpload<
   );
 
   const pause = useCallback((jobId: string) => {
-    jobHandlesRef.current[jobId]?.pause();
-  }, []);
+    const handle = jobHandlesRef.current[jobId];
+    if (handle) {
+      handle.pause();
+      return;
+    }
+    client.uploads.pauseJob?.(jobId);
+  }, [client]);
   const resume = useCallback((jobId: string) => {
-    jobHandlesRef.current[jobId]?.resume();
-  }, []);
+    const handle = jobHandlesRef.current[jobId];
+    if (handle) {
+      handle.resume();
+      return;
+    }
+    client.uploads.resumeJob?.(jobId);
+  }, [client]);
   const cancel = useCallback((jobId: string) => {
-    jobHandlesRef.current[jobId]?.cancel();
-  }, []);
+    const handle = jobHandlesRef.current[jobId];
+    if (handle) {
+      handle.cancel();
+      return;
+    }
+    client.uploads.cancelJob?.(jobId);
+  }, [client]);
   const retry = useCallback(
     (jobId: string) => {
       const args = lastArgsRef.current[jobId];

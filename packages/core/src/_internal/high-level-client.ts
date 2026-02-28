@@ -131,6 +131,10 @@ export interface UploadJobHandle {
   result: Promise<UploadFileResponse[] | undefined>;
 }
 
+function isAbortDomException(error: unknown): error is DOMException {
+  return error instanceof DOMException && error.name === "AbortError";
+}
+
 const DEFAULT_QUEUE: Required<QueueOptions> = {
   concurrency: 3,
   autoStart: true,
@@ -159,13 +163,13 @@ function isRetryableError(error: unknown): boolean {
       error.code === "RATE_LIMITED"
     );
   }
-  if (error instanceof DOMException && error.name === "AbortError") return false;
+  if (isAbortDomException(error)) return false;
   return true;
 }
 
 function toUploadError(error: unknown): UploadError {
   if (error instanceof UploadError) return error;
-  if (error instanceof DOMException && error.name === "AbortError") {
+  if (isAbortDomException(error)) {
     return new UploadError({
       code: "UPLOAD_FAILED",
       message: "Upload aborted",
@@ -298,7 +302,7 @@ export function createS3GoodClient<TRouter extends FileRouter>(
       Math.floor(opts.retry?.maxAttempts ?? DEFAULT_RETRY.maxAttempts),
     ),
   };
-  const resumeEnabled = opts.resume?.enabled ?? true;
+  const resumeEnabled = opts.resume?.enabled ?? false;
   const storageKey = buildStorageKey(opts);
 
   const pending: Array<QueueJob<TRouter, inferEndpoints<TRouter>>> = [];
@@ -417,20 +421,31 @@ export function createS3GoodClient<TRouter extends FileRouter>(
     job.snapshot.state = "uploading";
     job.snapshot.updatedAt = Date.now();
     snapshots.set(job.id, { ...job.snapshot });
-    emit({ type: "upload.started", jobId: job.id, endpoint: String(job.endpoint), attempt: job.snapshot.attempts + 1 });
+    emit({
+      type: "upload.started",
+      jobId: job.id,
+      endpoint: String(job.endpoint),
+      attempt: job.snapshot.attempts + 1,
+    });
     syncPersistence();
 
     try {
-      for (let attempt = 1; attempt <= retryCfg.maxAttempts; attempt += 1) {
+      for (
+        let attempt = job.snapshot.attempts + 1;
+        attempt <= retryCfg.maxAttempts;
+        attempt += 1
+      ) {
+        let attemptController: AbortController | null = null;
         job.snapshot.attempts = attempt;
         job.snapshot.updatedAt = Date.now();
         snapshots.set(job.id, { ...job.snapshot });
         syncPersistence();
 
         try {
+          attemptController = job.controller;
           const result = await uploader.uploadFiles(job.endpoint, {
             ...job.opts,
-            signal: job.controller.signal,
+            signal: attemptController.signal,
             onUploadProgress: (progressEvent) => {
               job.snapshot.progress = progressEvent.percentage;
               job.snapshot.updatedAt = Date.now();
@@ -461,7 +476,16 @@ export function createS3GoodClient<TRouter extends FileRouter>(
           return;
         } catch (error) {
           const abortReason = job.abortReason;
+          if (
+            isAbortDomException(error) &&
+            attemptController &&
+            job.controller !== attemptController
+          ) {
+            // Paused + resumed quickly: ignore stale abort from previous controller.
+            return;
+          }
           if (abortReason === "pause") {
+            job.snapshot.attempts = Math.max(0, attempt - 1);
             job.snapshot.state = "paused";
             job.snapshot.updatedAt = Date.now();
             snapshots.set(job.id, { ...job.snapshot });
@@ -587,6 +611,9 @@ export function createS3GoodClient<TRouter extends FileRouter>(
     const start = () => runNext();
     const pause = () => {
       if (snapshot.state === "uploading") {
+        snapshot.state = "paused";
+        snapshot.updatedAt = Date.now();
+        snapshots.set(id, { ...snapshot });
         job.abortReason = "pause";
         job.controller.abort();
       } else if (snapshot.state === "queued") {
@@ -686,6 +713,27 @@ export function createS3GoodClient<TRouter extends FileRouter>(
       createUpload: uploader.createUpload,
       enqueueUpload,
       getQueueState: queueSnapshot,
+      pauseJob: (jobId: string) => {
+        const job = jobs.get(jobId);
+        if (!job) return;
+        if (job.snapshot.state === "uploading") {
+          job.snapshot.state = "paused";
+          job.snapshot.updatedAt = Date.now();
+          snapshots.set(jobId, { ...job.snapshot });
+          job.abortReason = "pause";
+          job.controller.abort();
+          return;
+        }
+        if (job.snapshot.state === "queued") {
+          const idx = pending.findIndex((entry) => entry.id === jobId);
+          if (idx >= 0) pending.splice(idx, 1);
+          job.snapshot.state = "paused";
+          job.snapshot.updatedAt = Date.now();
+          snapshots.set(jobId, { ...job.snapshot });
+          emit({ type: "upload.paused", jobId, endpoint: String(job.endpoint) });
+          syncPersistence();
+        }
+      },
       resumeJob,
       cancelJob,
       resumePending: async () => {
@@ -694,9 +742,20 @@ export function createS3GoodClient<TRouter extends FileRouter>(
           return;
         }
         const persisted = await loadQueueSnapshot(storageKey);
-        if (persisted?.version === 1) {
+        if (
+          persisted?.version === 1 &&
+          Array.isArray(persisted.jobs)
+        ) {
           idCounter = Math.max(idCounter, persisted.idCounter);
           for (const job of persisted.jobs) {
+            if (
+              typeof job?.id !== "string" ||
+              typeof job?.endpoint !== "string" ||
+              !job.options ||
+              !Array.isArray(job.options.files)
+            ) {
+              continue;
+            }
             if (snapshots.has(job.id)) continue;
 
             let resolve!: (value: UploadFileResponse[] | undefined) => void;
