@@ -10,6 +10,8 @@ vi.mock("@s3-good/core/client", () => ({
   }),
   createS3GoodClient: () => ({
     uploads: {
+      uploadFiles: vi.fn(),
+      createUpload: vi.fn(),
       enqueueUpload: vi.fn(),
       getQueueState: vi.fn(() => ({ jobs: [], activeCount: 0 })),
       resumePending: vi.fn(),

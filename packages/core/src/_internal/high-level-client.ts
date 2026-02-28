@@ -135,6 +135,15 @@ function isAbortDomException(error: unknown): error is DOMException {
   return error instanceof DOMException && error.name === "AbortError";
 }
 
+function isAbortLikeError(error: unknown): boolean {
+  if (isAbortDomException(error)) return true;
+  if (!(error instanceof UploadError)) return false;
+  return (
+    error.status === 499 ||
+    error.message.toLowerCase().includes("aborted")
+  );
+}
+
 const DEFAULT_QUEUE: Required<QueueOptions> = {
   concurrency: 3,
   autoStart: true,
@@ -430,8 +439,17 @@ export function createS3GoodClient<TRouter extends FileRouter>(
     syncPersistence();
 
     try {
+      const nextAttempt = job.snapshot.attempts + 1;
+      if (nextAttempt > retryCfg.maxAttempts) {
+        throw new UploadError({
+          code: "RETRY_EXHAUSTED",
+          message: "Retry attempts exhausted",
+          retryable: false,
+          hint: "Re-enqueue the upload to retry from the beginning.",
+        });
+      }
       for (
-        let attempt = job.snapshot.attempts + 1;
+        let attempt = nextAttempt;
         attempt <= retryCfg.maxAttempts;
         attempt += 1
       ) {
@@ -477,7 +495,7 @@ export function createS3GoodClient<TRouter extends FileRouter>(
         } catch (error) {
           const abortReason = job.abortReason;
           if (
-            isAbortDomException(error) &&
+            isAbortLikeError(error) &&
             attemptController &&
             job.controller !== attemptController
           ) {
