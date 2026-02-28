@@ -136,6 +136,8 @@ pnpm install
 ### Common commands
 
 ```bash
+pnpm ci:required
+pnpm release:verify
 pnpm build
 pnpm test
 pnpm lint
