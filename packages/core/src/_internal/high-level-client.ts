@@ -203,13 +203,10 @@ function toUploadError(error: unknown): UploadError {
 }
 
 function computeBackoff(attempt: number, retry: Required<RetryOptions>): number {
-  const exponential = Math.min(
-    retry.maxDelayMs,
-    retry.baseDelayMs * 2 ** Math.max(0, attempt - 1),
-  );
-  if (!retry.jitter) return exponential;
+  const exponential = retry.baseDelayMs * 2 ** Math.max(0, attempt - 1);
+  if (!retry.jitter) return Math.min(retry.maxDelayMs, exponential);
   const jitterFactor = 0.5 + Math.random();
-  return Math.round(exponential * jitterFactor);
+  return Math.min(retry.maxDelayMs, Math.round(exponential * jitterFactor));
 }
 
 function buildStorageKey(opts: CreateS3GoodClientOptions): string {
@@ -315,12 +312,13 @@ export function createS3GoodClient<TRouter extends FileRouter>(
   const storageKey = buildStorageKey(opts);
 
   const pending: Array<QueueJob<TRouter, inferEndpoints<TRouter>>> = [];
-  const active = new Map<string, QueueJob<TRouter, inferEndpoints<TRouter>>>();
+  const active = new Map<string, number>();
   const jobs = new Map<string, QueueJob<TRouter, inferEndpoints<TRouter>>>();
   const snapshots = new Map<string, UploadJobSnapshot>();
   const persistedOptions = new Map<string, PersistedUploadOptions>();
   const listeners = new Set<UploadEventListener>();
   let idCounter = 0;
+  let runCounter = 0;
   let lastPersistAt = 0;
   let persistTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -426,7 +424,8 @@ export function createS3GoodClient<TRouter extends FileRouter>(
   const runJob = async (
     job: QueueJob<TRouter, inferEndpoints<TRouter>>,
   ): Promise<void> => {
-    active.set(job.id, job);
+    const runId = ++runCounter;
+    active.set(job.id, runId);
     job.snapshot.state = "uploading";
     job.snapshot.updatedAt = Date.now();
     snapshots.set(job.id, { ...job.snapshot });
@@ -565,7 +564,9 @@ export function createS3GoodClient<TRouter extends FileRouter>(
         job.reject(normalized);
       }
     } finally {
-      active.delete(job.id);
+      if (active.get(job.id) === runId) {
+        active.delete(job.id);
+      }
       runNext();
     }
   };
@@ -613,7 +614,7 @@ export function createS3GoodClient<TRouter extends FileRouter>(
       );
     }
 
-    snapshots.set(id, snapshot);
+    snapshots.set(id, { ...snapshot });
     jobs.set(id, job as QueueJob<TRouter, inferEndpoints<TRouter>>);
     if (canPersist) {
       persistedOptions.set(id, {
@@ -813,7 +814,7 @@ export function createS3GoodClient<TRouter extends FileRouter>(
               reject,
             };
 
-            snapshots.set(job.id, snapshot);
+            snapshots.set(job.id, { ...snapshot });
             persistedOptions.set(job.id, job.options);
             jobs.set(job.id, queueJob);
             if (job.state === "queued") {

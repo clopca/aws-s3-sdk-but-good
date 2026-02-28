@@ -6,7 +6,7 @@ import type {
   PermittedFileInfo,
 } from "@s3-good/core/types";
 import type { UploadFileResponse } from "@s3-good/shared";
-import { UploadError } from "@s3-good/shared";
+import { UploadError, parseFileSize } from "@s3-good/shared";
 import {
   createS3GoodClient,
   type UploadJobSnapshot,
@@ -90,19 +90,11 @@ function areJobSnapshotsEqual(
 
 function parseFileSizeToBytes(size: string | undefined): number {
   if (!size) return 0;
-  const match = size.trim().match(/^(\d+(?:\.\d+)?)(B|KB|MB|GB|TB)$/i);
-  if (!match) return 0;
-  const value = Number(match[1]);
-  const unit = match[2]?.toUpperCase();
-  if (!Number.isFinite(value) || !unit) return 0;
-  const scale: Record<string, number> = {
-    B: 1,
-    KB: 1024,
-    MB: 1024 ** 2,
-    GB: 1024 ** 3,
-    TB: 1024 ** 4,
-  };
-  return value * (scale[unit] ?? 0);
+  try {
+    return parseFileSize(size as Parameters<typeof parseFileSize>[0]);
+  } catch {
+    return 0;
+  }
 }
 
 // ─── Hook Implementation ────────────────────────────────────────────────────
