@@ -171,9 +171,12 @@ export function useUpload<
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (currentJobIdRef.current) {
-        jobHandlesRef.current[currentJobIdRef.current]?.cancel();
+      for (const handle of Object.values(jobHandlesRef.current)) {
+        handle.cancel();
       }
+      jobHandlesRef.current = {};
+      lastArgsRef.current = {};
+      currentJobIdRef.current = null;
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
   }, []);
@@ -214,15 +217,19 @@ export function useUpload<
 
         if (currentUpload === uploadCountRef.current) {
           setIsUploading(false);
-          setProgress(100);
-          opts?.onClientUploadComplete?.(
-            result as UploadFileResponse<TRouter[TEndpoint]["_output"]>[],
-          );
+          if (result) {
+            setProgress(100);
+            opts?.onClientUploadComplete?.(
+              result as UploadFileResponse<TRouter[TEndpoint]["_output"]>[],
+            );
+          } else {
+            setProgress(0);
+          }
         }
 
-        return result as UploadFileResponse<
-          TRouter[TEndpoint]["_output"]
-        >[];
+        return result as
+          | UploadFileResponse<TRouter[TEndpoint]["_output"]>[]
+          | undefined;
       } catch (error) {
         if (currentUpload === uploadCountRef.current) {
           setIsUploading(false);
@@ -245,10 +252,12 @@ export function useUpload<
   );
 
   const abort = useCallback(() => {
+    uploadCountRef.current += 1;
     if (currentJobIdRef.current) {
       jobHandlesRef.current[currentJobIdRef.current]?.cancel();
     }
     currentJobIdRef.current = null;
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     setIsUploading(false);
     setProgress(0);
   }, []);
@@ -278,6 +287,10 @@ export function useUpload<
         })
         .catch((error) => {
           if (error instanceof UploadError) opts?.onUploadError?.(error);
+        })
+        .finally(() => {
+          delete jobHandlesRef.current[handle.id];
+          delete lastArgsRef.current[handle.id];
         });
       return handle.id;
     },

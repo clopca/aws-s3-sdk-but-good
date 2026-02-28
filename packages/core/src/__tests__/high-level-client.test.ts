@@ -197,4 +197,23 @@ describe("createS3GoodClient", () => {
     const state = consumer.uploads.getQueueState();
     expect(state.jobs.some((job) => job.state === "completed")).toBe(true);
   });
+
+  it("clamps invalid retry.maxAttempts and queue.concurrency values", async () => {
+    mockUploadFiles.mockResolvedValue([
+      { key: "k", url: "u", name: "a.png", size: 1, type: "image/png", serverData: {} },
+    ]);
+
+    const client = createS3GoodClient<any>({
+      queue: { concurrency: 0, autoStart: true },
+      retry: { maxAttempts: 0, baseDelayMs: 0, maxDelayMs: 0, jitter: false },
+    });
+
+    const handle = client.uploads.enqueueUpload("imageUploader", {
+      files: [new File(["x"], "a.png", { type: "image/png" })],
+    });
+
+    await expect(handle.result).resolves.toBeDefined();
+    expect(mockUploadFiles).toHaveBeenCalledTimes(1);
+    expect(client.uploads.getQueueState().jobs[0]?.state).toBe("completed");
+  });
 });

@@ -148,7 +148,8 @@ function sleep(ms: number): Promise<void> {
 
 function isRetryableError(error: unknown): boolean {
   if (error instanceof UploadError) {
-    if (error.retryable) return true;
+    if (error.retryable === true) return true;
+    if (error.retryable === false) return false;
     return (
       error.code === "NETWORK_ERROR" ||
       error.code === "S3_ERROR" ||
@@ -279,8 +280,22 @@ export function createS3GoodClient<TRouter extends FileRouter>(
   opts: CreateS3GoodClientOptions = {},
 ) {
   const uploader = genUploader<TRouter>({ url: opts.url });
-  const queueCfg = { ...DEFAULT_QUEUE, ...(opts.queue ?? {}) };
-  const retryCfg = { ...DEFAULT_RETRY, ...(opts.retry ?? {}) };
+  const queueCfg: Required<QueueOptions> = {
+    ...DEFAULT_QUEUE,
+    ...(opts.queue ?? {}),
+    concurrency: Math.max(
+      1,
+      Math.floor(opts.queue?.concurrency ?? DEFAULT_QUEUE.concurrency),
+    ),
+  };
+  const retryCfg: Required<RetryOptions> = {
+    ...DEFAULT_RETRY,
+    ...(opts.retry ?? {}),
+    maxAttempts: Math.max(
+      1,
+      Math.floor(opts.retry?.maxAttempts ?? DEFAULT_RETRY.maxAttempts),
+    ),
+  };
   const resumeEnabled = opts.resume?.enabled ?? true;
   const storageKey = buildStorageKey(opts);
 

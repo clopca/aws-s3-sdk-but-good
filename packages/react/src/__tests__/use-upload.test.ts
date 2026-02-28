@@ -97,7 +97,7 @@ describe("useUpload", () => {
     const file = new File(["hello"], "photo.jpg", { type: "image/jpeg" });
 
     // Start upload (don't await)
-    let uploadPromise: Promise<any>;
+    let uploadPromise!: Promise<any>;
     act(() => {
       uploadPromise = result.current.startUpload([file]);
     });
@@ -117,13 +117,20 @@ describe("useUpload", () => {
 
   it("test_abort_resets_state", async () => {
     const cancel = vi.fn();
-    mockEnqueueUpload.mockImplementation((_endpoint, _opts) => ({
+    let settleJob!: () => void;
+    const jobResult = new Promise<undefined>((resolve) => {
+      settleJob = () => resolve(undefined);
+    });
+    const job = {
       id: "job-abort",
       start: vi.fn(),
       pause: vi.fn(),
       resume: vi.fn(),
       cancel,
-      result: new Promise(() => {}),
+      result: jobResult,
+    };
+    mockEnqueueUpload.mockImplementation((_endpoint, _opts) => ({
+      ...job,
     }));
 
     const { result } = renderHook(() =>
@@ -132,8 +139,9 @@ describe("useUpload", () => {
 
     const file = new File(["hello"], "photo.jpg", { type: "image/jpeg" });
 
+    let uploadPromise: Promise<any>;
     act(() => {
-      void result.current.startUpload([file]);
+      uploadPromise = result.current.startUpload([file]);
     });
 
     await waitFor(() => {
@@ -142,6 +150,12 @@ describe("useUpload", () => {
 
     act(() => {
       result.current.abort();
+    });
+
+    settleJob();
+    await act(async () => {
+      await job.result;
+      await uploadPromise;
     });
 
     expect(cancel).toHaveBeenCalledTimes(1);
