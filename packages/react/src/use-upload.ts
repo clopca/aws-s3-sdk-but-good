@@ -89,6 +89,14 @@ export function useUpload<
   >({});
   const rafRef = useRef<number | null>(null);
   const url = uploaderOpts?.url ?? "/api/upload";
+  const queueConcurrency = opts?.queue?.concurrency;
+  const queueAutoStart = opts?.queue?.autoStart;
+  const retryMaxAttempts = opts?.retry?.maxAttempts;
+  const retryBaseDelayMs = opts?.retry?.baseDelayMs;
+  const retryMaxDelayMs = opts?.retry?.maxDelayMs;
+  const retryJitter = opts?.retry?.jitter;
+  const resumeEnabled = opts?.resume?.enabled;
+  const resumeStorageKey = opts?.resume?.storageKey;
 
   // Debounce progress updates via requestAnimationFrame
   const debouncedSetProgress = useCallback((value: number) => {
@@ -114,7 +122,17 @@ export function useUpload<
         },
       }),
     // opts includes callback refs; only include config sections that affect client behavior.
-    [url, opts?.queue, opts?.retry, opts?.resume],
+    [
+      url,
+      queueConcurrency,
+      queueAutoStart,
+      retryMaxAttempts,
+      retryBaseDelayMs,
+      retryMaxDelayMs,
+      retryJitter,
+      resumeEnabled,
+      resumeStorageKey,
+    ],
   );
   const clientRef = useRef(client);
   clientRef.current = client;
@@ -315,9 +333,21 @@ export function useUpload<
     [enqueue],
   );
 
-  const activeCount = jobs.filter((job) => job.state === "uploading").length;
-  const queueSize = jobs.filter((job) => job.state === "queued").length;
-  const failedCount = jobs.filter((job) => job.state === "failed").length;
+  const { activeCount, queueSize, failedCount } = useMemo(() => {
+    let nextActiveCount = 0;
+    let nextQueueSize = 0;
+    let nextFailedCount = 0;
+    for (const job of jobs) {
+      if (job.state === "uploading") nextActiveCount += 1;
+      else if (job.state === "queued") nextQueueSize += 1;
+      else if (job.state === "failed") nextFailedCount += 1;
+    }
+    return {
+      activeCount: nextActiveCount,
+      queueSize: nextQueueSize,
+      failedCount: nextFailedCount,
+    };
+  }, [jobs]);
 
   return {
     startUpload,

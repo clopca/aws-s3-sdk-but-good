@@ -66,8 +66,9 @@
     "sqids": "^0.3.0"
   },
   "devDependencies": {
+    "@s3-good/eslint-config": "workspace:*",
     "@types/node": "^25.3.0",
-    "eslint": "^10.0.1",
+    "eslint": "^10.0.2",
     "hono": "^4.12.2",
     "tsup": "^8.0.0",
     "typescript": "^5.5.0",
@@ -91,7 +92,7 @@
     "access": "public"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.19.0"
   },
   "license": "MIT",
   "repository": {

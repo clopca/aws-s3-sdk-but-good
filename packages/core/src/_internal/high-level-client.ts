@@ -430,8 +430,6 @@ export function createS3GoodClient<TRouter extends FileRouter>(
           emit({ type: "upload.completed", jobId: job.id, endpoint: String(job.endpoint), attempt });
           syncPersistence();
           job.resolve(result);
-          active.delete(job.id);
-          runNext();
           return;
         } catch (error) {
           const abortReason = job.abortReason;

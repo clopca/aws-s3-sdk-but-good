@@ -35,12 +35,13 @@
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
+    "@s3-good/eslint-config": "workspace:*",
     "@tailwindcss/cli": "^4.1.17",
     "@testing-library/jest-dom": "^6.0.0",
     "@testing-library/react": "^16.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "eslint": "^10.0.1",
+    "eslint": "^10.0.2",
     "jsdom": "^28.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -57,7 +58,7 @@
     "access": "public"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.19.0"
   },
   "license": "MIT",
   "repository": {
