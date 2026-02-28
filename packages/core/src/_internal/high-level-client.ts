@@ -84,6 +84,29 @@ export interface UploadQueueSnapshot {
   activeCount: number;
 }
 
+interface PersistedUploadOptions {
+  files: File[];
+  input?: unknown;
+  headers?: HeadersInit;
+}
+
+interface PersistedUploadJob {
+  id: string;
+  endpoint: string;
+  state: "queued" | "paused";
+  attempts: number;
+  progress: number;
+  createdAt: number;
+  updatedAt: number;
+  options: PersistedUploadOptions;
+}
+
+interface PersistedQueueState {
+  version: 1;
+  idCounter: number;
+  jobs: PersistedUploadJob[];
+}
+
 interface QueueJob<
   TRouter extends FileRouter,
   TEndpoint extends inferEndpoints<TRouter>,
@@ -183,7 +206,7 @@ function hasIndexedDb(): boolean {
 
 async function persistQueueSnapshot(
   key: string,
-  snapshot: UploadQueueSnapshot,
+  snapshot: PersistedQueueState,
 ): Promise<void> {
   if (!hasIndexedDb()) return;
   await new Promise<void>((resolve) => {
@@ -208,6 +231,50 @@ async function persistQueueSnapshot(
   });
 }
 
+async function loadQueueSnapshot(
+  key: string,
+): Promise<PersistedQueueState | undefined> {
+  if (!hasIndexedDb()) return undefined;
+
+  return new Promise<PersistedQueueState | undefined>((resolve) => {
+    const open = indexedDB.open("s3-good-client", 1);
+    open.onupgradeneeded = () => {
+      open.result.createObjectStore("queue");
+    };
+    open.onerror = () => resolve(undefined);
+    open.onsuccess = () => {
+      const db = open.result;
+      const tx = db.transaction("queue", "readonly");
+      const request = tx.objectStore("queue").get(key);
+      request.onerror = () => {
+        db.close();
+        resolve(undefined);
+      };
+      request.onsuccess = () => {
+        db.close();
+        resolve(request.result as PersistedQueueState | undefined);
+      };
+    };
+  });
+}
+
+function toSerializableHeaders(
+  headers: HeadersInit | (() => Promise<HeadersInit> | HeadersInit) | undefined,
+): HeadersInit | undefined {
+  if (!headers || typeof headers === "function") return undefined;
+  if (headers instanceof Headers) {
+    const out: Record<string, string> = {};
+    headers.forEach((value, key) => {
+      out[key] = value;
+    });
+    return out;
+  }
+  if (Array.isArray(headers)) {
+    return Object.fromEntries(headers);
+  }
+  return headers;
+}
+
 export function createS3GoodClient<TRouter extends FileRouter>(
   opts: CreateS3GoodClientOptions = {},
 ) {
@@ -220,6 +287,7 @@ export function createS3GoodClient<TRouter extends FileRouter>(
   const pending: Array<QueueJob<TRouter, inferEndpoints<TRouter>>> = [];
   const active = new Map<string, QueueJob<TRouter, inferEndpoints<TRouter>>>();
   const snapshots = new Map<string, UploadJobSnapshot>();
+  const persistedOptions = new Map<string, PersistedUploadOptions>();
   let idCounter = 0;
 
   const emit = (event: UploadLifecycleEvent) => {
@@ -231,9 +299,39 @@ export function createS3GoodClient<TRouter extends FileRouter>(
     activeCount: active.size,
   });
 
+  const resumePersistedState = (): PersistedQueueState => {
+    const jobs: PersistedUploadJob[] = [];
+    for (const [id, snapshot] of snapshots.entries()) {
+      if (
+        snapshot.state !== "queued" &&
+        snapshot.state !== "paused" &&
+        snapshot.state !== "uploading"
+      ) {
+        continue;
+      }
+      const options = persistedOptions.get(id);
+      if (!options) continue;
+      jobs.push({
+        id,
+        endpoint: snapshot.endpoint,
+        state: snapshot.state === "paused" ? "paused" : "queued",
+        attempts: snapshot.attempts,
+        progress: snapshot.progress,
+        createdAt: snapshot.createdAt,
+        updatedAt: Date.now(),
+        options,
+      });
+    }
+    return {
+      version: 1,
+      idCounter,
+      jobs,
+    };
+  };
+
   const syncPersistence = () => {
     if (!resumeEnabled) return;
-    void persistQueueSnapshot(storageKey, queueSnapshot());
+    void persistQueueSnapshot(storageKey, resumePersistedState());
   };
 
   const runNext = () => {
@@ -287,6 +385,7 @@ export function createS3GoodClient<TRouter extends FileRouter>(
           job.snapshot.error = undefined;
           job.snapshot.updatedAt = Date.now();
           snapshots.set(job.id, { ...job.snapshot });
+          persistedOptions.delete(job.id);
           emit({ type: "upload.completed", jobId: job.id, endpoint: String(job.endpoint), attempt });
           syncPersistence();
           job.resolve(result);
@@ -312,6 +411,7 @@ export function createS3GoodClient<TRouter extends FileRouter>(
             job.snapshot.state = "canceled";
             job.snapshot.updatedAt = Date.now();
             snapshots.set(job.id, { ...job.snapshot });
+            persistedOptions.delete(job.id);
             emit({
               type: "upload.canceled",
               jobId: job.id,
@@ -337,6 +437,7 @@ export function createS3GoodClient<TRouter extends FileRouter>(
       job.snapshot.error = normalized;
       job.snapshot.updatedAt = Date.now();
       snapshots.set(job.id, { ...job.snapshot });
+      persistedOptions.delete(job.id);
       emit({
         type: isCanceled ? "upload.canceled" : "upload.failed",
         jobId: job.id,
@@ -392,6 +493,11 @@ export function createS3GoodClient<TRouter extends FileRouter>(
     };
 
     snapshots.set(id, snapshot);
+    persistedOptions.set(id, {
+      files: uploadOpts.files,
+      input: uploadOpts.input,
+      headers: toSerializableHeaders(uploadOpts.headers),
+    });
     pending.push(job as QueueJob<TRouter, inferEndpoints<TRouter>>);
     emit({ type: "upload.enqueued", jobId: id, endpoint: String(endpoint) });
     syncPersistence();
@@ -436,6 +542,7 @@ export function createS3GoodClient<TRouter extends FileRouter>(
       if (previousState === "queued" || previousState === "paused") {
         const idx = pending.findIndex((entry) => entry.id === id);
         if (idx >= 0) pending.splice(idx, 1);
+        persistedOptions.delete(id);
         emit({ type: "upload.canceled", jobId: id, endpoint: String(endpoint) });
         job.resolve(undefined);
       } else {
@@ -456,6 +563,61 @@ export function createS3GoodClient<TRouter extends FileRouter>(
       enqueueUpload,
       getQueueState: queueSnapshot,
       resumePending: async () => {
+        if (!resumeEnabled) {
+          runNext();
+          return;
+        }
+        const persisted = await loadQueueSnapshot(storageKey);
+        if (persisted?.version === 1) {
+          idCounter = Math.max(idCounter, persisted.idCounter);
+          for (const job of persisted.jobs) {
+            if (snapshots.has(job.id)) continue;
+
+            let resolve!: (value: UploadFileResponse[] | undefined) => void;
+            let reject!: (reason?: unknown) => void;
+            const result = new Promise<UploadFileResponse[] | undefined>((res, rej) => {
+              resolve = res;
+              reject = rej;
+            });
+            // Restored jobs are detached from the original caller promise.
+            void result.catch(() => undefined);
+
+            const snapshot: UploadJobSnapshot = {
+              id: job.id,
+              endpoint: job.endpoint,
+              state: job.state,
+              attempts: job.attempts,
+              progress: job.progress,
+              createdAt: job.createdAt,
+              updatedAt: Date.now(),
+            };
+
+            const queueJob: QueueJob<TRouter, inferEndpoints<TRouter>> = {
+              id: job.id,
+              endpoint: job.endpoint as inferEndpoints<TRouter>,
+              opts: {
+                files: job.options.files,
+                input: job.options.input as inferEndpointInput<
+                  TRouter,
+                  inferEndpoints<TRouter>
+                >,
+                headers: job.options.headers,
+              },
+              controller: new AbortController(),
+              snapshot,
+              abortReason: null,
+              resolve,
+              reject,
+            };
+
+            snapshots.set(job.id, snapshot);
+            persistedOptions.set(job.id, job.options);
+            if (job.state === "queued") {
+              pending.push(queueJob);
+            }
+          }
+          syncPersistence();
+        }
         runNext();
       },
     },

@@ -12,9 +12,72 @@ vi.mock("../_internal/client-factory", () => ({
   }),
 }));
 
+function createIndexedDbMock() {
+  const store = new Map<string, unknown>();
+  return {
+    open: vi.fn((_name: string, _version: number) => {
+      const request: {
+        result?: any;
+        onupgradeneeded?: () => void;
+        onsuccess?: () => void;
+        onerror?: () => void;
+      } = {};
+
+      queueMicrotask(() => {
+        const db = {
+          createObjectStore: (_storeName: string) => ({}),
+          transaction: (_storeName: string, _mode: "readonly" | "readwrite") => {
+            const tx: { oncomplete?: () => void; onerror?: () => void } = {};
+            const objectStore = {
+              put: (value: unknown, key: string) => {
+                store.set(key, value);
+              },
+              get: (key: string) => {
+                const getRequest: {
+                  result?: unknown;
+                  onsuccess?: () => void;
+                  onerror?: () => void;
+                } = {};
+                queueMicrotask(() => {
+                  getRequest.result = store.get(key);
+                  getRequest.onsuccess?.();
+                });
+                return getRequest;
+              },
+            };
+            queueMicrotask(() => tx.oncomplete?.());
+            return {
+              objectStore: () => objectStore,
+              get oncomplete() {
+                return tx.oncomplete;
+              },
+              set oncomplete(cb) {
+                tx.oncomplete = cb;
+              },
+              get onerror() {
+                return tx.onerror;
+              },
+              set onerror(cb) {
+                tx.onerror = cb;
+              },
+            };
+          },
+          close: () => undefined,
+        };
+        request.result = db;
+        request.onupgradeneeded?.();
+        request.onsuccess?.();
+      });
+
+      return request;
+    }),
+  };
+}
+
 describe("createS3GoodClient", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    delete (globalThis as Record<string, unknown>).indexedDB;
   });
 
   it("enqueues and uploads files with autoStart", async () => {
@@ -104,5 +167,34 @@ describe("createS3GoodClient", () => {
     await expect(handle.result).resolves.toBeUndefined();
     expect(mockUploadFiles).toHaveBeenCalledTimes(0);
     expect(client.uploads.getQueueState().jobs[0]?.state).toBe("canceled");
+  });
+
+  it("rehydrates queued jobs from indexedDB on resumePending", async () => {
+    (globalThis as Record<string, unknown>).indexedDB = createIndexedDbMock();
+
+    const storageKey = "test-resume";
+    const file = new File(["x"], "persisted.png", { type: "image/png" });
+
+    const producer = createS3GoodClient<any>({
+      queue: { autoStart: false },
+      resume: { enabled: true, storageKey },
+    });
+    producer.uploads.enqueueUpload("imageUploader", { files: [file] });
+    await Promise.resolve();
+
+    mockUploadFiles.mockResolvedValueOnce([
+      { key: "k", url: "u", name: "persisted.png", size: 1, type: "image/png", serverData: {} },
+    ]);
+    const consumer = createS3GoodClient<any>({
+      queue: { autoStart: false },
+      resume: { enabled: true, storageKey },
+      retry: { maxAttempts: 1 },
+    });
+
+    await consumer.uploads.resumePending();
+
+    expect(mockUploadFiles).toHaveBeenCalledTimes(1);
+    const state = consumer.uploads.getQueueState();
+    expect(state.jobs.some((job) => job.state === "completed")).toBe(true);
   });
 });
