@@ -135,6 +135,22 @@ export function useUpload<
     });
   }, []);
 
+  const scheduleQueueStateSync = useCallback(() => {
+    const queueState = clientRef.current?.uploads.getQueueState();
+    if (!queueState) return;
+    pendingQueueStateRef.current = queueState.jobs;
+    if (queueRafRef.current !== null) return;
+    queueRafRef.current = requestAnimationFrame(() => {
+      const nextJobs = pendingQueueStateRef.current ?? [];
+      setJobs((prev) => (areJobSnapshotsEqual(prev, nextJobs) ? prev : nextJobs));
+      setIsUploading((prev) => {
+        const next = nextJobs.some((job) => job.state === "uploading");
+        return prev === next ? prev : next;
+      });
+      queueRafRef.current = null;
+    });
+  }, []);
+
   const client = useMemo(
     () => {
       if (sharedClient) return sharedClient;
@@ -143,21 +159,6 @@ export function useUpload<
         queue: opts?.queue,
         retry: opts?.retry,
         resume: opts?.resume,
-        onEvent: () => {
-          const queueState = clientRef.current?.uploads.getQueueState();
-          if (!queueState) return;
-          pendingQueueStateRef.current = queueState.jobs;
-          if (queueRafRef.current !== null) return;
-          queueRafRef.current = requestAnimationFrame(() => {
-            const nextJobs = pendingQueueStateRef.current ?? [];
-            setJobs((prev) => (areJobSnapshotsEqual(prev, nextJobs) ? prev : nextJobs));
-            setIsUploading((prev) => {
-              const next = nextJobs.some((job) => job.state === "uploading");
-              return prev === next ? prev : next;
-            });
-            queueRafRef.current = null;
-          });
-        },
       });
     },
     // opts includes callback refs; only include config sections that affect client behavior.
@@ -176,6 +177,16 @@ export function useUpload<
   );
   const clientRef = useRef(client);
   clientRef.current = client;
+
+  useEffect(() => {
+    scheduleQueueStateSync();
+    const unsubscribe = client.events?.subscribe?.(() => {
+      scheduleQueueStateSync();
+    });
+    return () => {
+      unsubscribe?.();
+    };
+  }, [client, scheduleQueueStateSync]);
 
   // Fetch permitted file info from the server GET endpoint on mount
   useEffect(() => {

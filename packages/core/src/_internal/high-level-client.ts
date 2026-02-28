@@ -56,6 +56,7 @@ export interface CreateS3GoodClientOptions extends GenUploaderOptions {
   resume?: ResumeOptions;
   onEvent?: (event: UploadLifecycleEvent) => void;
 }
+type UploadEventListener = (event: UploadLifecycleEvent) => void;
 
 export interface EnqueueUploadOptions<
   TRouter extends FileRouter,
@@ -305,6 +306,7 @@ export function createS3GoodClient<TRouter extends FileRouter>(
   const jobs = new Map<string, QueueJob<TRouter, inferEndpoints<TRouter>>>();
   const snapshots = new Map<string, UploadJobSnapshot>();
   const persistedOptions = new Map<string, PersistedUploadOptions>();
+  const listeners = new Set<UploadEventListener>();
   let idCounter = 0;
   let lastPersistAt = 0;
   let persistTimer: ReturnType<typeof setTimeout> | null = null;
@@ -331,6 +333,13 @@ export function createS3GoodClient<TRouter extends FileRouter>(
       opts.onEvent?.(event);
     } catch {
       // Observer callbacks should not break upload control flow.
+    }
+    for (const listener of listeners) {
+      try {
+        listener(event);
+      } catch {
+        // Listener errors should not affect upload flow.
+      }
     }
   };
 
@@ -741,6 +750,10 @@ export function createS3GoodClient<TRouter extends FileRouter>(
     },
     events: {
       emit,
+      subscribe: (listener: UploadEventListener) => {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      },
     },
   };
 }
