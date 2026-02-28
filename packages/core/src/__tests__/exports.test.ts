@@ -45,6 +45,8 @@ describe("client exports", () => {
     // Assert
     expect(clientModule).toHaveProperty("genUploader");
     expect(typeof clientModule.genUploader).toBe("function");
+    expect(clientModule).toHaveProperty("createS3GoodClient");
+    expect(typeof clientModule.createS3GoodClient).toBe("function");
   });
 });
 
@@ -123,5 +125,6 @@ describe("client isolation", () => {
 
     // Client should only have client-specific exports
     expect(clientKeys).toContain("genUploader");
+    expect(clientKeys).toContain("createS3GoodClient");
   });
 });

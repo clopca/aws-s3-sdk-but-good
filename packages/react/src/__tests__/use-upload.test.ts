@@ -2,14 +2,22 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { UploadError } from "@s3-good/shared";
 
-// ─── Mock genUploader ───────────────────────────────────────────────────────
-
 const mockUploadFiles = vi.fn();
+const mockCreateUpload = vi.fn();
+const mockEnqueueUpload = vi.fn();
+const mockGetQueueState = vi.fn(() => ({ jobs: [], activeCount: 0 }));
+const mockResumePending = vi.fn();
 
 vi.mock("@s3-good/core/client", () => ({
-  genUploader: () => ({
-    uploadFiles: mockUploadFiles,
-    createUpload: vi.fn(),
+  genUploader: () => ({ uploadFiles: mockUploadFiles, createUpload: mockCreateUpload }),
+  createS3GoodClient: () => ({
+    uploads: {
+      uploadFiles: mockUploadFiles,
+      createUpload: mockCreateUpload,
+      enqueueUpload: mockEnqueueUpload,
+      getQueueState: mockGetQueueState,
+      resumePending: mockResumePending,
+    },
   }),
 }));
 
@@ -44,6 +52,14 @@ type TestRouter = {
 describe("useUpload", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockEnqueueUpload.mockImplementation((_endpoint, _opts) => ({
+      id: "job-default",
+      start: vi.fn(),
+      pause: vi.fn(),
+      resume: vi.fn(),
+      cancel: vi.fn(),
+      result: Promise.resolve([]),
+    }));
     mockFetch.mockResolvedValue({
       ok: false,
     });
@@ -62,13 +78,17 @@ describe("useUpload", () => {
   });
 
   it("test_startUpload_sets_isUploading", async () => {
-    // Make uploadFiles hang so we can observe isUploading=true
     let resolveUpload!: (value: any) => void;
-    mockUploadFiles.mockReturnValue(
-      new Promise((resolve) => {
+    mockEnqueueUpload.mockImplementation((_endpoint, _opts) => ({
+      id: "job-pending",
+      start: vi.fn(),
+      pause: vi.fn(),
+      resume: vi.fn(),
+      cancel: vi.fn(),
+      result: new Promise((resolve) => {
         resolveUpload = resolve;
       }),
-    );
+    }));
 
     const { result } = renderHook(() =>
       useUpload<TestRouter, "imageUploader">("imageUploader"),
@@ -87,7 +107,6 @@ describe("useUpload", () => {
       expect(result.current.isUploading).toBe(true);
     });
 
-    // Resolve the upload
     await act(async () => {
       resolveUpload([{ key: "abc.jpg", url: "https://example.com/abc.jpg", name: "photo.jpg", size: 5, type: "image/jpeg", serverData: {} }]);
       await uploadPromise;
@@ -97,8 +116,15 @@ describe("useUpload", () => {
   });
 
   it("test_abort_resets_state", async () => {
-    // Make uploadFiles hang
-    mockUploadFiles.mockReturnValue(new Promise(() => {}));
+    const cancel = vi.fn();
+    mockEnqueueUpload.mockImplementation((_endpoint, _opts) => ({
+      id: "job-abort",
+      start: vi.fn(),
+      pause: vi.fn(),
+      resume: vi.fn(),
+      cancel,
+      result: new Promise(() => {}),
+    }));
 
     const { result } = renderHook(() =>
       useUpload<TestRouter, "imageUploader">("imageUploader"),
@@ -118,13 +144,21 @@ describe("useUpload", () => {
       result.current.abort();
     });
 
+    expect(cancel).toHaveBeenCalledTimes(1);
     expect(result.current.isUploading).toBe(false);
     expect(result.current.progress).toBe(0);
   });
 
   it("test_cleanup_on_unmount", async () => {
-    // Make uploadFiles hang
-    mockUploadFiles.mockReturnValue(new Promise(() => {}));
+    const cancel = vi.fn();
+    mockEnqueueUpload.mockImplementation((_endpoint, _opts) => ({
+      id: "job-unmount",
+      start: vi.fn(),
+      pause: vi.fn(),
+      resume: vi.fn(),
+      cancel,
+      result: new Promise(() => {}),
+    }));
 
     const { result, unmount } = renderHook(() =>
       useUpload<TestRouter, "imageUploader">("imageUploader"),
@@ -140,8 +174,8 @@ describe("useUpload", () => {
       expect(result.current.isUploading).toBe(true);
     });
 
-    // Unmount should abort the controller (no error thrown)
     unmount();
+    expect(cancel).toHaveBeenCalledTimes(1);
   });
 
   it("test_onUploadError_called", async () => {
@@ -149,7 +183,14 @@ describe("useUpload", () => {
       code: "FILE_TOO_LARGE",
       message: "File exceeds limit",
     });
-    mockUploadFiles.mockRejectedValue(uploadError);
+    mockEnqueueUpload.mockImplementation((_endpoint, _opts) => ({
+      id: "job-error",
+      start: vi.fn(),
+      pause: vi.fn(),
+      resume: vi.fn(),
+      cancel: vi.fn(),
+      result: Promise.reject(uploadError),
+    }));
 
     const onUploadError = vi.fn();
 

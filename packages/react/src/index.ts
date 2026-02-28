@@ -1,5 +1,5 @@
 import type { FileRouter, inferEndpoints } from "@s3-good/core/types";
-import { genUploader } from "@s3-good/core/client";
+import { createS3GoodClient, genUploader } from "@s3-good/core/client";
 import { useUpload, type UseUploadProps } from "./use-upload";
 
 // ─── generateReactHelpers Options ───────────────────────────────────────────
@@ -33,6 +33,7 @@ export function generateReactHelpers<TRouter extends FileRouter>(
   opts?: GenerateReactHelpersOptions,
 ) {
   const url = opts?.url ?? "/api/upload";
+  const highLevel = createS3GoodClient<TRouter>({ url });
 
   // Create typed hook bound to the router
   function useUploadTyped<TEndpoint extends inferEndpoints<TRouter>>(
@@ -49,6 +50,9 @@ export function generateReactHelpers<TRouter extends FileRouter>(
     useUpload: useUploadTyped,
     uploadFiles,
     createUpload,
+    enqueueUpload: highLevel.uploads.enqueueUpload,
+    getQueueState: highLevel.uploads.getQueueState,
+    resumePending: highLevel.uploads.resumePending,
   } as const;
 }
 

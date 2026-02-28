@@ -8,6 +8,13 @@ vi.mock("@s3-good/core/client", () => ({
     createUpload: vi.fn(),
     _url: opts?.url ?? "/api/upload",
   }),
+  createS3GoodClient: () => ({
+    uploads: {
+      enqueueUpload: vi.fn(),
+      getQueueState: vi.fn(() => ({ jobs: [], activeCount: 0 })),
+      resumePending: vi.fn(),
+    },
+  }),
 }));
 
 // ─── Mock fetch (for permittedFileInfo in useUpload) ────────────────────────
@@ -41,9 +48,15 @@ describe("generateReactHelpers", () => {
     expect(helpers).toHaveProperty("useUpload");
     expect(helpers).toHaveProperty("uploadFiles");
     expect(helpers).toHaveProperty("createUpload");
+    expect(helpers).toHaveProperty("enqueueUpload");
+    expect(helpers).toHaveProperty("getQueueState");
+    expect(helpers).toHaveProperty("resumePending");
     expect(typeof helpers.useUpload).toBe("function");
     expect(typeof helpers.uploadFiles).toBe("function");
     expect(typeof helpers.createUpload).toBe("function");
+    expect(typeof helpers.enqueueUpload).toBe("function");
+    expect(typeof helpers.getQueueState).toBe("function");
+    expect(typeof helpers.resumePending).toBe("function");
   });
 
   it("test_custom_url_propagated", () => {
@@ -56,6 +69,9 @@ describe("generateReactHelpers", () => {
     expect(helpers).toHaveProperty("useUpload");
     expect(helpers).toHaveProperty("uploadFiles");
     expect(helpers).toHaveProperty("createUpload");
+    expect(helpers).toHaveProperty("enqueueUpload");
+    expect(helpers).toHaveProperty("getQueueState");
+    expect(helpers).toHaveProperty("resumePending");
   });
 
   it("test_direct_exports_available", async () => {

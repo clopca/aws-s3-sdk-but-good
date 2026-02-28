@@ -7,6 +7,11 @@
   "module": "./dist/server.js",
   "types": "./dist/server.d.ts",
   "exports": {
+    ".": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js",
+      "require": "./dist/server.cjs"
+    },
     "./server": {
       "types": "./dist/server.d.ts",
       "import": "./dist/server.js",
@@ -83,6 +88,9 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   },
   "license": "MIT",
   "repository": {

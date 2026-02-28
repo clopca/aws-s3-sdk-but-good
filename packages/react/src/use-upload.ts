@@ -7,7 +7,13 @@ import type {
 } from "@s3-good/core/types";
 import type { UploadFileResponse } from "@s3-good/shared";
 import { UploadError } from "@s3-good/shared";
-import { genUploader } from "@s3-good/core/client";
+import {
+  createS3GoodClient,
+  type UploadJobSnapshot,
+  type QueueOptions,
+  type RetryOptions,
+  type ResumeOptions,
+} from "@s3-good/core/client";
 
 // ─── Hook Types ─────────────────────────────────────────────────────────────
 
@@ -23,6 +29,9 @@ export interface UseUploadProps<
   ) => void;
   onUploadError?: (error: UploadError) => void;
   headers?: HeadersInit | (() => Promise<HeadersInit> | HeadersInit);
+  queue?: QueueOptions;
+  retry?: RetryOptions;
+  resume?: ResumeOptions;
 }
 
 export interface UseUploadReturn<
@@ -38,6 +47,18 @@ export interface UseUploadReturn<
   isUploading: boolean;
   progress: number;
   abort: () => void;
+  enqueue: (
+    files: File[],
+    input?: inferEndpointInput<TRouter, TEndpoint>,
+  ) => string;
+  pause: (jobId: string) => void;
+  resume: (jobId: string) => void;
+  cancel: (jobId: string) => void;
+  retry: (jobId: string) => void;
+  jobs: UploadJobSnapshot[];
+  activeCount: number;
+  queueSize: number;
+  failedCount: number;
   /** Permitted file info fetched from the server GET endpoint */
   permittedFileInfo: PermittedFileInfo | undefined;
 }
@@ -54,11 +75,18 @@ export function useUpload<
 ): UseUploadReturn<TRouter, TEndpoint> {
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [jobs, setJobs] = useState<UploadJobSnapshot[]>([]);
   const [permittedFileInfo, setPermittedFileInfo] = useState<
     PermittedFileInfo | undefined
   >(undefined);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const currentJobIdRef = useRef<string | null>(null);
   const uploadCountRef = useRef(0);
+  const lastArgsRef = useRef<
+    Record<string, { files: File[]; input?: inferEndpointInput<TRouter, TEndpoint> }>
+  >({});
+  const jobHandlesRef = useRef<
+    Record<string, { pause: () => void; resume: () => void; cancel: () => void }>
+  >({});
   const rafRef = useRef<number | null>(null);
   const url = uploaderOpts?.url ?? "/api/upload";
 
@@ -71,8 +99,25 @@ export function useUpload<
     });
   }, []);
 
-  // Memoize the uploader so it's not recreated on every startUpload call
-  const uploader = useMemo(() => genUploader<TRouter>({ url }), [url]);
+  const client = useMemo(
+    () =>
+      createS3GoodClient<TRouter>({
+        url,
+        queue: opts?.queue,
+        retry: opts?.retry,
+        resume: opts?.resume,
+        onEvent: () => {
+          const queueState = clientRef.current?.uploads.getQueueState();
+          if (!queueState) return;
+          setJobs(queueState.jobs);
+          setIsUploading(queueState.activeCount > 0);
+        },
+      }),
+    // opts includes callback refs; only include config sections that affect client behavior.
+    [url, opts?.queue, opts?.retry, opts?.resume],
+  );
+  const clientRef = useRef(client);
+  clientRef.current = client;
 
   // Fetch permitted file info from the server GET endpoint on mount
   useEffect(() => {
@@ -126,7 +171,9 @@ export function useUpload<
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      abortControllerRef.current?.abort();
+      if (currentJobIdRef.current) {
+        jobHandlesRef.current[currentJobIdRef.current]?.cancel();
+      }
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
   }, []);
@@ -136,30 +183,34 @@ export function useUpload<
       files: File[],
       input?: inferEndpointInput<TRouter, TEndpoint>,
     ) => {
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
       const currentUpload = ++uploadCountRef.current;
+      let handleId: string | undefined;
 
       setIsUploading(true);
       setProgress(0);
 
       try {
-        const { uploadFiles } = uploader;
-
-        const result = await uploadFiles(endpoint, {
+        const handle = client.uploads.enqueueUpload(endpoint, {
           files,
           input,
           headers: opts?.headers,
-          signal: controller.signal,
           onUploadBegin: opts?.onUploadBegin,
-          onUploadProgress: (e) => {
-            // Only update if this is still the current upload
+          onUploadProgress: (p) => {
             if (currentUpload === uploadCountRef.current) {
-              debouncedSetProgress(e.percentage);
-              opts?.onUploadProgress?.(e.percentage);
+              debouncedSetProgress(p);
+              opts?.onUploadProgress?.(p);
             }
           },
         });
+        jobHandlesRef.current[handle.id] = {
+          pause: handle.pause,
+          resume: handle.resume,
+          cancel: handle.cancel,
+        };
+        handleId = handle.id;
+        lastArgsRef.current[handleId] = { files, input };
+        currentJobIdRef.current = handleId;
+        const result = await handle.result;
 
         if (currentUpload === uploadCountRef.current) {
           setIsUploading(false);
@@ -181,16 +232,94 @@ export function useUpload<
           }
         }
         return undefined;
+      } finally {
+        if (handleId) {
+          delete jobHandlesRef.current[handleId];
+          if (currentJobIdRef.current === handleId) {
+            currentJobIdRef.current = null;
+          }
+        }
       }
     },
-    [endpoint, opts, uploader, debouncedSetProgress],
+    [endpoint, opts, client, debouncedSetProgress],
   );
 
   const abort = useCallback(() => {
-    abortControllerRef.current?.abort();
+    if (currentJobIdRef.current) {
+      jobHandlesRef.current[currentJobIdRef.current]?.cancel();
+    }
+    currentJobIdRef.current = null;
     setIsUploading(false);
     setProgress(0);
   }, []);
 
-  return { startUpload, isUploading, progress, abort, permittedFileInfo };
+  const enqueue = useCallback(
+    (files: File[], input?: inferEndpointInput<TRouter, TEndpoint>) => {
+      const handle = client.uploads.enqueueUpload(endpoint, {
+        files,
+        input,
+        headers: opts?.headers,
+        onUploadBegin: opts?.onUploadBegin,
+        onUploadProgress: (p) => opts?.onUploadProgress?.(p),
+      });
+      jobHandlesRef.current[handle.id] = {
+        pause: handle.pause,
+        resume: handle.resume,
+        cancel: handle.cancel,
+      };
+      lastArgsRef.current[handle.id] = { files, input };
+      void handle.result
+        .then((res) => {
+          if (res) {
+            opts?.onClientUploadComplete?.(
+              res as UploadFileResponse<TRouter[TEndpoint]["_output"]>[],
+            );
+          }
+        })
+        .catch((error) => {
+          if (error instanceof UploadError) opts?.onUploadError?.(error);
+        });
+      return handle.id;
+    },
+    [client, endpoint, opts],
+  );
+
+  const pause = useCallback((jobId: string) => {
+    jobHandlesRef.current[jobId]?.pause();
+  }, []);
+  const resume = useCallback((jobId: string) => {
+    jobHandlesRef.current[jobId]?.resume();
+  }, []);
+  const cancel = useCallback((jobId: string) => {
+    jobHandlesRef.current[jobId]?.cancel();
+  }, []);
+  const retry = useCallback(
+    (jobId: string) => {
+      const args = lastArgsRef.current[jobId];
+      if (!args) return;
+      enqueue(args.files, args.input);
+    },
+    [enqueue],
+  );
+
+  const activeCount = jobs.filter((job) => job.state === "uploading").length;
+  const queueSize = jobs.filter((job) => job.state === "queued").length;
+  const failedCount = jobs.filter((job) => job.state === "failed").length;
+
+  return {
+    startUpload,
+    isUploading,
+    progress,
+    abort,
+    enqueue,
+    pause,
+    resume,
+    cancel,
+    retry,
+    jobs,
+    activeCount,
+    queueSize,
+    failedCount,
+    permittedFileInfo,
+  };
 }
