@@ -26,6 +26,28 @@ const { uploadFiles, createUpload } = genUploader<OurFileRouter>({
 |--------|------|---------|-------------|
 | `url` | `string` | `"/api/upload"` | API endpoint URL |
 
+## createS3GoodClient
+
+For queue-managed uploads (pause/resume/cancel, retries, persisted resume), use the high-level client:
+
+```typescript
+import { createS3GoodClient } from "@s3-good/core/client";
+import type { OurFileRouter } from "~/server/upload-router";
+
+const client = createS3GoodClient<OurFileRouter>({
+  url: "/api/upload",
+  queue: { concurrency: 3, autoStart: true },
+  retry: { maxAttempts: 4, baseDelayMs: 300, maxDelayMs: 3000, jitter: true },
+  resume: { enabled: false }, // opt-in
+});
+
+const handle = client.uploads.enqueueUpload("imageUploader", { files: [file] });
+handle.pause();
+handle.resume();
+handle.cancel();
+await handle.result;
+```
+
 ## uploadFiles
 
 Upload files to a specific endpoint. Handles the full flow: presigned URL generation, S3 upload with progress tracking, and server completion notification.

@@ -9,7 +9,7 @@ Introduce a new high-level client API for browser uploads with queueing, retries
 
 ### Breaking changes
 
-- Set minimum supported Node.js version to `>=20.0.0` across packages.
+- Set minimum supported Node.js version to `>=20.19.0` across packages.
 - Add `@s3-good/core` root export (`@s3-good/core`) as the official server alias in addition to subpath exports.
 - `@s3-good/react` now builds on `createS3GoodClient` for upload orchestration and exposes queue helpers from `generateReactHelpers`.
 

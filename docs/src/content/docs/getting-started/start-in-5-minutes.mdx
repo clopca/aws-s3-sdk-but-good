@@ -1,0 +1,103 @@
+---
+title: Start in 5 Minutes
+description: Minimal setup to upload your first file in under 5 minutes.
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+This is the fastest path to a working upload flow with type-safe server and client wiring.
+
+<Aside type="tip">
+  Need full explanations? Use [Quick Start](/getting-started/quick-start/) for a deeper walkthrough.
+</Aside>
+
+<Steps>
+
+1. **Install**
+
+    ```bash
+    pnpm add @s3-good/core @s3-good/react zod
+    ```
+
+2. **Define your router**
+
+    ```ts title="src/server/upload-router.ts"
+    import { createUploader, type FileRouter } from "@s3-good/core/server";
+
+    const f = createUploader();
+
+    export const uploadRouter = {
+      imageUploader: f({ image: { maxFileSize: "4MB" } }).onUploadComplete(
+        async ({ file }) => ({ url: file.url }),
+      ),
+    } satisfies FileRouter;
+
+    export type OurFileRouter = typeof uploadRouter;
+    ```
+
+3. **Create API route (Next.js)**
+
+    ```ts title="src/app/api/upload/route.ts"
+    import { createRouteHandler } from "@s3-good/core/next";
+    import { uploadRouter } from "~/server/upload-router";
+
+    export const { GET, POST } = createRouteHandler({
+      router: uploadRouter,
+      config: {
+        region: process.env.AWS_REGION!,
+        bucket: process.env.AWS_BUCKET!,
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+      },
+    });
+    ```
+
+4. **Create client helpers**
+
+    ```ts title="src/lib/upload.ts"
+    import { generateReactHelpers } from "@s3-good/react";
+    import type { OurFileRouter } from "~/server/upload-router";
+
+    export const { useUpload } = generateReactHelpers<OurFileRouter>({
+      url: "/api/upload",
+    });
+    ```
+
+5. **Upload from UI**
+
+    ```tsx title="src/app/page.tsx"
+    "use client";
+
+    import { useUpload } from "~/lib/upload";
+
+    export default function Page() {
+      const { startUpload, isUploading, progress } = useUpload("imageUploader");
+
+      return (
+        <main>
+          <input
+            type="file"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              await startUpload([file]);
+            }}
+          />
+          {isUploading ? <p>Uploading... {progress}%</p> : null}
+        </main>
+      );
+    }
+    ```
+
+</Steps>
+
+## Verify it works
+
+1. Run `pnpm dev`
+2. Open your app
+3. Upload a file and confirm `onUploadComplete` runs on the server
+
+## Next steps
+
+- [Common Errors](/getting-started/common-errors/) for fast debugging
+- [Scenarios](/getting-started/scenarios/) for Next.js, Hono, and S3-compatible providers

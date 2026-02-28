@@ -174,6 +174,9 @@ function useUpload<TRouter, TEndpoint>(
 | `onClientUploadComplete` | `(res: UploadFileResponse[]) => void` | Called when all files finish |
 | `onUploadError` | `(error: UploadError) => void` | Called on failure |
 | `headers` | `HeadersInit \| (() => HeadersInit)` | Custom headers |
+| `queue` | `QueueOptions` | Queue behavior |
+| `retry` | `RetryOptions` | Retry behavior |
+| `resume` | `ResumeOptions` | Resume persistence (opt-in) |
 
 **Returns:** `UseUploadReturn`
 
@@ -183,6 +186,15 @@ function useUpload<TRouter, TEndpoint>(
 | `isUploading` | `boolean` | Upload in progress |
 | `progress` | `number` | Progress percentage (0-100) |
 | `abort` | `() => void` | Cancel current upload |
+| `enqueue` | `(files: File[], input?) => string` | Enqueue and return job id |
+| `pause` | `(jobId: string) => void` | Pause job |
+| `resume` | `(jobId: string) => void` | Resume job |
+| `cancel` | `(jobId: string) => void` | Cancel job |
+| `retry` | `(jobId: string) => void` | Retry failed job (new job id) |
+| `jobs` | `UploadJobSnapshot[]` | Queue snapshots |
+| `activeCount` | `number` | Active uploads |
+| `queueSize` | `number` | Queued jobs |
+| `failedCount` | `number` | Failed jobs |
 | `permittedFileInfo` | `PermittedFileInfo \| undefined` | Route config from server |
 
 See [React Hooks docs](/client/hooks/) for full documentation.
@@ -204,6 +216,9 @@ function generateReactHelpers<TRouter extends FileRouter>(
   useUpload: TypedUseUpload<TRouter>;
   uploadFiles: TypedUploadFiles<TRouter>;
   createUpload: TypedCreateUpload<TRouter>;
+  enqueueUpload: TypedEnqueueUpload<TRouter>;
+  getQueueState: () => UploadQueueSnapshot;
+  resumePending: () => Promise<void>;
 }
 
 interface GenerateReactHelpersOptions {

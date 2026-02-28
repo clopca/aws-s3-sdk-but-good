@@ -15,7 +15,14 @@ The recommended way to use hooks is through the `generateReactHelpers` factory, 
 import { generateReactHelpers } from "@s3-good/react";
 import type { OurFileRouter } from "~/server/upload-router";
 
-export const { useUpload, uploadFiles, createUpload } =
+export const {
+  useUpload,
+  uploadFiles,
+  createUpload,
+  enqueueUpload,
+  getQueueState,
+  resumePending,
+} =
   generateReactHelpers<OurFileRouter>({
     url: "/api/upload", // default
   });
@@ -34,6 +41,9 @@ export const { useUpload, uploadFiles, createUpload } =
 | `useUpload` | Hook | React hook for uploads with state management |
 | `uploadFiles` | Function | Imperative upload function (same as `genUploader`) |
 | `createUpload` | Function | Creates a controllable upload handle |
+| `enqueueUpload` | Function | Enqueue uploads with pause/resume/cancel handle |
+| `getQueueState` | Function | Read queue snapshot (`jobs`, `activeCount`) |
+| `resumePending` | Function | Rehydrate persisted jobs (when `resume.enabled` is `true`) |
 
 <Aside>
   For Next.js apps, you can also use `generateNextHelpers` from `@s3-good/core/next-client` which is a convenience wrapper with `/api/upload` as the default URL.
@@ -105,6 +115,11 @@ useUpload(endpoint, options?)
 | `onUploadProgress` | `(progress: number) => void` | Called with progress percentage (0-100) |
 | `onUploadBegin` | `(fileName: string) => void` | Called when each file starts uploading |
 | `headers` | `HeadersInit \| (() => HeadersInit)` | Custom headers for the API request |
+| `queue` | `QueueOptions` | Queue behavior (`concurrency`, `autoStart`) |
+| `retry` | `RetryOptions` | Retry policy (`maxAttempts`, delays, jitter) |
+| `resume` | `ResumeOptions` | Resume persistence config (`enabled`, `storageKey`) |
+
+`resume.enabled` is `false` by default (opt-in persistence).
 
 ### Return value
 
@@ -114,6 +129,15 @@ useUpload(endpoint, options?)
 | `isUploading` | `boolean` | Whether an upload is in progress |
 | `progress` | `number` | Upload progress percentage (0-100) |
 | `abort` | `() => void` | Cancel the current upload |
+| `enqueue` | `(files: File[], input?) => string` | Enqueue a job and return `jobId` |
+| `pause` | `(jobId: string) => void` | Pause queued/active job |
+| `resume` | `(jobId: string) => void` | Resume paused job |
+| `cancel` | `(jobId: string) => void` | Cancel job |
+| `retry` | `(jobId: string) => void` | Retry failed job (creates a new queued job) |
+| `jobs` | `UploadJobSnapshot[]` | Queue snapshots |
+| `activeCount` | `number` | Jobs currently uploading |
+| `queueSize` | `number` | Jobs waiting in queue |
+| `failedCount` | `number` | Jobs in failed state |
 | `permittedFileInfo` | `PermittedFileInfo \| undefined` | File type info fetched from the server |
 
 ### PermittedFileInfo

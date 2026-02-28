@@ -84,6 +84,12 @@ export const { useUpload, uploadFiles } =
   generateReactHelpers<OurFileRouter>({ url: "/api/upload" });
 ```
 
+`generateReactHelpers` also exposes queue helpers:
+
+- `enqueueUpload`
+- `getQueueState`
+- `resumePending`
+
 ### 5) Optional browser API + UI
 
 ```ts
@@ -118,8 +124,8 @@ export default function FilesPage() {
 
 ### Requirements
 
-- Node.js `>=18`
-- `pnpm@9`
+- Node.js `>=20.19.0`
+- `pnpm@10`
 
 ### Setup
 

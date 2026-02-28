@@ -25,7 +25,14 @@ import "@s3-good/react/styles.css";
 import { generateReactHelpers } from "@s3-good/react";
 import type { OurFileRouter } from "~/server/upload-router";
 
-export const { useUpload, uploadFiles, createUpload } =
+export const {
+  useUpload,
+  uploadFiles,
+  createUpload,
+  enqueueUpload,
+  getQueueState,
+  resumePending,
+} =
   generateReactHelpers<OurFileRouter>({
     url: "/api/upload", // default
   });
@@ -36,6 +43,7 @@ This gives:
 - endpoint autocomplete from your `FileRouter`
 - typed `input` values per endpoint
 - typed `serverData` in responses
+- queue helpers for imperative flows
 
 ## Components
 
@@ -114,7 +122,18 @@ Returns:
 - `isUploading`
 - `progress` (0-100)
 - `abort()`
+- `enqueue(files, input?)`
+- `pause(jobId)`, `resume(jobId)`, `cancel(jobId)`, `retry(jobId)`
+- `jobs`, `activeCount`, `queueSize`, `failedCount`
 - `permittedFileInfo`
+
+Queue and retry options are configurable via hook options:
+
+- `queue?: { concurrency?: number; autoStart?: boolean }`
+- `retry?: { maxAttempts?: number; baseDelayMs?: number; maxDelayMs?: number; jitter?: boolean }`
+- `resume?: { enabled?: boolean; storageKey?: string }` (`enabled` defaults to `false`)
+
+`retry(jobId)` enqueues a new job using the last known args for that failed job.
 
 ## Lower-level exports
 

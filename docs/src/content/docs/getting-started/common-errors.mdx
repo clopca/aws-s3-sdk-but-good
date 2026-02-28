@@ -1,0 +1,89 @@
+---
+title: Common Errors
+description: Fixes for the most common setup and runtime issues.
+---
+
+## Missing AWS credentials
+
+**Symptoms**
+- `Missing credentials in config`
+- `Resolved credential object is not valid`
+
+**Fix**
+- Ensure these env vars are set in your runtime:
+  - `AWS_REGION`
+  - `AWS_BUCKET`
+  - `AWS_ACCESS_KEY_ID`
+  - `AWS_SECRET_ACCESS_KEY`
+- Confirm they are available in server runtime (not only build-time).
+
+## S3 CORS blocks browser upload
+
+**Symptoms**
+- Browser preflight fails (`403` or CORS errors)
+- Upload starts but PUT to presigned URL is blocked
+
+**Fix**
+- Apply bucket CORS from [S3 Setup](/getting-started/s3-setup/).
+- Include your app origin (`http://localhost:3000` for local dev).
+- Allow methods used by uploads: `PUT`, `POST`, `GET`, `HEAD`.
+
+## Wrong route path in client helpers
+
+**Symptoms**
+- `404` on `/api/upload`
+- `Route not found` for endpoint
+
+**Fix**
+- Ensure `generateReactHelpers({ url })` or `genUploader({ url })` matches your API route path exactly.
+- Confirm `endpoint` names in client calls match router keys from server.
+
+## Next.js route handler not invoked
+
+**Symptoms**
+- `GET/POST` not called
+- Request handled by wrong route file
+
+**Fix**
+- Use App Router file path: `src/app/api/upload/route.ts`.
+- Export `{ GET, POST }` from `createRouteHandler(...)`.
+- Restart dev server after moving route files.
+
+## Hono adapter mismatch
+
+**Symptoms**
+- Type mismatch around context/request adapters
+- Runtime errors when forwarding `c` to handler
+
+**Fix**
+- Use `@s3-good/core/hono` and forward the same Hono context:
+  - `app.get("/api/upload", (c) => GET(c))`
+  - `app.post("/api/upload", (c) => POST(c))`
+
+## File rejected by route constraints
+
+**Symptoms**
+- Upload fails immediately
+- Validation messages for file type/size/count
+
+**Fix**
+- Check route constraints in `createUploader()` config.
+- Verify file MIME type and size match your route policy.
+- For multiple files, ensure `maxFileCount` is high enough.
+
+## Queue seems stuck in paused/failed state
+
+**Symptoms**
+- `useUpload` jobs stay paused or failed
+- No new network attempts
+
+**Fix**
+- Call `resume(jobId)` for paused jobs.
+- Call `retry(jobId)` for failed jobs.
+- If using persistence, enable `resume.enabled` and call `resumePending()`.
+
+## Where to go next
+
+- [Start in 5 Minutes](/getting-started/start-in-5-minutes/)
+- [Quick Start](/getting-started/quick-start/)
+- [Client Hooks](/client/hooks/)

@@ -7,7 +7,7 @@ import { Tabs, TabItem, Aside, Steps } from "@astrojs/starlight/components";
 
 ## Prerequisites
 
-- **Node.js** >= 18.0.0
+- **Node.js** >= 20.19.0
 - **React** >= 18.0.0 (only for `@s3-good/react` and `@s3-good/browser`)
 - An **AWS S3 bucket** — see the [S3 Setup guide](/getting-started/s3-setup/)
 
@@ -178,7 +178,7 @@ import {
 import { createRouteHandler } from "@s3-good/core/hono";
 
 // Client — programmatic upload functions
-import { genUploader } from "@s3-good/core/client";
+import { genUploader, createS3GoodClient } from "@s3-good/core/client";
 
 // SDK utilities — bucket setup and validation
 import { setupBucket, validateBucketCors, S3Api } from "@s3-good/core/sdk";
@@ -186,5 +186,8 @@ import { setupBucket, validateBucketCors, S3Api } from "@s3-good/core/sdk";
 
 ## Next steps
 
-- [Quick Start](/getting-started/quick-start/) — build a working upload in 5 minutes
+- [Start in 5 Minutes](/getting-started/start-in-5-minutes/) — fastest path to first upload
+- [Quick Start](/getting-started/quick-start/) — full framework walkthrough
+- [Common Errors](/getting-started/common-errors/) — quick fixes for setup/runtime issues
+- [Scenarios](/getting-started/scenarios/) — pick the best path for Next.js, Hono, or S3-compatible providers
 - [S3 Setup](/getting-started/s3-setup/) — configure your AWS S3 bucket
