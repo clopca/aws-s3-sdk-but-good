@@ -141,6 +141,7 @@ const DEFAULT_RETRY: Required<RetryOptions> = {
   maxDelayMs: 3000,
   jitter: true,
 };
+const MAX_TERMINAL_SNAPSHOTS = 200;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -308,6 +309,23 @@ export function createS3GoodClient<TRouter extends FileRouter>(
   let lastPersistAt = 0;
   let persistTimer: ReturnType<typeof setTimeout> | null = null;
 
+  const pruneSnapshots = () => {
+    const terminal = Array.from(snapshots.values())
+      .filter(
+        (snapshot) =>
+          snapshot.state === "completed" ||
+          snapshot.state === "canceled" ||
+          snapshot.state === "failed",
+      )
+      .sort((a, b) => a.updatedAt - b.updatedAt);
+    const overflow = terminal.length - MAX_TERMINAL_SNAPSHOTS;
+    if (overflow <= 0) return;
+    for (let i = 0; i < overflow; i += 1) {
+      const snapshot = terminal[i];
+      if (snapshot) snapshots.delete(snapshot.id);
+    }
+  };
+
   const emit = (event: UploadLifecycleEvent) => {
     try {
       opts.onEvent?.(event);
@@ -427,6 +445,7 @@ export function createS3GoodClient<TRouter extends FileRouter>(
           snapshots.set(job.id, { ...job.snapshot });
           persistedOptions.delete(job.id);
           jobs.delete(job.id);
+          pruneSnapshots();
           emit({ type: "upload.completed", jobId: job.id, endpoint: String(job.endpoint), attempt });
           syncPersistence();
           job.resolve(result);
@@ -452,6 +471,7 @@ export function createS3GoodClient<TRouter extends FileRouter>(
             snapshots.set(job.id, { ...job.snapshot });
             persistedOptions.delete(job.id);
             jobs.delete(job.id);
+            pruneSnapshots();
             emit({
               type: "upload.canceled",
               jobId: job.id,
@@ -479,6 +499,7 @@ export function createS3GoodClient<TRouter extends FileRouter>(
       snapshots.set(job.id, { ...job.snapshot });
       persistedOptions.delete(job.id);
       jobs.delete(job.id);
+      pruneSnapshots();
       emit({
         type: isCanceled ? "upload.canceled" : "upload.failed",
         jobId: job.id,
@@ -596,6 +617,7 @@ export function createS3GoodClient<TRouter extends FileRouter>(
         if (idx >= 0) pending.splice(idx, 1);
         persistedOptions.delete(id);
         jobs.delete(id);
+        pruneSnapshots();
         emit({ type: "upload.canceled", jobId: id, endpoint: String(endpoint) });
         job.resolve(undefined);
       } else {
@@ -640,6 +662,7 @@ export function createS3GoodClient<TRouter extends FileRouter>(
       if (idx >= 0) pending.splice(idx, 1);
       persistedOptions.delete(jobId);
       jobs.delete(jobId);
+      pruneSnapshots();
       emit({ type: "upload.canceled", jobId, endpoint: String(job.endpoint) });
       job.resolve(undefined);
     } else {

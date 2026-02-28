@@ -63,6 +63,31 @@ export interface UseUploadReturn<
   permittedFileInfo: PermittedFileInfo | undefined;
 }
 
+type HighLevelClient<TRouter extends FileRouter> = ReturnType<
+  typeof createS3GoodClient<TRouter>
+>;
+
+function areJobSnapshotsEqual(
+  prev: UploadJobSnapshot[],
+  next: UploadJobSnapshot[],
+): boolean {
+  if (prev.length !== next.length) return false;
+  for (let i = 0; i < prev.length; i += 1) {
+    const a = prev[i];
+    const b = next[i];
+    if (!a || !b) return false;
+    if (
+      a.id !== b.id ||
+      a.state !== b.state ||
+      a.progress !== b.progress ||
+      a.attempts !== b.attempts
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
 // ─── Hook Implementation ────────────────────────────────────────────────────
 
 export function useUpload<
@@ -71,7 +96,7 @@ export function useUpload<
 >(
   endpoint: TEndpoint,
   opts?: Omit<UseUploadProps<TRouter, TEndpoint>, "endpoint">,
-  uploaderOpts?: { url?: string },
+  uploaderOpts?: { url?: string; client?: HighLevelClient<TRouter> },
 ): UseUploadReturn<TRouter, TEndpoint> {
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -88,7 +113,10 @@ export function useUpload<
     Record<string, { pause: () => void; resume: () => void; cancel: () => void }>
   >({});
   const rafRef = useRef<number | null>(null);
+  const queueRafRef = useRef<number | null>(null);
+  const pendingQueueStateRef = useRef<UploadJobSnapshot[] | null>(null);
   const url = uploaderOpts?.url ?? "/api/upload";
+  const sharedClient = uploaderOpts?.client;
   const queueConcurrency = opts?.queue?.concurrency;
   const queueAutoStart = opts?.queue?.autoStart;
   const retryMaxAttempts = opts?.retry?.maxAttempts;
@@ -108,8 +136,9 @@ export function useUpload<
   }, []);
 
   const client = useMemo(
-    () =>
-      createS3GoodClient<TRouter>({
+    () => {
+      if (sharedClient) return sharedClient;
+      return createS3GoodClient<TRouter>({
         url,
         queue: opts?.queue,
         retry: opts?.retry,
@@ -117,10 +146,20 @@ export function useUpload<
         onEvent: () => {
           const queueState = clientRef.current?.uploads.getQueueState();
           if (!queueState) return;
-          setJobs(queueState.jobs);
-          setIsUploading(queueState.activeCount > 0);
+          pendingQueueStateRef.current = queueState.jobs;
+          if (queueRafRef.current !== null) return;
+          queueRafRef.current = requestAnimationFrame(() => {
+            const nextJobs = pendingQueueStateRef.current ?? [];
+            setJobs((prev) => (areJobSnapshotsEqual(prev, nextJobs) ? prev : nextJobs));
+            setIsUploading((prev) => {
+              const next = nextJobs.some((job) => job.state === "uploading");
+              return prev === next ? prev : next;
+            });
+            queueRafRef.current = null;
+          });
         },
-      }),
+      });
+    },
     // opts includes callback refs; only include config sections that affect client behavior.
     [
       url,
@@ -132,6 +171,7 @@ export function useUpload<
       retryJitter,
       resumeEnabled,
       resumeStorageKey,
+      sharedClient,
     ],
   );
   const clientRef = useRef(client);
@@ -196,6 +236,8 @@ export function useUpload<
       lastArgsRef.current = {};
       currentJobIdRef.current = null;
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      if (queueRafRef.current !== null) cancelAnimationFrame(queueRafRef.current);
+      pendingQueueStateRef.current = null;
     };
   }, []);
 

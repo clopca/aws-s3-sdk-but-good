@@ -40,7 +40,10 @@ export function generateReactHelpers<TRouter extends FileRouter>(
     endpoint: TEndpoint,
     hookOpts?: Omit<UseUploadProps<TRouter, TEndpoint>, "endpoint">,
   ) {
-    return useUpload<TRouter, TEndpoint>(endpoint, hookOpts, { url });
+    return useUpload<TRouter, TEndpoint>(endpoint, hookOpts, {
+      url,
+      client: highLevel,
+    });
   }
 
   // Create typed upload functions from genUploader
