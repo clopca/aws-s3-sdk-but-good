@@ -47,7 +47,7 @@ export interface ClientErrorShape {
   code: UploadErrorCode;
   message: string;
   status: number;
-  retryable: boolean;
+  retryable?: boolean;
   hint?: string;
   docsUrl?: string;
   causeCode?: string;
@@ -59,7 +59,7 @@ export interface ClientErrorShape {
 export class UploadError extends Error {
   public readonly code: UploadErrorCode;
   public readonly status: number;
-  public readonly retryable: boolean;
+  public readonly retryable?: boolean;
   public readonly hint?: string;
   public readonly docsUrl?: string;
   public readonly causeCode?: string;
@@ -77,7 +77,7 @@ export class UploadError extends Error {
     this.name = "UploadError";
     this.code = opts.code;
     this.status = opts.status ?? DEFAULT_STATUS_MAP[opts.code];
-    this.retryable = opts.retryable ?? false;
+    this.retryable = opts.retryable;
     this.hint = opts.hint;
     this.docsUrl = opts.docsUrl;
     this.causeCode = opts.causeCode;

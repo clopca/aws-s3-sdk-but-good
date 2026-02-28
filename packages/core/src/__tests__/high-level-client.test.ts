@@ -198,6 +198,70 @@ describe("createS3GoodClient", () => {
     expect(state.jobs.some((job) => job.state === "completed")).toBe(true);
   });
 
+  it("does not retry non-retryable upload failures", async () => {
+    mockUploadFiles.mockRejectedValueOnce(
+      new UploadError({
+        code: "UPLOAD_FAILED",
+        message: "permanent failure",
+        retryable: false,
+      }),
+    );
+
+    const client = createS3GoodClient<any>({
+      queue: { concurrency: 1, autoStart: true },
+      retry: { maxAttempts: 3, baseDelayMs: 0, maxDelayMs: 0, jitter: false },
+    });
+
+    const handle = client.uploads.enqueueUpload("imageUploader", {
+      files: [new File(["x"], "a.png", { type: "image/png" })],
+    });
+
+    await expect(handle.result).rejects.toBeInstanceOf(UploadError);
+    expect(mockUploadFiles).toHaveBeenCalledTimes(1);
+    expect(client.uploads.getQueueState().jobs[0]?.state).toBe("failed");
+  });
+
+  it("rehydrates paused jobs and allows resume by job id", async () => {
+    (globalThis as Record<string, unknown>).indexedDB = createIndexedDbMock();
+    const storageKey = "test-resume-paused";
+    const file = new File(["x"], "paused.png", { type: "image/png" });
+
+    mockUploadFiles.mockImplementationOnce((_endpoint, opts) => {
+      return new Promise((_resolve, reject) => {
+        opts.signal?.addEventListener("abort", () => {
+          reject(new DOMException("aborted", "AbortError"));
+        });
+      });
+    });
+    const producer = createS3GoodClient<any>({
+      queue: { autoStart: true },
+      retry: { maxAttempts: 1, baseDelayMs: 0, maxDelayMs: 0, jitter: false },
+      resume: { enabled: true, storageKey },
+    });
+    const h = producer.uploads.enqueueUpload("imageUploader", { files: [file] });
+    h.pause();
+    await Promise.resolve();
+
+    mockUploadFiles.mockResolvedValueOnce([
+      { key: "k", url: "u", name: "paused.png", size: 1, type: "image/png", serverData: {} },
+    ]);
+    const consumer = createS3GoodClient<any>({
+      queue: { autoStart: false },
+      retry: { maxAttempts: 1, baseDelayMs: 0, maxDelayMs: 0, jitter: false },
+      resume: { enabled: true, storageKey },
+    });
+
+    await consumer.uploads.resumePending();
+    const pausedJob = consumer.uploads
+      .getQueueState()
+      .jobs.find((job) => job.state === "paused");
+    expect(pausedJob).toBeDefined();
+    consumer.uploads.resumeJob(pausedJob!.id);
+    await Promise.resolve();
+
+    expect(mockUploadFiles).toHaveBeenCalledTimes(2);
+  });
+
   it("clamps invalid retry.maxAttempts and queue.concurrency values", async () => {
     mockUploadFiles.mockResolvedValue([
       { key: "k", url: "u", name: "a.png", size: 1, type: "image/png", serverData: {} },

@@ -301,12 +301,19 @@ export function createS3GoodClient<TRouter extends FileRouter>(
 
   const pending: Array<QueueJob<TRouter, inferEndpoints<TRouter>>> = [];
   const active = new Map<string, QueueJob<TRouter, inferEndpoints<TRouter>>>();
+  const jobs = new Map<string, QueueJob<TRouter, inferEndpoints<TRouter>>>();
   const snapshots = new Map<string, UploadJobSnapshot>();
   const persistedOptions = new Map<string, PersistedUploadOptions>();
   let idCounter = 0;
+  let lastPersistAt = 0;
+  let persistTimer: ReturnType<typeof setTimeout> | null = null;
 
   const emit = (event: UploadLifecycleEvent) => {
-    opts.onEvent?.(event);
+    try {
+      opts.onEvent?.(event);
+    } catch {
+      // Observer callbacks should not break upload control flow.
+    }
   };
 
   const queueSnapshot = (): UploadQueueSnapshot => ({
@@ -344,9 +351,27 @@ export function createS3GoodClient<TRouter extends FileRouter>(
     };
   };
 
-  const syncPersistence = () => {
+  const syncPersistence = (force = true) => {
     if (!resumeEnabled) return;
-    void persistQueueSnapshot(storageKey, resumePersistedState());
+    const persistNow = () => {
+      lastPersistAt = Date.now();
+      if (persistTimer) {
+        clearTimeout(persistTimer);
+        persistTimer = null;
+      }
+      void persistQueueSnapshot(storageKey, resumePersistedState());
+    };
+    if (force) {
+      persistNow();
+      return;
+    }
+    const elapsed = Date.now() - lastPersistAt;
+    if (elapsed >= 500) {
+      persistNow();
+      return;
+    }
+    if (persistTimer) return;
+    persistTimer = setTimeout(persistNow, 500 - elapsed);
   };
 
   const runNext = () => {
@@ -391,7 +416,7 @@ export function createS3GoodClient<TRouter extends FileRouter>(
                 progress: progressEvent.percentage,
               });
               job.opts.onUploadProgress?.(progressEvent.percentage);
-              syncPersistence();
+              syncPersistence(false);
             },
           });
 
@@ -401,6 +426,7 @@ export function createS3GoodClient<TRouter extends FileRouter>(
           job.snapshot.updatedAt = Date.now();
           snapshots.set(job.id, { ...job.snapshot });
           persistedOptions.delete(job.id);
+          jobs.delete(job.id);
           emit({ type: "upload.completed", jobId: job.id, endpoint: String(job.endpoint), attempt });
           syncPersistence();
           job.resolve(result);
@@ -427,6 +453,7 @@ export function createS3GoodClient<TRouter extends FileRouter>(
             job.snapshot.updatedAt = Date.now();
             snapshots.set(job.id, { ...job.snapshot });
             persistedOptions.delete(job.id);
+            jobs.delete(job.id);
             emit({
               type: "upload.canceled",
               jobId: job.id,
@@ -453,6 +480,7 @@ export function createS3GoodClient<TRouter extends FileRouter>(
       job.snapshot.updatedAt = Date.now();
       snapshots.set(job.id, { ...job.snapshot });
       persistedOptions.delete(job.id);
+      jobs.delete(job.id);
       emit({
         type: isCanceled ? "upload.canceled" : "upload.failed",
         jobId: job.id,
@@ -507,12 +535,23 @@ export function createS3GoodClient<TRouter extends FileRouter>(
       reject,
     };
 
+    const canPersist = typeof uploadOpts.headers !== "function";
+    const serializableHeaders = toSerializableHeaders(uploadOpts.headers);
+    if (resumeEnabled && !canPersist) {
+      console.warn(
+        "[s3-good] resume persistence skipped for job with function-based headers",
+      );
+    }
+
     snapshots.set(id, snapshot);
-    persistedOptions.set(id, {
-      files: uploadOpts.files,
-      input: uploadOpts.input,
-      headers: toSerializableHeaders(uploadOpts.headers),
-    });
+    jobs.set(id, job as QueueJob<TRouter, inferEndpoints<TRouter>>);
+    if (canPersist) {
+      persistedOptions.set(id, {
+        files: uploadOpts.files,
+        input: uploadOpts.input,
+        headers: serializableHeaders,
+      });
+    }
     pending.push(job as QueueJob<TRouter, inferEndpoints<TRouter>>);
     emit({ type: "upload.enqueued", jobId: id, endpoint: String(endpoint) });
     syncPersistence();
@@ -558,6 +597,7 @@ export function createS3GoodClient<TRouter extends FileRouter>(
         const idx = pending.findIndex((entry) => entry.id === id);
         if (idx >= 0) pending.splice(idx, 1);
         persistedOptions.delete(id);
+        jobs.delete(id);
         emit({ type: "upload.canceled", jobId: id, endpoint: String(endpoint) });
         job.resolve(undefined);
       } else {
@@ -571,12 +611,53 @@ export function createS3GoodClient<TRouter extends FileRouter>(
     return { id, start, pause, resume, cancel, result };
   }
 
+  const resumeJob = (jobId: string) => {
+    const job = jobs.get(jobId);
+    if (!job || job.snapshot.state !== "paused") return;
+    const newController = new AbortController();
+    job.controller = newController;
+    job.abortReason = null;
+    job.snapshot.state = "queued";
+    job.snapshot.updatedAt = Date.now();
+    snapshots.set(jobId, { ...job.snapshot });
+    pending.push(job);
+    emit({ type: "upload.resumed", jobId, endpoint: String(job.endpoint) });
+    syncPersistence();
+    runNext();
+  };
+
+  const cancelJob = (jobId: string) => {
+    const job = jobs.get(jobId);
+    if (!job) return;
+    if (job.snapshot.state === "canceled" || job.snapshot.state === "completed") {
+      return;
+    }
+    const previousState = job.snapshot.state;
+    job.abortReason = "cancel";
+    job.snapshot.state = "canceled";
+    job.snapshot.updatedAt = Date.now();
+    snapshots.set(jobId, { ...job.snapshot });
+    if (previousState === "queued" || previousState === "paused") {
+      const idx = pending.findIndex((entry) => entry.id === jobId);
+      if (idx >= 0) pending.splice(idx, 1);
+      persistedOptions.delete(jobId);
+      jobs.delete(jobId);
+      emit({ type: "upload.canceled", jobId, endpoint: String(job.endpoint) });
+      job.resolve(undefined);
+    } else {
+      job.controller.abort();
+    }
+    syncPersistence();
+  };
+
   return {
     uploads: {
       uploadFiles: uploader.uploadFiles,
       createUpload: uploader.createUpload,
       enqueueUpload,
       getQueueState: queueSnapshot,
+      resumeJob,
+      cancelJob,
       resumePending: async () => {
         if (!resumeEnabled) {
           runNext();
@@ -627,6 +708,7 @@ export function createS3GoodClient<TRouter extends FileRouter>(
 
             snapshots.set(job.id, snapshot);
             persistedOptions.set(job.id, job.options);
+            jobs.set(job.id, queueJob);
             if (job.state === "queued") {
               pending.push(queueJob);
             }

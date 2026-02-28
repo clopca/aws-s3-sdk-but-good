@@ -284,13 +284,13 @@ export function useUpload<
               res as UploadFileResponse<TRouter[TEndpoint]["_output"]>[],
             );
           }
+          delete lastArgsRef.current[handle.id];
         })
         .catch((error) => {
           if (error instanceof UploadError) opts?.onUploadError?.(error);
         })
         .finally(() => {
           delete jobHandlesRef.current[handle.id];
-          delete lastArgsRef.current[handle.id];
         });
       return handle.id;
     },
