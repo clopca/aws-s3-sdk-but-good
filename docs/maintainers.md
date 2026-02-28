@@ -11,12 +11,14 @@ This runbook covers release flow and quality gates for maintainers.
 ## Required checks before merge
 
 ```bash
-pnpm build
-pnpm typecheck
-pnpm lint
-pnpm test
+pnpm ci:required
+pnpm release:verify
 pnpm size:check
 ```
+
+Quality gate policy:
+
+- Pull requests touching public package behavior should include a changeset.
 
 ## Making a release
 

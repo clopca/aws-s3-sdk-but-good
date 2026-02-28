@@ -4,8 +4,8 @@ Thanks for contributing to `s3-good`.
 
 ## Prerequisites
 
-- Node.js `>=18`
-- `pnpm@9`
+- Node.js `>=20.19.0`
+- `pnpm@10`
 - AWS test credentials only if you run E2E tests
 
 ## Setup
@@ -34,10 +34,8 @@ pnpm dev
 Run all checks:
 
 ```bash
-pnpm build
-pnpm typecheck
-pnpm lint
-pnpm test
+pnpm ci:required
+pnpm release:verify
 ```
 
 Run checks for one package:
