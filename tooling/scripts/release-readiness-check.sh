@@ -24,6 +24,7 @@ for tgz in "${PACK_DIR}"/*.tgz; do
   echo " -> ${name}"
 
   manifest="$(tar -xOf "${tgz}" package/package.json)"
+  tar_listing="$(tar -tf "${tgz}")"
 
   if echo "${manifest}" | grep -q "workspace:"; then
     echo "ERROR: ${name} contains unresolved workspace: dependency metadata"
@@ -31,13 +32,13 @@ for tgz in "${PACK_DIR}"/*.tgz; do
   fi
 
   for required_file in "package/package.json" "package/README.md"; do
-    if ! tar -tf "${tgz}" | grep -qx "${required_file}"; then
+    if ! printf '%s\n' "${tar_listing}" | grep -qx "${required_file}"; then
       echo "ERROR: ${name} is missing ${required_file}"
       exit 1
     fi
   done
 
-  if ! tar -tf "${tgz}" | grep -q "^package/dist/"; then
+  if ! printf '%s\n' "${tar_listing}" | grep -Eq "^(package/)?dist/"; then
     echo "ERROR: ${name} does not contain dist/ output"
     exit 1
   fi
