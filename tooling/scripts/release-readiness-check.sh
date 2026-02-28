@@ -37,7 +37,7 @@ for tgz in "${PACK_DIR}"/*.tgz; do
     fi
   done
 
-  if ! tar -tf "${tgz}" | grep -q "^package/dist\\($\\|/\\)"; then
+  if ! tar -tf "${tgz}" | grep -q "^package/dist/"; then
     echo "ERROR: ${name} does not contain dist/ output"
     exit 1
   fi
