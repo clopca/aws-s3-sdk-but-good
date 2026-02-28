@@ -1,0 +1,50 @@
+---
+title: Scenarios
+description: Pick the shortest working path for your stack and storage provider.
+---
+
+## Next.js App Router (recommended)
+
+Use this when your app is already on Next.js and you want typed uploads plus optional UI components.
+
+1. Define router with `createUploader` (`@s3-good/core/server`)
+2. Mount route with `createRouteHandler` (`@s3-good/core/next`)
+3. Use `generateReactHelpers` (`@s3-good/react`) in client code
+
+Docs:
+- [Start in 5 Minutes](/getting-started/start-in-5-minutes/)
+- [Quick Start](/getting-started/quick-start/)
+
+## Hono (API-first)
+
+Use this when you run Hono or another lightweight server and want programmatic uploads.
+
+1. Define router with `createUploader`
+2. Mount with Hono adapter (`@s3-good/core/hono`)
+3. Upload with `genUploader` or `createS3GoodClient` from `@s3-good/core/client`
+
+Docs:
+- [Server: Hono](/server/hono/)
+- [Client: Upload Files](/client/upload-files/)
+
+## Cloudflare R2 / MinIO / DigitalOcean Spaces
+
+Use this when you need S3-compatible object storage outside AWS S3.
+
+1. Keep the same SDK setup and route APIs
+2. Point configuration to provider-compatible region/endpoint/credentials
+3. Validate CORS + bucket policy before app integration
+
+Notes:
+- API compatibility is generally strong, but provider defaults differ.
+- Always validate presigned URL upload flow in your target environment.
+
+Docs:
+- [S3 Setup](/getting-started/s3-setup/)
+- [Common Errors](/getting-started/common-errors/)
+
+## Choose your client level
+
+- **Simple (`genUploader`)**: one-shot uploads with typed endpoint calls.
+- **Advanced (`createS3GoodClient`)**: queueing, pause/resume/cancel, retry policy, and event subscriptions.
+- **React (`useUpload`)**: wraps advanced client orchestration in hook state + helpers.

@@ -11,6 +11,7 @@ Complete API reference for the `@s3-good/core` package. This package provides th
 
 | Import path | Environment | Description |
 |-------------|-------------|-------------|
+| `@s3-good/core` | Server | Root alias of `@s3-good/core/server` |
 | `@s3-good/core/server` | Server | File router builder, route handler, middleware helpers |
 | `@s3-good/core/next` | Server | Next.js App Router adapter and browser/upload route handlers |
 | `@s3-good/core/next-client` | Client | Next.js helper factories for typed React helpers/components |
@@ -215,6 +216,39 @@ function genUploader<TRouter extends FileRouter>(
 
 interface GenUploaderOptions {
   url?: string;  // default: "/api/upload"
+}
+```
+
+### createS3GoodClient
+
+High-level client with queueing, retries, pause/resume/cancel and optional persisted resume.
+
+```typescript
+function createS3GoodClient<TRouter extends FileRouter>(
+  opts?: CreateS3GoodClientOptions,
+): {
+  uploads: {
+    uploadFiles: TypedUploadFiles;
+    createUpload: TypedCreateUpload;
+    enqueueUpload: TypedEnqueueUpload;
+    getQueueState: () => UploadQueueSnapshot;
+    pauseJob: (jobId: string) => void;
+    resumeJob: (jobId: string) => void;
+    cancelJob: (jobId: string) => void;
+    resumePending: () => Promise<void>;
+  };
+  events: {
+    emit: (event: UploadLifecycleEvent) => void;
+    subscribe: (listener: (event: UploadLifecycleEvent) => void) => () => void;
+  };
+}
+
+interface CreateS3GoodClientOptions {
+  url?: string;
+  queue?: QueueOptions;
+  retry?: RetryOptions;
+  resume?: ResumeOptions; // enabled defaults to false
+  onEvent?: (event: UploadLifecycleEvent) => void;
 }
 ```
 

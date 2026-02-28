@@ -12,8 +12,9 @@ pnpm add @s3-good/core zod
 
 | Import path | Use for |
 | --- | --- |
+| `@s3-good/core` | Server alias (same exports as `@s3-good/core/server`) |
 | `@s3-good/core/server` | Route builder, framework-agnostic handlers, browser route builder |
-| `@s3-good/core/client` | Typed upload client factory (`genUploader`) |
+| `@s3-good/core/client` | Typed upload client factory (`genUploader`) + high-level queue client (`createS3GoodClient`) |
 | `@s3-good/core/next` | Next.js server route handlers (`createRouteHandler`, `createBrowserRouteHandler`) |
 | `@s3-good/core/next-client` | Next.js client helper factories (`generateUploadButton`, `generateUploadDropzone`, `generateNextHelpers`) |
 | `@s3-good/core/hono` | Hono handlers |
@@ -106,6 +107,42 @@ await uploadFiles("imageUploader", {
   },
 });
 ```
+
+### `createS3GoodClient<TRouter>({...})`
+
+High-level browser upload client with queueing, retry policy, pause/resume/cancel, events, and optional persisted resume.
+
+```ts
+import { createS3GoodClient } from "@s3-good/core/client";
+import type { OurFileRouter } from "~/server/upload-router";
+
+const client = createS3GoodClient<OurFileRouter>({
+  url: "/api/upload",
+  queue: { concurrency: 3, autoStart: true },
+  retry: { maxAttempts: 4, baseDelayMs: 300, maxDelayMs: 3000, jitter: true },
+  resume: { enabled: false, storageKey: "my-upload-queue" }, // opt-in
+});
+
+const handle = client.uploads.enqueueUpload("imageUploader", {
+  files: [file],
+});
+
+handle.pause();
+handle.resume();
+handle.cancel();
+await handle.result;
+```
+
+Available queue helpers:
+
+- `uploads.enqueueUpload(...)`
+- `uploads.getQueueState()`
+- `uploads.pauseJob(jobId)`
+- `uploads.resumeJob(jobId)`
+- `uploads.cancelJob(jobId)`
+- `uploads.resumePending()`
+
+`events.subscribe(listener)` lets you observe lifecycle events.
 
 ## Next.js server adapter (`@s3-good/core/next`)
 

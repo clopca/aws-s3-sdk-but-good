@@ -6,8 +6,24 @@ export default function TextPreview({ url }: PreviewRendererProps) {
 
   useEffect(() => {
     let active = true;
+    const controller = new AbortController();
+    const fetchImpl = globalThis.fetch;
+    if (typeof fetchImpl !== "function") {
+      setContent("Text preview is unavailable in this environment");
+      return () => {
+        active = false;
+      };
+    }
 
-    void fetch(url)
+    const request = fetchImpl(url, { signal: controller.signal });
+    if (!request || typeof request.then !== "function") {
+      setContent("Text preview is unavailable in this environment");
+      return () => {
+        active = false;
+      };
+    }
+
+    void request
       .then((response) => response.text())
       .then((text) => {
         if (!active) return;
@@ -20,6 +36,7 @@ export default function TextPreview({ url }: PreviewRendererProps) {
 
     return () => {
       active = false;
+      controller.abort();
     };
   }, [url]);
 

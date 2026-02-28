@@ -8,6 +8,15 @@ vi.mock("@s3-good/core/client", () => ({
     createUpload: vi.fn(),
     _url: opts?.url ?? "/api/upload",
   }),
+  createS3GoodClient: () => ({
+    uploads: {
+      uploadFiles: vi.fn(),
+      createUpload: vi.fn(),
+      enqueueUpload: vi.fn(),
+      getQueueState: vi.fn(() => ({ jobs: [], activeCount: 0 })),
+      resumePending: vi.fn(),
+    },
+  }),
 }));
 
 vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }));
