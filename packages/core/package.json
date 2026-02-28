@@ -67,6 +67,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.3.0",
+    "eslint": "^10.0.1",
     "hono": "^4.12.2",
     "tsup": "^8.0.0",
     "typescript": "^5.5.0",
