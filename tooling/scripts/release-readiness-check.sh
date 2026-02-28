@@ -25,8 +25,8 @@ for tgz in "${PACK_DIR}"/*.tgz; do
 
   manifest="$(tar -xOf "${tgz}" package/package.json)"
 
-  if echo "${manifest}" | grep -q "workspace:\\*"; then
-    echo "ERROR: ${name} contains unresolved workspace:* dependency metadata"
+  if echo "${manifest}" | grep -q "workspace:"; then
+    echo "ERROR: ${name} contains unresolved workspace: dependency metadata"
     exit 1
   fi
 
