@@ -8,13 +8,24 @@
   "types": "./dist/server.d.ts",
   "typesVersions": {
     "*": {
-      "server": ["dist/server.d.ts"],
-      "client": ["dist/client.d.ts"],
-      "next": ["dist/next.d.ts"],
-      "next-client": ["dist/next-client.d.ts"],
-      "types": ["dist/types.d.ts"],
-      "hono": ["dist/hono.d.ts"],
-      "sdk": ["dist/sdk/index.d.ts"]
+      "server": [
+        "dist/server.d.ts"
+      ],
+      "client": [
+        "dist/client.d.ts"
+      ],
+      "next": [
+        "dist/next.d.ts"
+      ],
+      "types": [
+        "dist/types.d.ts"
+      ],
+      "hono": [
+        "dist/hono.d.ts"
+      ],
+      "sdk": [
+        "dist/sdk/index.d.ts"
+      ]
     }
   },
   "exports": {
@@ -37,11 +48,6 @@
       "types": "./dist/next.d.ts",
       "import": "./dist/next.js",
       "require": "./dist/next.cjs"
-    },
-    "./next-client": {
-      "types": "./dist/next-client.d.ts",
-      "import": "./dist/next-client.js",
-      "require": "./dist/next-client.cjs"
     },
     "./types": {
       "types": "./dist/types.d.ts",

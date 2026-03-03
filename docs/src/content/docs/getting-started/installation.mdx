@@ -18,41 +18,17 @@ Choose the packages that match your project:
 ### Next.js (with React components)
 
 <Tabs>
-  <TabItem label="pnpm">
-    ```bash
-    pnpm add s3-good @s3-good/react
-    ```
-  </TabItem>
-  <TabItem label="npm">
-    ```bash
-    npm install s3-good @s3-good/react
-    ```
-  </TabItem>
-  <TabItem label="yarn">
-    ```bash
-    yarn add s3-good @s3-good/react
-    ```
-  </TabItem>
+  <TabItem label="pnpm">```bash pnpm add s3-good @s3-good/react ```</TabItem>
+  <TabItem label="npm">```bash npm install s3-good @s3-good/react ```</TabItem>
+  <TabItem label="yarn">```bash yarn add s3-good @s3-good/react ```</TabItem>
 </Tabs>
 
 ### Hono / other server frameworks
 
 <Tabs>
-  <TabItem label="pnpm">
-    ```bash
-    pnpm add s3-good
-    ```
-  </TabItem>
-  <TabItem label="npm">
-    ```bash
-    npm install s3-good
-    ```
-  </TabItem>
-  <TabItem label="yarn">
-    ```bash
-    yarn add s3-good
-    ```
-  </TabItem>
+  <TabItem label="pnpm">```bash pnpm add s3-good ```</TabItem>
+  <TabItem label="npm">```bash npm install s3-good ```</TabItem>
+  <TabItem label="yarn">```bash yarn add s3-good ```</TabItem>
 </Tabs>
 
 ### S3 file browser
@@ -60,55 +36,32 @@ Choose the packages that match your project:
 To add the full-featured file browser component:
 
 <Tabs>
-  <TabItem label="pnpm">
-    ```bash
-    pnpm add @s3-good/browser
-    ```
-  </TabItem>
-  <TabItem label="npm">
-    ```bash
-    npm install @s3-good/browser
-    ```
-  </TabItem>
-  <TabItem label="yarn">
-    ```bash
-    yarn add @s3-good/browser
-    ```
-  </TabItem>
+  <TabItem label="pnpm">```bash pnpm add @s3-good/browser ```</TabItem>
+  <TabItem label="npm">```bash npm install @s3-good/browser ```</TabItem>
+  <TabItem label="yarn">```bash yarn add @s3-good/browser ```</TabItem>
 </Tabs>
 
 <Aside type="tip">
-  `s3-good` includes and re-exports the shared runtime contracts you need. You should not install internal packages directly.
+  `s3-good` includes and re-exports the shared runtime contracts you need. You
+  should not install internal packages directly.
 </Aside>
 
 ## Peer dependencies
 
-| Package | Peer dependency | Version |
-|---------|----------------|---------|
-| `s3-good` | `zod` | `>= 3.0.0` |
-| `@s3-good/react` | `react` | `>= 18.0.0` |
-| `@s3-good/react` | `react-dom` | `>= 18.0.0` |
-| `@s3-good/browser` | `react` | `>= 18.0.0` |
-| `@s3-good/browser` | `react-dom` | `>= 18.0.0` |
+| Package            | Peer dependency | Version     |
+| ------------------ | --------------- | ----------- |
+| `s3-good`          | `zod`           | `>= 3.0.0`  |
+| `@s3-good/react`   | `react`         | `>= 18.0.0` |
+| `@s3-good/react`   | `react-dom`     | `>= 18.0.0` |
+| `@s3-good/browser` | `react`         | `>= 18.0.0` |
+| `@s3-good/browser` | `react-dom`     | `>= 18.0.0` |
 
 If your project doesn't already include these, install them:
 
 <Tabs>
-  <TabItem label="pnpm">
-    ```bash
-    pnpm add zod react react-dom
-    ```
-  </TabItem>
-  <TabItem label="npm">
-    ```bash
-    npm install zod react react-dom
-    ```
-  </TabItem>
-  <TabItem label="yarn">
-    ```bash
-    yarn add zod react react-dom
-    ```
-  </TabItem>
+  <TabItem label="pnpm">```bash pnpm add zod react react-dom ```</TabItem>
+  <TabItem label="npm">```bash npm install zod react react-dom ```</TabItem>
+  <TabItem label="yarn">```bash yarn add zod react react-dom ```</TabItem>
 </Tabs>
 
 ## Environment variables
@@ -130,11 +83,11 @@ These values are passed to `createRouteHandler` on the server — see the [Quick
 
 ## Package overview
 
-| Package | Purpose | Environment |
-|---------|---------|-------------|
-| `s3-good` | File router, route handlers, upload client, S3 setup utilities | Server + Client |
-| `@s3-good/react` | `UploadButton`, `UploadDropzone`, `useUpload` hook, and more | Client (React) |
-| `@s3-good/browser` | `S3Browser` file manager, headless hooks, preview components | Client (React) |
+| Package            | Purpose                                                        | Environment     |
+| ------------------ | -------------------------------------------------------------- | --------------- |
+| `s3-good`          | File router, route handlers, upload client, S3 setup utilities | Server + Client |
+| `@s3-good/react`   | `UploadButton`, `UploadDropzone`, `useUpload` hook, and more   | Client (React)  |
+| `@s3-good/browser` | `S3Browser` file manager, headless hooks, preview components   | Client (React)  |
 
 ## Styles (`@s3-good/react` and `@s3-good/browser`)
 
@@ -166,12 +119,12 @@ import { createUploader, createRouteHandler } from "s3-good/server";
 // Next.js server route handlers
 import { createRouteHandler } from "s3-good/next";
 
-// Next.js client helper factories (async)
+// Next.js client helper factories
 import {
   generateUploadButton,
   generateUploadDropzone,
   generateNextHelpers,
-} from "s3-good/next-client";
+} from "@s3-good/react/next";
 
 // Hono — framework-specific route handler
 import { createRouteHandler } from "s3-good/hono";

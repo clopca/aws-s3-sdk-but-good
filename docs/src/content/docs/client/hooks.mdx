@@ -22,31 +22,32 @@ export const {
   enqueueUpload,
   getQueueState,
   resumePending,
-} =
-  generateReactHelpers<OurFileRouter>({
-    url: "/api/upload", // default
-  });
+} = generateReactHelpers<OurFileRouter>({
+  url: "/api/upload", // default
+});
 ```
 
 ### Options
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `url` | `string` | `"/api/upload"` | API endpoint URL |
+| Option | Type     | Default         | Description      |
+| ------ | -------- | --------------- | ---------------- |
+| `url`  | `string` | `"/api/upload"` | API endpoint URL |
 
 ### Returns
 
-| Export | Type | Description |
-|--------|------|-------------|
-| `useUpload` | Hook | React hook for uploads with state management |
-| `uploadFiles` | Function | Imperative upload function (same as `genUploader`) |
-| `createUpload` | Function | Creates a controllable upload handle |
-| `enqueueUpload` | Function | Enqueue uploads with pause/resume/cancel handle |
-| `getQueueState` | Function | Read queue snapshot (`jobs`, `activeCount`) |
+| Export          | Type     | Description                                                |
+| --------------- | -------- | ---------------------------------------------------------- |
+| `useUpload`     | Hook     | React hook for uploads with state management               |
+| `uploadFiles`   | Function | Imperative upload function (same as `genUploader`)         |
+| `createUpload`  | Function | Creates a controllable upload handle                       |
+| `enqueueUpload` | Function | Enqueue uploads with pause/resume/cancel handle            |
+| `getQueueState` | Function | Read queue snapshot (`jobs`, `activeCount`)                |
 | `resumePending` | Function | Rehydrate persisted jobs (when `resume.enabled` is `true`) |
 
 <Aside>
-  For Next.js apps, you can also use `generateNextHelpers` from `s3-good/next-client` which is a convenience wrapper with `/api/upload` as the default URL.
+  For Next.js apps, you can also use `generateNextHelpers` from
+  `@s3-good/react/next` which is a convenience re-export of
+  `generateReactHelpers` with `/api/upload` as the default URL.
 </Aside>
 
 ## useUpload
@@ -84,9 +85,7 @@ function CustomUploader() {
         disabled={isUploading}
       />
       {isUploading && <p>Uploading... {progress}%</p>}
-      {isUploading && (
-        <button onClick={abort}>Cancel</button>
-      )}
+      {isUploading && <button onClick={abort}>Cancel</button>}
       {permittedFileInfo && (
         <p>Allowed: {permittedFileInfo.fileTypes.join(", ")}</p>
       )}
@@ -101,44 +100,44 @@ function CustomUploader() {
 useUpload(endpoint, options?)
 ```
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `endpoint` | `string` | Route name from your file router (autocompleted) |
-| `options` | `UseUploadProps` | Optional callbacks and configuration |
+| Parameter  | Type             | Description                                      |
+| ---------- | ---------------- | ------------------------------------------------ |
+| `endpoint` | `string`         | Route name from your file router (autocompleted) |
+| `options`  | `UseUploadProps` | Optional callbacks and configuration             |
 
 ### Options
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `onClientUploadComplete` | `(res: UploadFileResponse[]) => void` | Called when all files finish uploading |
-| `onUploadError` | `(error: UploadError) => void` | Called when an upload fails |
-| `onUploadProgress` | `(progress: number) => void` | Called with progress percentage (0-100) |
-| `onUploadBegin` | `(fileName: string) => void` | Called when each file starts uploading |
-| `headers` | `HeadersInit \| (() => HeadersInit)` | Custom headers for the API request |
-| `queue` | `QueueOptions` | Queue behavior (`concurrency`, `autoStart`) |
-| `retry` | `RetryOptions` | Retry policy (`maxAttempts`, delays, jitter) |
-| `resume` | `ResumeOptions` | Resume persistence config (`enabled`, `storageKey`) |
+| Option                   | Type                                  | Description                                         |
+| ------------------------ | ------------------------------------- | --------------------------------------------------- |
+| `onClientUploadComplete` | `(res: UploadFileResponse[]) => void` | Called when all files finish uploading              |
+| `onUploadError`          | `(error: UploadError) => void`        | Called when an upload fails                         |
+| `onUploadProgress`       | `(progress: number) => void`          | Called with progress percentage (0-100)             |
+| `onUploadBegin`          | `(fileName: string) => void`          | Called when each file starts uploading              |
+| `headers`                | `HeadersInit \| (() => HeadersInit)`  | Custom headers for the API request                  |
+| `queue`                  | `QueueOptions`                        | Queue behavior (`concurrency`, `autoStart`)         |
+| `retry`                  | `RetryOptions`                        | Retry policy (`maxAttempts`, delays, jitter)        |
+| `resume`                 | `ResumeOptions`                       | Resume persistence config (`enabled`, `storageKey`) |
 
 `resume.enabled` is `false` by default (opt-in persistence).
 
 ### Return value
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `startUpload` | `(files: File[], input?) => Promise<UploadFileResponse[] \| undefined>` | Start uploading files |
-| `isUploading` | `boolean` | Whether an upload is in progress |
-| `progress` | `number` | Upload progress percentage (0-100) |
-| `abort` | `() => void` | Cancel the current upload |
-| `enqueue` | `(files: File[], input?) => string` | Enqueue a job and return `jobId` |
-| `pause` | `(jobId: string) => void` | Pause queued/active job |
-| `resume` | `(jobId: string) => void` | Resume paused job |
-| `cancel` | `(jobId: string) => void` | Cancel job |
-| `retry` | `(jobId: string) => void` | Retry failed job (creates a new queued job) |
-| `jobs` | `UploadJobSnapshot[]` | Queue snapshots |
-| `activeCount` | `number` | Jobs currently uploading |
-| `queueSize` | `number` | Jobs waiting in queue |
-| `failedCount` | `number` | Jobs in failed state |
-| `permittedFileInfo` | `PermittedFileInfo \| undefined` | File type info fetched from the server |
+| Property            | Type                                                                    | Description                                 |
+| ------------------- | ----------------------------------------------------------------------- | ------------------------------------------- |
+| `startUpload`       | `(files: File[], input?) => Promise<UploadFileResponse[] \| undefined>` | Start uploading files                       |
+| `isUploading`       | `boolean`                                                               | Whether an upload is in progress            |
+| `progress`          | `number`                                                                | Upload progress percentage (0-100)          |
+| `abort`             | `() => void`                                                            | Cancel the current upload                   |
+| `enqueue`           | `(files: File[], input?) => string`                                     | Enqueue a job and return `jobId`            |
+| `pause`             | `(jobId: string) => void`                                               | Pause queued/active job                     |
+| `resume`            | `(jobId: string) => void`                                               | Resume paused job                           |
+| `cancel`            | `(jobId: string) => void`                                               | Cancel job                                  |
+| `retry`             | `(jobId: string) => void`                                               | Retry failed job (creates a new queued job) |
+| `jobs`              | `UploadJobSnapshot[]`                                                   | Queue snapshots                             |
+| `activeCount`       | `number`                                                                | Jobs currently uploading                    |
+| `queueSize`         | `number`                                                                | Jobs waiting in queue                       |
+| `failedCount`       | `number`                                                                | Jobs in failed state                        |
+| `permittedFileInfo` | `PermittedFileInfo \| undefined`                                        | File type info fetched from the server      |
 
 ### PermittedFileInfo
 
@@ -146,11 +145,11 @@ The hook automatically fetches route configuration from the server on mount:
 
 ```typescript
 interface PermittedFileInfo {
-  slug: string;                    // Route name
-  config: ExpandedRouteConfig;     // Full route config
-  fileTypes: string[];             // e.g. ["image", "pdf"]
-  maxFileSize: string;             // e.g. "4MB"
-  maxFileCount: number;            // e.g. 10
+  slug: string; // Route name
+  config: ExpandedRouteConfig; // Full route config
+  fileTypes: string[]; // e.g. ["image", "pdf"]
+  maxFileSize: string; // e.g. "4MB"
+  maxFileCount: number; // e.g. 10
 }
 ```
 
@@ -175,9 +174,7 @@ Progress is debounced via `requestAnimationFrame` to avoid excessive re-renders 
 
 ```tsx
 function UploadWithProgress() {
-  const { startUpload, isUploading, progress } = useUpload(
-    "imageUploader",
-  );
+  const { startUpload, isUploading, progress } = useUpload("imageUploader");
 
   return (
     <div>
@@ -209,9 +206,7 @@ The `abort()` function cancels the in-progress upload and resets state:
 
 ```tsx
 function AbortableUpload() {
-  const { startUpload, isUploading, abort } = useUpload(
-    "imageUploader",
-  );
+  const { startUpload, isUploading, abort } = useUpload("imageUploader");
 
   return (
     <div>
@@ -223,15 +218,14 @@ function AbortableUpload() {
         }}
         disabled={isUploading}
       />
-      {isUploading && (
-        <button onClick={abort}>Cancel Upload</button>
-      )}
+      {isUploading && <button onClick={abort}>Cancel Upload</button>}
     </div>
   );
 }
 ```
 
 When aborted:
+
 - The XHR request to S3 is cancelled
 - `isUploading` resets to `false`
 - `progress` resets to `0`
@@ -249,7 +243,8 @@ const { startUpload } = useUpload("imageUploader");
 ```
 
 <Aside type="caution">
-  The direct import doesn't provide type safety on endpoint names or input types. Prefer `generateReactHelpers` for production use.
+  The direct import doesn't provide type safety on endpoint names or input
+  types. Prefer `generateReactHelpers` for production use.
 </Aside>
 
 ## Complete example
@@ -267,39 +262,34 @@ import type { FileItem } from "@s3-good/react";
 export function CustomUploader() {
   const [files, setFiles] = useState<FileItem[]>([]);
 
-  const { startUpload, isUploading, progress } = useUpload(
-    "imageUploader",
-    {
-      onUploadBegin: (fileName) => {
-        setFiles((prev) =>
-          prev.map((f) =>
-            f.name === fileName
-              ? { ...f, status: "uploading" as const }
-              : f,
-          ),
-        );
-      },
-      onClientUploadComplete: (res) => {
-        setFiles((prev) =>
-          prev.map((f) => ({
-            ...f,
-            status: "complete" as const,
-            progress: 100,
-            url: res.find((r) => r.name === f.name)?.url,
-          })),
-        );
-      },
-      onUploadError: (error) => {
-        setFiles((prev) =>
-          prev.map((f) =>
-            f.status === "uploading"
-              ? { ...f, status: "error" as const, error: error.message }
-              : f,
-          ),
-        );
-      },
+  const { startUpload, isUploading, progress } = useUpload("imageUploader", {
+    onUploadBegin: (fileName) => {
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.name === fileName ? { ...f, status: "uploading" as const } : f,
+        ),
+      );
     },
-  );
+    onClientUploadComplete: (res) => {
+      setFiles((prev) =>
+        prev.map((f) => ({
+          ...f,
+          status: "complete" as const,
+          progress: 100,
+          url: res.find((r) => r.name === f.name)?.url,
+        })),
+      );
+    },
+    onUploadError: (error) => {
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.status === "uploading"
+            ? { ...f, status: "error" as const, error: error.message }
+            : f,
+        ),
+      );
+    },
+  });
 
   const handleFiles = useCallback(
     (newFiles: File[]) => {

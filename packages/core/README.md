@@ -10,16 +10,16 @@ pnpm add s3-good zod
 
 ## Entry points
 
-| Import path | Use for |
-| --- | --- |
-| `s3-good` | Server alias (same exports as `s3-good/server`) |
-| `s3-good/server` | Route builder, framework-agnostic handlers, browser route builder |
-| `s3-good/client` | Typed upload client factory (`genUploader`) + high-level queue client (`createS3GoodClient`) |
-| `s3-good/next` | Next.js server route handlers (`createRouteHandler`, `createBrowserRouteHandler`) |
-| `s3-good/next-client` | Next.js client helper factories (`generateUploadButton`, `generateUploadDropzone`, `generateNextHelpers`) |
-| `s3-good/hono` | Hono handlers |
-| `s3-good/sdk` | Bucket setup, CORS validation |
-| `s3-good/types` | Public type exports |
+| Import path           | Use for                                                                                                                                       |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `s3-good`             | Server alias (same exports as `s3-good/server`)                                                                                               |
+| `s3-good/server`      | Route builder, framework-agnostic handlers, browser route builder                                                                             |
+| `s3-good/client`      | Typed upload client factory (`genUploader`) + high-level queue client (`createS3GoodClient`)                                                  |
+| `s3-good/next`        | Next.js server route handlers (`createRouteHandler`, `createBrowserRouteHandler`)                                                             |
+| `@s3-good/react/next` | Next.js client helper factories (`generateUploadButton`, `generateUploadDropzone`, `generateNextHelpers`) — from the `@s3-good/react` package |
+| `s3-good/hono`        | Hono handlers                                                                                                                                 |
+| `s3-good/sdk`         | Bucket setup, CORS validation                                                                                                                 |
+| `s3-good/types`       | Public type exports                                                                                                                           |
 
 ## Server API (`s3-good/server`)
 
@@ -61,10 +61,7 @@ Framework-agnostic upload handler that returns `{ GET, POST }`.
 Build and expose a browser API route (list/move/copy/delete/presigned preview URL).
 
 ```ts
-import {
-  createBrowser,
-  createBrowserRouteHandler,
-} from "s3-good/server";
+import { createBrowser, createBrowserRouteHandler } from "s3-good/server";
 
 const browser = createBrowser()
   .buckets(["assets", "backups"])
@@ -180,9 +177,9 @@ export const { GET, POST } = createBrowserRouteHandler({
 });
 ```
 
-## Next.js client helpers (`s3-good/next-client`)
+## Next.js client helpers (`@s3-good/react/next`)
 
-These helpers are async and should be used in client-side modules.
+These helpers are now synchronous and come from the `@s3-good/react` package.
 
 ```ts
 "use client";
@@ -192,17 +189,13 @@ import {
   generateUploadButton,
   generateUploadDropzone,
   generateNextHelpers,
-} from "s3-good/next-client";
+} from "@s3-good/react/next";
 
-export async function createUploadUi() {
-  const UploadButton = await generateUploadButton<OurFileRouter>({
-    url: "/api/upload",
-  });
-  const UploadDropzone = await generateUploadDropzone<OurFileRouter>();
-  const helpers = await generateNextHelpers<OurFileRouter>();
-
-  return { UploadButton, UploadDropzone, ...helpers };
-}
+const UploadButton = generateUploadButton<OurFileRouter>({
+  url: "/api/upload",
+});
+const UploadDropzone = generateUploadDropzone<OurFileRouter>();
+const helpers = generateNextHelpers<OurFileRouter>();
 ```
 
 ## Hono adapter (`s3-good/hono`)
@@ -236,7 +229,8 @@ AWS_SECRET_ACCESS_KEY=...
 ## Notes
 
 - `s3-good/next` is server-only.
-- `s3-good/next-client` isolates client-side helper generation.
+- `generateUploadButton`, `generateUploadDropzone`, and `generateNextHelpers` have moved to `@s3-good/react/next`. They are now synchronous (no `await` needed).
+- `generateNextHelpers` is a re-export of `generateReactHelpers` from `@s3-good/react` with `/api/upload` as the default URL.
 - For custom frontends, prefer `genUploader` or `generateReactHelpers` from `@s3-good/react`.
 
 ## License

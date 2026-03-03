@@ -9,16 +9,16 @@ Complete API reference for the `s3-good` package. This package provides the serv
 
 ## Entry points
 
-| Import path | Environment | Description |
-|-------------|-------------|-------------|
-| `s3-good` | Server | Root alias of `s3-good/server` |
-| `s3-good/server` | Server | File router builder, route handler, middleware helpers |
-| `s3-good/next` | Server | Next.js App Router adapter and browser/upload route handlers |
-| `s3-good/next-client` | Client | Next.js helper factories for typed React helpers/components |
-| `s3-good/hono` | Server | Hono framework adapter |
-| `s3-good/client` | Browser | Client-side upload functions |
-| `s3-good/types` | Both | Type exports for inference utilities |
-| `s3-good/sdk` | Server | High-level S3 API class |
+| Import path           | Environment | Description                                                                         |
+| --------------------- | ----------- | ----------------------------------------------------------------------------------- |
+| `s3-good`             | Server      | Root alias of `s3-good/server`                                                      |
+| `s3-good/server`      | Server      | File router builder, route handler, middleware helpers                              |
+| `s3-good/next`        | Server      | Next.js App Router adapter and browser/upload route handlers                        |
+| `@s3-good/react/next` | Client      | Next.js helper factories for typed React helpers/components (from `@s3-good/react`) |
+| `s3-good/hono`        | Server      | Hono framework adapter                                                              |
+| `s3-good/client`      | Browser     | Client-side upload functions                                                        |
+| `s3-good/types`       | Both        | Type exports for inference utilities                                                |
+| `s3-good/sdk`         | Server      | High-level S3 API class                                                             |
 
 ---
 
@@ -31,13 +31,13 @@ Factory function that returns the `f()` builder for defining upload routes.
 ```typescript
 function createUploader(
   opts?: CreateUploaderOptions,
-): (config: ExpandedRouteConfig) => UploadBuilder
+): (config: ExpandedRouteConfig) => UploadBuilder;
 ```
 
 **Options:**
 
-| Option | Type | Description |
-|--------|------|-------------|
+| Option           | Type                        | Description                       |
+| ---------------- | --------------------------- | --------------------------------- |
 | `errorFormatter` | `(error: Error) => unknown` | Custom error formatter (optional) |
 
 **Returns:** The `f()` builder function.
@@ -48,7 +48,7 @@ import { createUploader } from "s3-good/server";
 const f = createUploader();
 
 const route = f({ image: { maxFileSize: "4MB" } })
-  .input(zodSchema)        // optional
+  .input(zodSchema) // optional
   .middleware(async ({ req, input }) => metadata)
   .onUploadComplete(async ({ metadata, file }) => serverData);
 ```
@@ -57,15 +57,16 @@ const route = f({ image: { maxFileSize: "4MB" } })
 
 Chainable builder returned by `f()`. Methods:
 
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `.input(schema)` | `(schema: ZodType) => UploadBuilder` | Attach Zod input validation |
-| `.middleware(fn)` | `(fn: MiddlewareFn) => UploadBuilder` | Attach auth/validation middleware |
-| `.onUploadError(fn)` | `(fn: UploadErrorFn) => UploadBuilder` | Attach error handler |
+| Method                  | Signature                               | Description                              |
+| ----------------------- | --------------------------------------- | ---------------------------------------- |
+| `.input(schema)`        | `(schema: ZodType) => UploadBuilder`    | Attach Zod input validation              |
+| `.middleware(fn)`       | `(fn: MiddlewareFn) => UploadBuilder`   | Attach auth/validation middleware        |
+| `.onUploadError(fn)`    | `(fn: UploadErrorFn) => UploadBuilder`  | Attach error handler                     |
 | `.onUploadComplete(fn)` | `(fn: OnUploadCompleteFn) => FileRoute` | **Terminal.** Define completion callback |
 
 <Aside>
-  `.input()` must be called before `.middleware()`. After `.middleware()`, only `.onUploadError()` and `.onUploadComplete()` are available.
+  `.input()` must be called before `.middleware()`. After `.middleware()`, only
+  `.onUploadError()` and `.onUploadComplete()` are available.
 </Aside>
 
 ### createRouteHandler
@@ -76,7 +77,7 @@ Creates framework-agnostic `{ GET, POST }` handlers.
 function createRouteHandler(opts: RouteHandlerOptions): {
   GET: (req: Request) => Promise<Response>;
   POST: (req: Request) => Promise<Response>;
-}
+};
 
 interface RouteHandlerOptions {
   router: FileRouter;
@@ -91,16 +92,16 @@ Creates an identity proxy for IDE "Go to Definition" support.
 ```typescript
 function createRouteRegistry<TRouter extends FileRouter>(
   router: TRouter,
-): { [K in keyof TRouter]: K }
+): { [K in keyof TRouter]: K };
 ```
 
 ### Middleware helpers
 
-| Function | Signature | Description |
-|----------|-----------|-------------|
-| `getCookie` | `(req: Request, name: string) => string \| undefined` | Extract a cookie value |
-| `getBearerToken` | `(req: Request) => string \| undefined` | Extract Bearer token from Authorization header |
-| `getHeader` | `(req: Request, name: string) => string \| undefined` | Extract any header value |
+| Function         | Signature                                             | Description                                    |
+| ---------------- | ----------------------------------------------------- | ---------------------------------------------- |
+| `getCookie`      | `(req: Request, name: string) => string \| undefined` | Extract a cookie value                         |
+| `getBearerToken` | `(req: Request) => string \| undefined`               | Extract Bearer token from Authorization header |
+| `getHeader`      | `(req: Request, name: string) => string \| undefined` | Extract any header value                       |
 
 ---
 
@@ -114,7 +115,7 @@ Creates Next.js App Router `{ GET, POST }` handlers with server environment vali
 function createRouteHandler(opts: NextRouteHandlerOptions): {
   GET: (req: Request) => Promise<Response>;
   POST: (req: Request) => Promise<Response>;
-}
+};
 
 interface NextRouteHandlerOptions {
   router: FileRouter;
@@ -127,12 +128,10 @@ interface NextRouteHandlerOptions {
 Creates Next.js App Router `{ GET, POST }` handlers for browser actions.
 
 ```typescript
-function createBrowserRouteHandler(
-  opts: NextBrowserRouteHandlerOptions,
-): {
+function createBrowserRouteHandler(opts: NextBrowserRouteHandlerOptions): {
   GET: (req: Request) => Promise<Response>;
   POST: (req: Request) => Promise<Response>;
-}
+};
 
 interface NextBrowserRouteHandlerOptions {
   browser: BrowserBuilder<unknown>;
@@ -142,16 +141,22 @@ interface NextBrowserRouteHandlerOptions {
 
 ---
 
-## s3-good/next-client
+## @s3-good/react/next
+
+<Aside>
+  These functions have moved from `s3-good/next-client` to `@s3-good/react/next`
+  (in the `@s3-good/react` package). They are now **synchronous** — no `await`
+  needed.
+</Aside>
 
 ### generateUploadButton
 
 Creates a pre-typed `UploadButton` helper component factory.
 
 ```typescript
-async function generateUploadButton<TRouter extends FileRouter>(
-  opts?: { url?: string },
-): Promise<(props: UploadButtonProps) => unknown>
+function generateUploadButton<TRouter extends FileRouter>(opts?: {
+  url?: string;
+}): (props: UploadButtonProps) => unknown;
 ```
 
 ### generateUploadDropzone
@@ -159,9 +164,33 @@ async function generateUploadButton<TRouter extends FileRouter>(
 Creates a pre-typed `UploadDropzone` helper component factory.
 
 ```typescript
-async function generateUploadDropzone<TRouter extends FileRouter>(
-  opts?: { url?: string },
-): Promise<(props: UploadDropzoneProps) => unknown>
+function generateUploadDropzone<TRouter extends FileRouter>(opts?: {
+  url?: string;
+}): (props: UploadDropzoneProps) => unknown;
+```
+
+### generateNextHelpers
+
+Creates typed React helpers with Next.js defaults (`/api/upload`). This is a re-export of `generateReactHelpers` from `@s3-good/react`.
+
+```typescript
+function generateNextHelpers<TRouter extends FileRouter>(opts?: {
+  url?: string;
+}): {
+  useUpload: TypedUseUpload;
+  uploadFiles: TypedUploadFiles;
+  createUpload: TypedCreateUpload;
+};
+```
+
+### generateUploadDropzone
+
+Creates a pre-typed `UploadDropzone` helper component factory.
+
+```typescript
+async function generateUploadDropzone<TRouter extends FileRouter>(opts?: {
+  url?: string;
+}): Promise<(props: UploadDropzoneProps) => unknown>;
 ```
 
 ### generateNextHelpers
@@ -169,13 +198,13 @@ async function generateUploadDropzone<TRouter extends FileRouter>(
 Creates typed React helpers with Next.js defaults (`/api/upload`).
 
 ```typescript
-async function generateNextHelpers<TRouter extends FileRouter>(
-  opts?: { url?: string },
-): Promise<{
+async function generateNextHelpers<TRouter extends FileRouter>(opts?: {
+  url?: string;
+}): Promise<{
   useUpload: TypedUseUpload;
   uploadFiles: TypedUploadFiles;
   createUpload: TypedCreateUpload;
-}>
+}>;
 ```
 
 ---
@@ -190,7 +219,7 @@ Creates Hono `{ GET, POST }` handlers that accept a Hono `Context`.
 function createRouteHandler(opts: HonoRouteHandlerOptions): {
   GET: (c: Context) => Promise<Response>;
   POST: (c: Context) => Promise<Response>;
-}
+};
 
 interface HonoRouteHandlerOptions {
   router: FileRouter;
@@ -212,10 +241,10 @@ function genUploader<TRouter extends FileRouter>(
 ): {
   uploadFiles: TypedUploadFiles;
   createUpload: TypedCreateUpload;
-}
+};
 
 interface GenUploaderOptions {
-  url?: string;  // default: "/api/upload"
+  url?: string; // default: "/api/upload"
 }
 ```
 
@@ -241,7 +270,7 @@ function createS3GoodClient<TRouter extends FileRouter>(
     emit: (event: UploadLifecycleEvent) => void;
     subscribe: (listener: (event: UploadLifecycleEvent) => void) => () => void;
   };
-}
+};
 
 interface CreateS3GoodClientOptions {
   url?: string;
@@ -267,7 +296,7 @@ async function uploadFiles<TEndpoint extends inferEndpoints<TRouter>>(
     headers?: HeadersInit | (() => Promise<HeadersInit> | HeadersInit);
     signal?: AbortSignal;
   },
-): Promise<UploadFileResponse[]>
+): Promise<UploadFileResponse[]>;
 ```
 
 ### createUpload
@@ -281,7 +310,7 @@ function createUpload<TEndpoint extends inferEndpoints<TRouter>>(
 ): {
   done: () => Promise<UploadFileResponse[]>;
   abort: () => void;
-}
+};
 ```
 
 ### UploadProgressEvent
@@ -302,58 +331,58 @@ Type-only exports for inference and shared types.
 
 ### Router types
 
-| Type | Description |
-|------|-------------|
-| `FileRouter` | `Record<string, FileRoute>` — the top-level router shape |
-| `FileRoute` | A finalized route definition |
-| `AnyParams` | Erased parameter interface for generic constraints |
-| `UnsetMarker` | Brand type for unset builder parameters |
+| Type          | Description                                              |
+| ------------- | -------------------------------------------------------- |
+| `FileRouter`  | `Record<string, FileRoute>` — the top-level router shape |
+| `FileRoute`   | A finalized route definition                             |
+| `AnyParams`   | Erased parameter interface for generic constraints       |
+| `UnsetMarker` | Brand type for unset builder parameters                  |
 
 ### Inference utilities
 
-| Type | Description |
-|------|-------------|
-| `inferEndpoints<TRouter>` | Extract endpoint names as string literal union |
-| `inferEndpointInput<TRouter, TEndpoint>` | Infer the input type for an endpoint |
-| `inferEndpointOutput<TRouter, TEndpoint>` | Infer the output type for an endpoint |
-| `inferServerData<TRoute>` | Extract server data type from a route |
-| `inferMetadata<TRoute>` | Extract metadata type from a route |
-| `PermittedFileInfo` | File type info fetched from the server |
+| Type                                      | Description                                    |
+| ----------------------------------------- | ---------------------------------------------- |
+| `inferEndpoints<TRouter>`                 | Extract endpoint names as string literal union |
+| `inferEndpointInput<TRouter, TEndpoint>`  | Infer the input type for an endpoint           |
+| `inferEndpointOutput<TRouter, TEndpoint>` | Infer the output type for an endpoint          |
+| `inferServerData<TRoute>`                 | Extract server data type from a route          |
+| `inferMetadata<TRoute>`                   | Extract metadata type from a route             |
+| `PermittedFileInfo`                       | File type info fetched from the server         |
 
 ### Shared types (re-exported from s3-good/types)
 
-| Type | Description |
-|------|-------------|
-| `S3Config` | S3 connection configuration |
-| `UploadedFile` | File info passed to `onUploadComplete` |
-| `UploadFileResponse<TServerData>` | Response from a successful upload |
-| `FileSize` | Template literal type: `"4MB"`, `"512KB"`, etc. |
-| `AllowedFileType` | `"image" \| "video" \| "audio" \| "pdf" \| "text" \| "blob"` |
-| `ExpandedRouteConfig` | `Partial<Record<AllowedFileType, FileRouteConfig>>` |
-| `FileRouteConfig` | Per-type config: `maxFileSize`, `maxFileCount`, etc. |
+| Type                              | Description                                                  |
+| --------------------------------- | ------------------------------------------------------------ |
+| `S3Config`                        | S3 connection configuration                                  |
+| `UploadedFile`                    | File info passed to `onUploadComplete`                       |
+| `UploadFileResponse<TServerData>` | Response from a successful upload                            |
+| `FileSize`                        | Template literal type: `"4MB"`, `"512KB"`, etc.              |
+| `AllowedFileType`                 | `"image" \| "video" \| "audio" \| "pdf" \| "text" \| "blob"` |
+| `ExpandedRouteConfig`             | `Partial<Record<AllowedFileType, FileRouteConfig>>`          |
+| `FileRouteConfig`                 | Per-type config: `maxFileSize`, `maxFileCount`, etc.         |
 
 ### Error classes (re-exported from s3-good/types)
 
-| Class | Description |
-|-------|-------------|
+| Class         | Description                                              |
+| ------------- | -------------------------------------------------------- |
 | `UploadError` | Structured upload error with `code`, `message`, `status` |
-| `S3Error` | Error from S3 operations with optional `originalError` |
+| `S3Error`     | Error from S3 operations with optional `originalError`   |
 
 ### UploadError codes
 
-| Code | Status | Description |
-|------|--------|-------------|
-| `ROUTE_NOT_FOUND` | 404 | Endpoint not found |
-| `INVALID_FILE_TYPE` | 400 | File type not allowed |
-| `FILE_TOO_LARGE` | 400 | File exceeds size limit |
-| `TOO_MANY_FILES` | 400 | Too many files |
-| `TOO_FEW_FILES` | 400 | Too few files |
-| `INPUT_VALIDATION_FAILED` | 400 | Zod validation failed |
-| `MIDDLEWARE_ERROR` | 500 | Middleware threw |
-| `S3_ERROR` | 502 | S3 operation failed |
-| `UPLOAD_EXPIRED` | 410 | Presigned URL expired |
-| `UPLOAD_FAILED` | 500 | Upload failed |
-| `INTERNAL_ERROR` | 500 | Unexpected error |
+| Code                      | Status | Description             |
+| ------------------------- | ------ | ----------------------- |
+| `ROUTE_NOT_FOUND`         | 404    | Endpoint not found      |
+| `INVALID_FILE_TYPE`       | 400    | File type not allowed   |
+| `FILE_TOO_LARGE`          | 400    | File exceeds size limit |
+| `TOO_MANY_FILES`          | 400    | Too many files          |
+| `TOO_FEW_FILES`           | 400    | Too few files           |
+| `INPUT_VALIDATION_FAILED` | 400    | Zod validation failed   |
+| `MIDDLEWARE_ERROR`        | 500    | Middleware threw        |
+| `S3_ERROR`                | 502    | S3 operation failed     |
+| `UPLOAD_EXPIRED`          | 410    | Presigned URL expired   |
+| `UPLOAD_FAILED`           | 500    | Upload failed           |
+| `INTERNAL_ERROR`          | 500    | Unexpected error        |
 
 ---
 
@@ -369,7 +398,9 @@ class S3Api {
 
   getFileUrl(key: string): string;
   getSignedUrl(key: string, expiresIn?: number): Promise<string>;
-  setupBucket(opts?: SetupOptions): Promise<{ cors: boolean; lifecycle: boolean }>;
+  setupBucket(
+    opts?: SetupOptions,
+  ): Promise<{ cors: boolean; lifecycle: boolean }>;
   validateCors(): Promise<{ isValid: boolean; issues: string[] }>;
 }
 ```
@@ -382,7 +413,7 @@ Configures the bucket for use with the upload SDK (CORS rules, lifecycle rules).
 function setupBucket(
   config: S3Config,
   opts?: SetupOptions,
-): Promise<{ cors: boolean; lifecycle: boolean }>
+): Promise<{ cors: boolean; lifecycle: boolean }>;
 ```
 
 ### validateBucketCors
@@ -392,7 +423,7 @@ Validates that the bucket has the required CORS configuration.
 ```typescript
 function validateBucketCors(
   config: S3Config,
-): Promise<{ isValid: boolean; issues: string[] }>
+): Promise<{ isValid: boolean; issues: string[] }>;
 ```
 
 ---
@@ -405,9 +436,9 @@ interface S3Config {
   bucket: string;
   accessKeyId: string;
   secretAccessKey: string;
-  endpoint?: string;        // Custom endpoint (MinIO, R2, etc.)
+  endpoint?: string; // Custom endpoint (MinIO, R2, etc.)
   forcePathStyle?: boolean; // Path-style addressing
-  baseUrl?: string;         // Base URL for public file URLs
+  baseUrl?: string; // Base URL for public file URLs
 }
 ```
 
@@ -415,11 +446,11 @@ interface S3Config {
 
 ```typescript
 interface UploadedFile {
-  key: string;   // S3 object key
-  url: string;   // Public URL
-  name: string;  // Original file name
-  size: number;  // Size in bytes
-  type: string;  // MIME type
+  key: string; // S3 object key
+  url: string; // Public URL
+  name: string; // Original file name
+  size: number; // Size in bytes
+  type: string; // MIME type
 }
 ```
 

@@ -48,8 +48,9 @@ Dependency direction is intentionally one-way:
 - `s3-good/next`
   - Server-only Next.js route handlers.
   - Must not import React UI modules.
-- `s3-good/next-client`
-  - Async client helper factories that lazily access `@s3-good/react`.
+- `@s3-good/react/next`
+  - Synchronous client helper factories (`generateUploadButton`, `generateUploadDropzone`, `generateNextHelpers`).
+  - Lives in the `@s3-good/react` package (moved from the former `s3-good/next-client` entry point).
 
 Why this exists:
 
@@ -95,14 +96,15 @@ Rationale:
 - Avoid duplicate model definitions across packages.
 - Keep core protocol and UI packages aligned.
 
-### ADR-002: Split `s3-good/next` and `s3-good/next-client`
+### ADR-002: Split `s3-good/next` and Next.js client helpers
 
-Status: accepted.
+Status: accepted (updated).
 
 Rationale:
 
 - Prevent client hooks/UI imports from contaminating server route bundles.
 - Make Next.js boundary behavior explicit and maintainable.
+- The client helpers (`generateUploadButton`, `generateUploadDropzone`, `generateNextHelpers`) have moved from `s3-good/next-client` to `@s3-good/react/next`, co-located with the React package they depend on. They are now synchronous (the former async wrappers existed only because of dynamic imports).
 
 ### ADR-003: Browser uses store + client + UI layering
 
