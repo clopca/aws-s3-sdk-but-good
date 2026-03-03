@@ -47,25 +47,23 @@ describe("generateUploadButton", () => {
     // Assert — factory returns a function (component)
     expect(typeof UploadButton).toBe("function");
 
-    // Verify it calls through to the react package when invoked
-    UploadButton({ endpoint: "imageUploader" } as never);
-    expect(mockUploadButton).toHaveBeenCalledWith(
-      expect.objectContaining({
-        endpoint: "imageUploader",
-        __internal: { url: "/api/upload" },
-      }),
-    );
+    const result = UploadButton({ endpoint: "imageUploader" } as never);
+    expect(result.type).toBe(mockUploadButton);
+    expect(result.props).toMatchObject({
+      endpoint: "imageUploader",
+      __internal: { url: "/api/upload" },
+    });
   });
 
   it("test_generateUploadButton_custom_url", () => {
     const UploadButton = generateUploadButton({ url: "/custom/upload" });
 
-    UploadButton({ endpoint: "imageUploader" } as never);
-    expect(mockUploadButton).toHaveBeenCalledWith(
-      expect.objectContaining({
-        __internal: { url: "/custom/upload" },
-      }),
-    );
+    const result = UploadButton({ endpoint: "imageUploader" } as never);
+    expect(result.type).toBe(mockUploadButton);
+    expect(result.props).toMatchObject({
+      endpoint: "imageUploader",
+      __internal: { url: "/custom/upload" },
+    });
   });
 });
 
@@ -81,14 +79,12 @@ describe("generateUploadDropzone", () => {
     // Assert — factory returns a function (component)
     expect(typeof UploadDropzone).toBe("function");
 
-    // Verify it calls through to the react package when invoked
-    UploadDropzone({ endpoint: "imageUploader" } as never);
-    expect(mockUploadDropzone).toHaveBeenCalledWith(
-      expect.objectContaining({
-        endpoint: "imageUploader",
-        __internal: { url: "/api/upload" },
-      }),
-    );
+    const result = UploadDropzone({ endpoint: "imageUploader" } as never);
+    expect(result.type).toBe(mockUploadDropzone);
+    expect(result.props).toMatchObject({
+      endpoint: "imageUploader",
+      __internal: { url: "/api/upload" },
+    });
   });
 });
 
