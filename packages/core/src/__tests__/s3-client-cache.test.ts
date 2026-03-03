@@ -22,7 +22,7 @@ vi.mock("@aws-sdk/client-s3", () => {
   };
 });
 
-import type { S3Config } from "@s3-good/shared";
+import type { S3Config } from "@s3-good-internal/shared";
 import { getS3Client, clearS3ClientCache } from "../_internal/s3";
 
 const DEFAULT_TTL_MS = 5 * 60 * 1000; // 5 minutes — mirrors source constant

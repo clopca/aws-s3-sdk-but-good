@@ -1,5 +1,5 @@
 /**
- * @s3-good/core/hono — Hono framework adapter
+ * s3-good/hono — Hono framework adapter
  *
  * Creates route handlers for Hono that bridge to the core upload handler.
  * Hono natively uses Web API Request/Response, making this the simplest
@@ -9,7 +9,7 @@
  */
 
 import type { FileRouter } from "./_internal/types";
-import type { S3Config } from "@s3-good/shared";
+import type { S3Config } from "@s3-good-internal/shared";
 import { handleUploadAction } from "./_internal/handler";
 import type { BrowserBuilder } from "./_internal/browser-builder";
 import { handleBrowserAction } from "./_internal/browser-handler";
@@ -46,7 +46,7 @@ export interface HonoBrowserRouteHandlerOptions {
  * ```ts
  * // src/routes/upload.ts
  * import { Hono } from "hono";
- * import { createRouteHandler } from "@s3-good/core/hono";
+ * import { createRouteHandler } from "s3-good/hono";
  * import { uploadRouter } from "../server/upload-router";
  *
  * const app = new Hono();

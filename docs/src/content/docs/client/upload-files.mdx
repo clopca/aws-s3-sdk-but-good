@@ -12,7 +12,7 @@ The client module provides framework-agnostic functions for uploading files from
 The `genUploader` factory creates typed upload functions bound to your file router:
 
 ```typescript
-import { genUploader } from "@s3-good/core/client";
+import { genUploader } from "s3-good/client";
 import type { OurFileRouter } from "~/server/upload-router";
 
 const { uploadFiles, createUpload } = genUploader<OurFileRouter>({
@@ -31,7 +31,7 @@ const { uploadFiles, createUpload } = genUploader<OurFileRouter>({
 For queue-managed uploads (pause/resume/cancel, retries, persisted resume), use the high-level client:
 
 ```typescript
-import { createS3GoodClient } from "@s3-good/core/client";
+import { createS3GoodClient } from "s3-good/client";
 import type { OurFileRouter } from "~/server/upload-router";
 
 const client = createS3GoodClient<OurFileRouter>({
@@ -158,7 +158,7 @@ Under the hood, `uploadFiles` performs these steps:
 Upload errors throw `UploadError` with a structured error code:
 
 ```typescript
-import { UploadError } from "@s3-good/shared";
+import { UploadError } from "s3-good/types";
 
 try {
   const result = await uploadFiles("imageUploader", { files });
@@ -249,7 +249,7 @@ A complete example without any framework:
 <div id="result"></div>
 
 <script type="module">
-  import { genUploader } from "@s3-good/core/client";
+  import { genUploader } from "s3-good/client";
 
   const { uploadFiles } = genUploader({ url: "/api/upload" });
   const input = document.getElementById("file-input");

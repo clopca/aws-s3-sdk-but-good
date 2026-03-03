@@ -1,28 +1,28 @@
 ---
-title: "@s3-good/core"
-description: API reference for the @s3-good/core package.
+title: "s3-good"
+description: API reference for the s3-good package.
 ---
 
 import { Aside } from "@astrojs/starlight/components";
 
-Complete API reference for the `@s3-good/core` package. This package provides the server-side file router, framework adapters, client upload functions, and type utilities.
+Complete API reference for the `s3-good` package. This package provides the server-side file router, framework adapters, client upload functions, and type utilities.
 
 ## Entry points
 
 | Import path | Environment | Description |
 |-------------|-------------|-------------|
-| `@s3-good/core` | Server | Root alias of `@s3-good/core/server` |
-| `@s3-good/core/server` | Server | File router builder, route handler, middleware helpers |
-| `@s3-good/core/next` | Server | Next.js App Router adapter and browser/upload route handlers |
-| `@s3-good/core/next-client` | Client | Next.js helper factories for typed React helpers/components |
-| `@s3-good/core/hono` | Server | Hono framework adapter |
-| `@s3-good/core/client` | Browser | Client-side upload functions |
-| `@s3-good/core/types` | Both | Type exports for inference utilities |
-| `@s3-good/core/sdk` | Server | High-level S3 API class |
+| `s3-good` | Server | Root alias of `s3-good/server` |
+| `s3-good/server` | Server | File router builder, route handler, middleware helpers |
+| `s3-good/next` | Server | Next.js App Router adapter and browser/upload route handlers |
+| `s3-good/next-client` | Client | Next.js helper factories for typed React helpers/components |
+| `s3-good/hono` | Server | Hono framework adapter |
+| `s3-good/client` | Browser | Client-side upload functions |
+| `s3-good/types` | Both | Type exports for inference utilities |
+| `s3-good/sdk` | Server | High-level S3 API class |
 
 ---
 
-## @s3-good/core/server
+## s3-good/server
 
 ### createUploader
 
@@ -43,7 +43,7 @@ function createUploader(
 **Returns:** The `f()` builder function.
 
 ```typescript
-import { createUploader } from "@s3-good/core/server";
+import { createUploader } from "s3-good/server";
 
 const f = createUploader();
 
@@ -104,7 +104,7 @@ function createRouteRegistry<TRouter extends FileRouter>(
 
 ---
 
-## @s3-good/core/next
+## s3-good/next
 
 ### createRouteHandler
 
@@ -142,7 +142,7 @@ interface NextBrowserRouteHandlerOptions {
 
 ---
 
-## @s3-good/core/next-client
+## s3-good/next-client
 
 ### generateUploadButton
 
@@ -180,7 +180,7 @@ async function generateNextHelpers<TRouter extends FileRouter>(
 
 ---
 
-## @s3-good/core/hono
+## s3-good/hono
 
 ### createRouteHandler
 
@@ -200,7 +200,7 @@ interface HonoRouteHandlerOptions {
 
 ---
 
-## @s3-good/core/client
+## s3-good/client
 
 ### genUploader
 
@@ -296,7 +296,7 @@ interface UploadProgressEvent {
 
 ---
 
-## @s3-good/core/types
+## s3-good/types
 
 Type-only exports for inference and shared types.
 
@@ -320,7 +320,7 @@ Type-only exports for inference and shared types.
 | `inferMetadata<TRoute>` | Extract metadata type from a route |
 | `PermittedFileInfo` | File type info fetched from the server |
 
-### Shared types (re-exported from @s3-good/shared)
+### Shared types (re-exported from s3-good/types)
 
 | Type | Description |
 |------|-------------|
@@ -332,7 +332,7 @@ Type-only exports for inference and shared types.
 | `ExpandedRouteConfig` | `Partial<Record<AllowedFileType, FileRouteConfig>>` |
 | `FileRouteConfig` | Per-type config: `maxFileSize`, `maxFileCount`, etc. |
 
-### Error classes (re-exported from @s3-good/shared)
+### Error classes (re-exported from s3-good/types)
 
 | Class | Description |
 |-------|-------------|
@@ -357,7 +357,7 @@ Type-only exports for inference and shared types.
 
 ---
 
-## @s3-good/core/sdk
+## s3-good/sdk
 
 ### S3Api
 

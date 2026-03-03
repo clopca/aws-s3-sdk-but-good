@@ -12,8 +12,8 @@ import {
   UploadPartCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { S3Error } from "@s3-good/shared";
-import type { S3Config } from "@s3-good/shared";
+import { S3Error } from "@s3-good-internal/shared";
+import type { S3Config } from "@s3-good-internal/shared";
 
 // ---------------------------------------------------------------------------
 // S3 Client Factory — lazy initialization with singleton caching per config

@@ -3,7 +3,7 @@ import type {
   inferEndpointInput,
   inferEndpoints,
 } from "./types";
-import { UploadError, type UploadFileResponse } from "@s3-good/shared";
+import { UploadError, type UploadFileResponse } from "@s3-good-internal/shared";
 import { genUploader, type GenUploaderOptions } from "./client-factory";
 
 export type UploadJobState =

@@ -1,4 +1,4 @@
-import { UploadError } from "@s3-good/shared";
+import { UploadError } from "@s3-good-internal/shared";
 
 /**
  * Convert an unknown error into a structured JSON `Response`.

@@ -31,6 +31,6 @@ export type {
   SortDirection,
   SortField,
   ViewMode,
-} from "@s3-good/shared";
+} from "@s3-good-internal/shared";
 
-export { UploadError, S3Error } from "@s3-good/shared";
+export { UploadError, S3Error } from "@s3-good-internal/shared";

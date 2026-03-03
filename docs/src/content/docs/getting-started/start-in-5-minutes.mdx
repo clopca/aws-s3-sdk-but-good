@@ -16,13 +16,13 @@ This is the fastest path to a working upload flow with type-safe server and clie
 1. **Install**
 
     ```bash
-    pnpm add @s3-good/core @s3-good/react zod
+    pnpm add s3-good @s3-good/react zod
     ```
 
 2. **Define your router**
 
     ```ts title="src/server/upload-router.ts"
-    import { createUploader, type FileRouter } from "@s3-good/core/server";
+    import { createUploader, type FileRouter } from "s3-good/server";
 
     const f = createUploader();
 
@@ -38,7 +38,7 @@ This is the fastest path to a working upload flow with type-safe server and clie
 3. **Create API route (Next.js)**
 
     ```ts title="src/app/api/upload/route.ts"
-    import { createRouteHandler } from "@s3-good/core/next";
+    import { createRouteHandler } from "s3-good/next";
     import { uploadRouter } from "~/server/upload-router";
 
     export const { GET, POST } = createRouteHandler({

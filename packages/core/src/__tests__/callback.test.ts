@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { UploadError } from "@s3-good/shared";
+import { UploadError } from "@s3-good-internal/shared";
 import type { FileRoute, AnyParams } from "../_internal/types";
 
 // ─── Hoisted mocks (available before vi.mock factory runs) ──────────────────

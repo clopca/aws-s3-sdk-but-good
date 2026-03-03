@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { UploadError } from "@s3-good/shared";
-import type { S3Config } from "@s3-good/shared";
+import { UploadError } from "@s3-good-internal/shared";
+import type { S3Config } from "@s3-good-internal/shared";
 
 // ─── Mock S3 operations ─────────────────────────────────────────────────────
 

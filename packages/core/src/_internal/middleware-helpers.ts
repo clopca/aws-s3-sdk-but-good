@@ -32,7 +32,7 @@
  * @example Custom JWT
  * ```typescript
  * import { verify } from "jsonwebtoken";
- * import { getBearerToken } from "@s3-good/core/server";
+ * import { getBearerToken } from "s3-good/server";
  *
  * .middleware(async ({ req }) => {
  *   const token = getBearerToken(req);
@@ -57,7 +57,7 @@
  *
  * @example
  * ```typescript
- * import { getCookie } from "@s3-good/core/server";
+ * import { getCookie } from "s3-good/server";
  *
  * .middleware(async ({ req }) => {
  *   const sessionToken = getCookie(req, "session-token");
@@ -85,7 +85,7 @@ export function getCookie(req: Request, name: string): string | undefined {
  *
  * @example
  * ```typescript
- * import { getBearerToken } from "@s3-good/core/server";
+ * import { getBearerToken } from "s3-good/server";
  *
  * .middleware(async ({ req }) => {
  *   const token = getBearerToken(req);
@@ -114,7 +114,7 @@ export function getBearerToken(req: Request): string | undefined {
  *
  * @example
  * ```typescript
- * import { getHeader } from "@s3-good/core/server";
+ * import { getHeader } from "s3-good/server";
  *
  * .middleware(async ({ req }) => {
  *   const apiKey = getHeader(req, "x-api-key");

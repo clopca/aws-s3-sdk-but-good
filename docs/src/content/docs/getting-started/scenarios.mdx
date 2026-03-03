@@ -7,8 +7,8 @@ description: Pick the shortest working path for your stack and storage provider.
 
 Use this when your app is already on Next.js and you want typed uploads plus optional UI components.
 
-1. Define router with `createUploader` (`@s3-good/core/server`)
-2. Mount route with `createRouteHandler` (`@s3-good/core/next`)
+1. Define router with `createUploader` (`s3-good/server`)
+2. Mount route with `createRouteHandler` (`s3-good/next`)
 3. Use `generateReactHelpers` (`@s3-good/react`) in client code
 
 Docs:
@@ -20,8 +20,8 @@ Docs:
 Use this when you run Hono or another lightweight server and want programmatic uploads.
 
 1. Define router with `createUploader`
-2. Mount with Hono adapter (`@s3-good/core/hono`)
-3. Upload with `genUploader` or `createS3GoodClient` from `@s3-good/core/client`
+2. Mount with Hono adapter (`s3-good/hono`)
+3. Upload with `genUploader` or `createS3GoodClient` from `s3-good/client`
 
 Docs:
 - [Server: Hono](/server/hono/)

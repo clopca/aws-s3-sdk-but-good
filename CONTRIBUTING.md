@@ -41,7 +41,7 @@ pnpm release:verify
 Run checks for one package:
 
 ```bash
-pnpm --filter @s3-good/core test
+pnpm --filter s3-good test
 pnpm --filter @s3-good/browser lint
 pnpm --filter @s3-good/react typecheck
 ```

@@ -8,7 +8,7 @@ export default defineConfig({
   dts: true,
   clean: true,
   treeshake: true,
-  external: ["react", "react-dom", "@s3-good/core"],
+  external: ["react", "react-dom", "s3-good"],
   onSuccess: async () => {
     // Rollup's treeshake pass strips the "use client" banner directive,
     // so we prepend it after the build completes.

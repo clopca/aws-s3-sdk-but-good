@@ -20,8 +20,8 @@ This guide walks you through building a working file upload from scratch. By the
     Create a file that defines which upload routes your app supports. Each route specifies allowed file types, size limits, middleware (for auth), and a completion callback.
 
     ```typescript title="src/server/upload-router.ts"
-    import { createUploader } from "@s3-good/core/server";
-    import type { FileRouter } from "@s3-good/core/server";
+    import { createUploader } from "s3-good/server";
+    import type { FileRouter } from "s3-good/server";
 
     const f = createUploader();
 
@@ -58,7 +58,7 @@ This guide walks you through building a working file upload from scratch. By the
     Wire the file router into a Next.js App Router API route. This handles presigned URL generation and upload completion.
 
     ```typescript title="src/app/api/upload/route.ts"
-    import { createRouteHandler } from "@s3-good/core/next";
+    import { createRouteHandler } from "s3-good/next";
     import { uploadRouter } from "~/server/upload-router";
 
     export const { GET, POST } = createRouteHandler({
@@ -135,8 +135,8 @@ This guide walks you through building a working file upload from scratch. By the
     The file router definition is the same regardless of framework:
 
     ```typescript title="src/server/upload-router.ts"
-    import { createUploader } from "@s3-good/core/server";
-    import type { FileRouter } from "@s3-good/core/server";
+    import { createUploader } from "s3-good/server";
+    import type { FileRouter } from "s3-good/server";
 
     const f = createUploader();
 
@@ -157,7 +157,7 @@ This guide walks you through building a working file upload from scratch. By the
 
     ```typescript title="src/index.ts"
     import { Hono } from "hono";
-    import { createRouteHandler } from "@s3-good/core/hono";
+    import { createRouteHandler } from "s3-good/hono";
     import { uploadRouter } from "./server/upload-router";
 
     const app = new Hono();
@@ -183,7 +183,7 @@ This guide walks you through building a working file upload from scratch. By the
     Without React, use the `genUploader` client to upload files from the browser:
 
     ```typescript title="src/client.ts"
-    import { genUploader } from "@s3-good/core/client";
+    import { genUploader } from "s3-good/client";
     import type { OurFileRouter } from "./server/upload-router";
 
     const { uploadFiles } = genUploader<OurFileRouter>({

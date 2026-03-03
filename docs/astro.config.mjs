@@ -65,7 +65,7 @@ export default defineConfig({
         {
           label: "API Reference",
           items: [
-            { label: "@s3-good/core", slug: "api/core" },
+            { label: "s3-good", slug: "api/s3-good" },
             { label: "@s3-good/react", slug: "api/react" },
             { label: "@s3-good/browser", slug: "api/browser" },
           ],

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { S3Config } from "@s3-good/shared";
+import type { S3Config } from "@s3-good-internal/shared";
 
 vi.mock("../_internal/s3", () => ({
   getFileUrl: vi.fn().mockReturnValue("https://cdn.example.com/a.txt"),

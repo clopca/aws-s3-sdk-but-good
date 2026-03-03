@@ -17,9 +17,9 @@ function readFile(relativePath: string): string {
 
 describe("Publish Readiness (Task 18)", () => {
   const packages = [
-    { name: "core", scope: "@s3-good/core" },
+    { name: "core", scope: "s3-good" },
     { name: "react", scope: "@s3-good/react" },
-    { name: "shared", scope: "@s3-good/shared" },
+    { name: "shared", scope: "@s3-good-internal/shared" },
     { name: "browser", scope: "@s3-good/browser" },
   ] as const;
 
@@ -99,7 +99,7 @@ describe("Publish Readiness (Task 18)", () => {
       expect(config.access).toBe("public");
     });
 
-    it("has linked array including all 3 packages", () => {
+    it("has linked array including all managed packages", () => {
       const config = readJson(".changeset/config.json");
       const linked = config.linked as string[][];
 
@@ -107,9 +107,10 @@ describe("Publish Readiness (Task 18)", () => {
       expect(linked.length).toBeGreaterThanOrEqual(1);
 
       const linkedPackages = linked[0];
-      expect(linkedPackages).toContain("@s3-good/core");
+      expect(linkedPackages).toContain("s3-good");
       expect(linkedPackages).toContain("@s3-good/react");
-      expect(linkedPackages).toContain("@s3-good/shared");
+      expect(linkedPackages).toContain("@s3-good-internal/shared");
+      expect(linkedPackages).toContain("@s3-good/browser");
     });
 
     it("has baseBranch set to main", () => {
@@ -124,25 +125,25 @@ describe("Publish Readiness (Task 18)", () => {
   });
 
   describe("Workspace dependencies", () => {
-    it("@s3-good/core depends on @s3-good/shared via workspace:*", () => {
+    it("s3-good depends on @s3-good-internal/shared via workspace:*", () => {
       const pkg = readJson("packages/core/package.json");
       const deps = pkg.dependencies as Record<string, string>;
 
-      expect(deps["@s3-good/shared"]).toBe("workspace:*");
+      expect(deps["@s3-good-internal/shared"]).toBe("workspace:*");
     });
 
-    it("@s3-good/react depends on @s3-good/core and @s3-good/shared via workspace:*", () => {
+    it("@s3-good/react depends on s3-good and @s3-good-internal/shared via workspace:*", () => {
       const pkg = readJson("packages/react/package.json");
       const deps = pkg.dependencies as Record<string, string>;
 
-      expect(deps["@s3-good/core"]).toBe("workspace:*");
-      expect(deps["@s3-good/shared"]).toBe("workspace:*");
+      expect(deps["s3-good"]).toBe("workspace:*");
+      expect(deps["@s3-good-internal/shared"]).toBe("workspace:*");
     });
   });
 });
 
 describe("Package Scaffolds (Tasks 03-05)", () => {
-  describe("@s3-good/core (Task 03)", () => {
+  describe("s3-good (Task 03)", () => {
     it("has 6 entry points including hono", () => {
       const pkg = readJson("packages/core/package.json");
       const exports = pkg.exports as Record<string, unknown>;
@@ -169,7 +170,7 @@ describe("Package Scaffolds (Tasks 03-05)", () => {
     });
   });
 
-  describe("@s3-good/core Hono adapter (exp-02)", () => {
+  describe("s3-good Hono adapter (exp-02)", () => {
     it("test_core_has_hono_export", () => {
       const pkg = readJson("packages/core/package.json");
       const exports = pkg.exports as Record<string, unknown>;
@@ -224,7 +225,7 @@ describe("Package Scaffolds (Tasks 03-05)", () => {
     });
   });
 
-  describe("@s3-good/shared (Task 05)", () => {
+  describe("@s3-good-internal/shared (Task 05)", () => {
     it("has no framework dependencies (react, next, aws-sdk)", () => {
       const pkg = readJson("packages/shared/package.json");
       const deps = (pkg.dependencies ?? {}) as Record<string, string>;

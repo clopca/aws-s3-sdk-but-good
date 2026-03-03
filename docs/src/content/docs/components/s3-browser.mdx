@@ -100,7 +100,7 @@ Pass `config` to control client-side defaults:
 The `S3Browser` component talks to a server-side route handler. Set one up with `createBrowserRouteHandler`:
 
 ```ts title="app/api/browser/route.ts"
-import { createBrowser, createBrowserRouteHandler } from "@s3-good/core/server";
+import { createBrowser, createBrowserRouteHandler } from "s3-good/server";
 
 const browser = createBrowser().rootPrefix("uploads/");
 

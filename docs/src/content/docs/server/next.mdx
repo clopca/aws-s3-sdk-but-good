@@ -5,7 +5,7 @@ description: Integrate @s3-good with Next.js applications.
 
 import { Aside, Steps } from "@astrojs/starlight/components";
 
-The Next.js adapter provides `createRouteHandler` and `createBrowserRouteHandler` for App Router API routes. Typed client helper factories are available from `@s3-good/core/next-client`.
+The Next.js adapter provides `createRouteHandler` and `createBrowserRouteHandler` for App Router API routes. Typed client helper factories are available from `s3-good/next-client`.
 
 ## Setup
 
@@ -14,8 +14,8 @@ The Next.js adapter provides `createRouteHandler` and `createBrowserRouteHandler
 1. **Define your file router**
 
     ```typescript title="src/server/upload-router.ts"
-    import { createUploader } from "@s3-good/core/server";
-    import type { FileRouter } from "@s3-good/core/server";
+    import { createUploader } from "s3-good/server";
+    import type { FileRouter } from "s3-good/server";
 
     const f = createUploader();
 
@@ -36,7 +36,7 @@ The Next.js adapter provides `createRouteHandler` and `createBrowserRouteHandler
 2. **Create the API route**
 
     ```typescript title="src/app/api/upload/route.ts"
-    import { createRouteHandler } from "@s3-good/core/next";
+    import { createRouteHandler } from "s3-good/next";
     import { uploadRouter } from "~/server/upload-router";
 
     export const { GET, POST } = createRouteHandler({
@@ -57,7 +57,7 @@ The Next.js adapter provides `createRouteHandler` and `createBrowserRouteHandler
       generateUploadButton,
       generateUploadDropzone,
       generateNextHelpers,
-    } from "@s3-good/core/next-client";
+    } from "s3-good/next-client";
     import type { OurFileRouter } from "~/server/upload-router";
 
     export async function createUploadUi() {
@@ -97,7 +97,7 @@ The Next.js adapter provides `createRouteHandler` and `createBrowserRouteHandler
 Creates `GET` and `POST` handlers for a Next.js App Router API route.
 
 ```typescript
-import { createRouteHandler } from "@s3-good/core/next";
+import { createRouteHandler } from "s3-good/next";
 
 export const { GET, POST } = createRouteHandler({
   router: uploadRouter,
@@ -138,7 +138,7 @@ export const { GET, POST } = createRouteHandler({
 Creates a pre-typed `UploadButton` component with the API URL pre-configured:
 
 ```typescript
-import { generateUploadButton } from "@s3-good/core/next-client";
+import { generateUploadButton } from "s3-good/next-client";
 import type { OurFileRouter } from "~/server/upload-router";
 
 const UploadButton = await generateUploadButton<OurFileRouter>();
@@ -156,7 +156,7 @@ The returned component has the `endpoint` prop autocompleted with your route nam
 Creates a pre-typed `UploadDropzone` component with the API URL pre-configured:
 
 ```typescript
-import { generateUploadDropzone } from "@s3-good/core/next-client";
+import { generateUploadDropzone } from "s3-good/next-client";
 import type { OurFileRouter } from "~/server/upload-router";
 
 const UploadDropzone = await generateUploadDropzone<OurFileRouter>();
@@ -169,7 +169,7 @@ See [UploadDropzone](/components/upload-dropzone/) for full props documentation.
 Creates typed React hooks and upload functions with Next.js defaults (`/api/upload`):
 
 ```typescript
-import { generateNextHelpers } from "@s3-good/core/next-client";
+import { generateNextHelpers } from "s3-good/next-client";
 import type { OurFileRouter } from "~/server/upload-router";
 
 const { useUpload, uploadFiles, createUpload } =

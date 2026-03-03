@@ -3,7 +3,7 @@ import type {
   UploadError,
   UploadedFile,
   ExpandedRouteConfig,
-} from "@s3-good/shared";
+} from "@s3-good-internal/shared";
 
 // ─── Step 1: UnsetMarker ────────────────────────────────────────────────────
 

@@ -3,8 +3,8 @@ import {
   GetBucketCorsCommand,
   PutBucketLifecycleConfigurationCommand,
 } from "@aws-sdk/client-s3";
-import type { S3Config } from "@s3-good/shared";
-import { S3Error } from "@s3-good/shared";
+import type { S3Config } from "@s3-good-internal/shared";
+import { S3Error } from "@s3-good-internal/shared";
 import { getS3Client } from "../_internal/s3";
 
 // ---------------------------------------------------------------------------

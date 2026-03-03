@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import type { PreviewType } from "@s3-good/shared";
+import type { PreviewType } from "@s3-good-internal/shared";
 import { cn } from "./ui";
 
 interface FileIconProps {

@@ -1,6 +1,6 @@
 import { HeadObjectCommand, type S3Client } from "@aws-sdk/client-s3";
-import type { S3Config, UploadedFile, UploadFileResponse } from "@s3-good/shared";
-import { UploadError } from "@s3-good/shared";
+import type { S3Config, UploadedFile, UploadFileResponse } from "@s3-good-internal/shared";
+import { UploadError } from "@s3-good-internal/shared";
 import type { FileRoute, AnyParams } from "./types";
 import {
   getS3Client,

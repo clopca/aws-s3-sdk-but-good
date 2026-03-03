@@ -2,7 +2,7 @@ import type {
   BrowserAction,
   BrowserActionPayload,
   S3Config,
-} from "@s3-good/shared";
+} from "@s3-good-internal/shared";
 import type { MaybePromise } from "./types";
 
 export type BrowserMiddlewareFn<TMetadata = unknown> = (opts: {

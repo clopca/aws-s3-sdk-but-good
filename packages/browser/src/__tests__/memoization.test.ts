@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { BrowserItem, SortConfig } from "@s3-good/shared";
+import type { BrowserItem, SortConfig } from "@s3-good-internal/shared";
 import { sortAndFilterItems } from "../state";
 import { useBrowser } from "../hooks/use-browser";
 

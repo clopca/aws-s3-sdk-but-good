@@ -1,4 +1,4 @@
-import type { BrowserAction } from "@s3-good/shared";
+import type { BrowserAction } from "@s3-good-internal/shared";
 import type {
   BrowserMiddlewareFn,
   BrowserPermissionFn,

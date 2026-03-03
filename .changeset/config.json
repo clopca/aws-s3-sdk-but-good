@@ -4,7 +4,7 @@
   "commit": false,
   "fixed": [],
   "linked": [
-    ["@s3-good/core", "@s3-good/react", "@s3-good/shared", "@s3-good/browser"]
+    ["s3-good", "@s3-good/react", "@s3-good-internal/shared", "@s3-good/browser"]
   ],
   "access": "public",
   "baseBranch": "main",

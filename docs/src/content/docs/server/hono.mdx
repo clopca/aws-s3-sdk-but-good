@@ -16,8 +16,8 @@ The Hono adapter provides a `createRouteHandler` that bridges the core upload ha
     The file router definition is framework-agnostic — it's the same as Next.js:
 
     ```typescript title="src/server/upload-router.ts"
-    import { createUploader } from "@s3-good/core/server";
-    import type { FileRouter } from "@s3-good/core/server";
+    import { createUploader } from "s3-good/server";
+    import type { FileRouter } from "s3-good/server";
 
     const f = createUploader();
 
@@ -38,7 +38,7 @@ The Hono adapter provides a `createRouteHandler` that bridges the core upload ha
 
     ```typescript title="src/index.ts"
     import { Hono } from "hono";
-    import { createRouteHandler } from "@s3-good/core/hono";
+    import { createRouteHandler } from "s3-good/hono";
     import { uploadRouter } from "./server/upload-router";
 
     const app = new Hono();
@@ -64,7 +64,7 @@ The Hono adapter provides a `createRouteHandler` that bridges the core upload ha
     Use the `genUploader` client to upload files from the browser:
 
     ```typescript title="src/client.ts"
-    import { genUploader } from "@s3-good/core/client";
+    import { genUploader } from "s3-good/client";
     import type { OurFileRouter } from "./server/upload-router";
 
     const { uploadFiles } = genUploader<OurFileRouter>({
@@ -86,7 +86,7 @@ The Hono adapter provides a `createRouteHandler` that bridges the core upload ha
 Creates `GET` and `POST` handlers that accept a Hono `Context` object:
 
 ```typescript
-import { createRouteHandler } from "@s3-good/core/hono";
+import { createRouteHandler } from "s3-good/hono";
 
 const { GET, POST } = createRouteHandler({
   router: uploadRouter,
@@ -123,10 +123,10 @@ The Hono adapter is simpler than the Next.js adapter because Hono already uses W
 
 | Feature | Next.js | Hono |
 |---------|---------|------|
-| Import | `@s3-good/core/next` | `@s3-good/core/hono` |
+| Import | `s3-good/next` | `s3-good/hono` |
 | Handler args | `Request` | `Context` |
-| Component generators | `@s3-good/core/next-client` (`generateUploadButton`, `generateUploadDropzone`) | Use `@s3-good/react` directly |
-| React helpers | `@s3-good/core/next-client` (`generateNextHelpers`) | Use `generateReactHelpers` from `@s3-good/react` |
+| Component generators | `s3-good/next-client` (`generateUploadButton`, `generateUploadDropzone`) | Use `@s3-good/react` directly |
+| React helpers | `s3-good/next-client` (`generateNextHelpers`) | Use `generateReactHelpers` from `@s3-good/react` |
 | Default API URL | `/api/upload` | You choose the path |
 
 <Aside>
@@ -170,10 +170,10 @@ A full Hono application with file uploads:
 ```typescript title="src/index.ts"
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { createRouteHandler } from "@s3-good/core/hono";
-import { createUploader } from "@s3-good/core/server";
-import type { FileRouter } from "@s3-good/core/server";
-import { UploadError } from "@s3-good/shared";
+import { createRouteHandler } from "s3-good/hono";
+import { createUploader } from "s3-good/server";
+import type { FileRouter } from "s3-good/server";
+import { UploadError } from "s3-good/types";
 
 // Define the file router
 const f = createUploader();

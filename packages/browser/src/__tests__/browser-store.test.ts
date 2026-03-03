@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { BrowserItem } from "@s3-good/shared";
+import type { BrowserItem } from "@s3-good-internal/shared";
 import { createBrowserStore } from "../state";
 
 describe("browser store", () => {

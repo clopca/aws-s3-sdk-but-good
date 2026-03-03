@@ -3,8 +3,8 @@ import type {
   inferEndpointInput,
   inferEndpoints,
 } from "./types";
-import type { UploadFileResponse } from "@s3-good/shared";
-import { UploadError, computeSHA256 } from "@s3-good/shared";
+import type { UploadFileResponse } from "@s3-good-internal/shared";
+import { UploadError, computeSHA256 } from "@s3-good-internal/shared";
 import type { UploadProgressEvent } from "./upload-browser";
 import { uploadFile } from "./upload-browser";
 import { MULTIPART_THRESHOLD } from "./s3";
@@ -146,7 +146,7 @@ async function notifyUploadComplete(
  *
  * @example
  * ```ts
- * import { genUploader } from "@s3-good/core/client";
+ * import { genUploader } from "s3-good/client";
  * import type { OurFileRouter } from "~/server/upload-router";
  *
  * const { uploadFiles } = genUploader<OurFileRouter>();

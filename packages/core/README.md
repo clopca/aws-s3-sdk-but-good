@@ -1,32 +1,32 @@
-# @s3-good/core
+# s3-good
 
 Core package for `s3-good`: route builders, framework adapters, typed upload client, and S3 setup utilities.
 
 ## Installation
 
 ```bash
-pnpm add @s3-good/core zod
+pnpm add s3-good zod
 ```
 
 ## Entry points
 
 | Import path | Use for |
 | --- | --- |
-| `@s3-good/core` | Server alias (same exports as `@s3-good/core/server`) |
-| `@s3-good/core/server` | Route builder, framework-agnostic handlers, browser route builder |
-| `@s3-good/core/client` | Typed upload client factory (`genUploader`) + high-level queue client (`createS3GoodClient`) |
-| `@s3-good/core/next` | Next.js server route handlers (`createRouteHandler`, `createBrowserRouteHandler`) |
-| `@s3-good/core/next-client` | Next.js client helper factories (`generateUploadButton`, `generateUploadDropzone`, `generateNextHelpers`) |
-| `@s3-good/core/hono` | Hono handlers |
-| `@s3-good/core/sdk` | Bucket setup, CORS validation |
-| `@s3-good/core/types` | Public type exports |
+| `s3-good` | Server alias (same exports as `s3-good/server`) |
+| `s3-good/server` | Route builder, framework-agnostic handlers, browser route builder |
+| `s3-good/client` | Typed upload client factory (`genUploader`) + high-level queue client (`createS3GoodClient`) |
+| `s3-good/next` | Next.js server route handlers (`createRouteHandler`, `createBrowserRouteHandler`) |
+| `s3-good/next-client` | Next.js client helper factories (`generateUploadButton`, `generateUploadDropzone`, `generateNextHelpers`) |
+| `s3-good/hono` | Hono handlers |
+| `s3-good/sdk` | Bucket setup, CORS validation |
+| `s3-good/types` | Public type exports |
 
-## Server API (`@s3-good/core/server`)
+## Server API (`s3-good/server`)
 
 ### `createUploader()`
 
 ```ts
-import { createUploader, type FileRouter } from "@s3-good/core/server";
+import { createUploader, type FileRouter } from "s3-good/server";
 import { z } from "zod";
 
 const f = createUploader();
@@ -64,7 +64,7 @@ Build and expose a browser API route (list/move/copy/delete/presigned preview UR
 import {
   createBrowser,
   createBrowserRouteHandler,
-} from "@s3-good/core/server";
+} from "s3-good/server";
 
 const browser = createBrowser()
   .buckets(["assets", "backups"])
@@ -87,12 +87,12 @@ export const { GET, POST } = createBrowserRouteHandler({
 
 `getCookie(req, name)`, `getBearerToken(req)`, `getHeader(req, name)`.
 
-## Client API (`@s3-good/core/client`)
+## Client API (`s3-good/client`)
 
 ### `genUploader<TRouter>({ url? })`
 
 ```ts
-import { genUploader } from "@s3-good/core/client";
+import { genUploader } from "s3-good/client";
 import type { OurFileRouter } from "~/server/upload-router";
 
 const { uploadFiles, createUpload } = genUploader<OurFileRouter>({
@@ -113,7 +113,7 @@ await uploadFiles("imageUploader", {
 High-level browser upload client with queueing, retry policy, pause/resume/cancel, events, and optional persisted resume.
 
 ```ts
-import { createS3GoodClient } from "@s3-good/core/client";
+import { createS3GoodClient } from "s3-good/client";
 import type { OurFileRouter } from "~/server/upload-router";
 
 const client = createS3GoodClient<OurFileRouter>({
@@ -144,13 +144,13 @@ Available queue helpers:
 
 `events.subscribe(listener)` lets you observe lifecycle events.
 
-## Next.js server adapter (`@s3-good/core/next`)
+## Next.js server adapter (`s3-good/next`)
 
 Use this in App Router route files.
 
 ```ts
 // app/api/upload/route.ts
-import { createRouteHandler } from "@s3-good/core/next";
+import { createRouteHandler } from "s3-good/next";
 
 export const { GET, POST } = createRouteHandler({
   router: uploadRouter,
@@ -165,7 +165,7 @@ export const { GET, POST } = createRouteHandler({
 
 ```ts
 // app/api/browser/route.ts
-import { createBrowser, createBrowserRouteHandler } from "@s3-good/core/next";
+import { createBrowser, createBrowserRouteHandler } from "s3-good/next";
 
 const browser = createBrowser().done();
 
@@ -180,7 +180,7 @@ export const { GET, POST } = createBrowserRouteHandler({
 });
 ```
 
-## Next.js client helpers (`@s3-good/core/next-client`)
+## Next.js client helpers (`s3-good/next-client`)
 
 These helpers are async and should be used in client-side modules.
 
@@ -192,7 +192,7 @@ import {
   generateUploadButton,
   generateUploadDropzone,
   generateNextHelpers,
-} from "@s3-good/core/next-client";
+} from "s3-good/next-client";
 
 export async function createUploadUi() {
   const UploadButton = await generateUploadButton<OurFileRouter>({
@@ -205,11 +205,11 @@ export async function createUploadUi() {
 }
 ```
 
-## Hono adapter (`@s3-good/core/hono`)
+## Hono adapter (`s3-good/hono`)
 
 ```ts
 import { Hono } from "hono";
-import { createRouteHandler } from "@s3-good/core/hono";
+import { createRouteHandler } from "s3-good/hono";
 
 const app = new Hono();
 const { GET, POST } = createRouteHandler({ router: uploadRouter, config });
@@ -218,7 +218,7 @@ app.get("/api/upload", (c) => GET(c));
 app.post("/api/upload", (c) => POST(c));
 ```
 
-## SDK utilities (`@s3-good/core/sdk`)
+## SDK utilities (`s3-good/sdk`)
 
 - `setupBucket` - configure CORS/lifecycle defaults
 - `validateBucketCors` - verify CORS rules
@@ -235,8 +235,8 @@ AWS_SECRET_ACCESS_KEY=...
 
 ## Notes
 
-- `@s3-good/core/next` is server-only.
-- `@s3-good/core/next-client` isolates client-side helper generation.
+- `s3-good/next` is server-only.
+- `s3-good/next-client` isolates client-side helper generation.
 - For custom frontends, prefer `genUploader` or `generateReactHelpers` from `@s3-good/react`.
 
 ## License

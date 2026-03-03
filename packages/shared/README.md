@@ -1,13 +1,13 @@
-# @s3-good/shared
+# @s3-good-internal/shared
 
-Shared runtime/types package used by `@s3-good/core`, `@s3-good/react`, and `@s3-good/browser`.
+Shared runtime/types package used by `s3-good`, `@s3-good/react`, and `@s3-good/browser`.
 
 Most users consume these exports transitively, but this package is useful directly for shared types, error handling, and MIME/file helpers.
 
 ## Installation
 
 ```bash
-pnpm add @s3-good/shared
+pnpm add @s3-good-internal/shared
 ```
 
 ## What it provides
@@ -61,7 +61,7 @@ Useful when building custom browser clients/UI:
 ### `UploadError`
 
 ```ts
-import { UploadError } from "@s3-good/shared";
+import { UploadError } from "@s3-good-internal/shared";
 
 throw new UploadError({
   code: "MIDDLEWARE_ERROR",
@@ -84,7 +84,7 @@ Common codes include:
 ### `S3Error`
 
 ```ts
-import { S3Error } from "@s3-good/shared";
+import { S3Error } from "@s3-good-internal/shared";
 
 throw new S3Error("Failed to configure CORS", originalError);
 ```
@@ -99,7 +99,7 @@ import {
   getMimeType,
   getPreviewType,
   getCodeLanguage,
-} from "@s3-good/shared";
+} from "@s3-good-internal/shared";
 
 getAcceptedMimeTypes(["image", "pdf"]);
 // ["image/*", "application/pdf"]
@@ -120,7 +120,7 @@ getCodeLanguage("app.ts");
 ## Generic utilities
 
 ```ts
-import { formatFileSize, parseFileSize, generateId } from "@s3-good/shared";
+import { formatFileSize, parseFileSize, generateId } from "@s3-good-internal/shared";
 
 formatFileSize(2621440); // "2.5 MB"
 parseFileSize("4MB");   // 4194304

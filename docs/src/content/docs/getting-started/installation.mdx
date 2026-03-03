@@ -20,17 +20,17 @@ Choose the packages that match your project:
 <Tabs>
   <TabItem label="pnpm">
     ```bash
-    pnpm add @s3-good/core @s3-good/react
+    pnpm add s3-good @s3-good/react
     ```
   </TabItem>
   <TabItem label="npm">
     ```bash
-    npm install @s3-good/core @s3-good/react
+    npm install s3-good @s3-good/react
     ```
   </TabItem>
   <TabItem label="yarn">
     ```bash
-    yarn add @s3-good/core @s3-good/react
+    yarn add s3-good @s3-good/react
     ```
   </TabItem>
 </Tabs>
@@ -40,17 +40,17 @@ Choose the packages that match your project:
 <Tabs>
   <TabItem label="pnpm">
     ```bash
-    pnpm add @s3-good/core
+    pnpm add s3-good
     ```
   </TabItem>
   <TabItem label="npm">
     ```bash
-    npm install @s3-good/core
+    npm install s3-good
     ```
   </TabItem>
   <TabItem label="yarn">
     ```bash
-    yarn add @s3-good/core
+    yarn add s3-good
     ```
   </TabItem>
 </Tabs>
@@ -78,14 +78,14 @@ To add the full-featured file browser component:
 </Tabs>
 
 <Aside type="tip">
-  `@s3-good/shared` is installed automatically as a dependency of `@s3-good/core` — you don't need to install it separately.
+  `s3-good` includes and re-exports the shared runtime contracts you need. You should not install internal packages directly.
 </Aside>
 
 ## Peer dependencies
 
 | Package | Peer dependency | Version |
 |---------|----------------|---------|
-| `@s3-good/core` | `zod` | `>= 3.0.0` |
+| `s3-good` | `zod` | `>= 3.0.0` |
 | `@s3-good/react` | `react` | `>= 18.0.0` |
 | `@s3-good/react` | `react-dom` | `>= 18.0.0` |
 | `@s3-good/browser` | `react` | `>= 18.0.0` |
@@ -132,10 +132,9 @@ These values are passed to `createRouteHandler` on the server — see the [Quick
 
 | Package | Purpose | Environment |
 |---------|---------|-------------|
-| `@s3-good/core` | File router, route handlers, upload client, S3 setup utilities | Server + Client |
+| `s3-good` | File router, route handlers, upload client, S3 setup utilities | Server + Client |
 | `@s3-good/react` | `UploadButton`, `UploadDropzone`, `useUpload` hook, and more | Client (React) |
 | `@s3-good/browser` | `S3Browser` file manager, headless hooks, preview components | Client (React) |
-| `@s3-good/shared` | Shared types (`S3Config`, `UploadedFile`, etc.) and error classes | Both |
 
 ## Styles (`@s3-good/react` and `@s3-good/browser`)
 
@@ -158,30 +157,30 @@ import "@s3-good/browser/styles.css";
 
 ### Import paths
 
-`@s3-good/core` exposes multiple entry points:
+`s3-good` exposes multiple entry points:
 
 ```typescript
 // Server — createUploader, createRouteHandler, FileRouter type
-import { createUploader, createRouteHandler } from "@s3-good/core/server";
+import { createUploader, createRouteHandler } from "s3-good/server";
 
 // Next.js server route handlers
-import { createRouteHandler } from "@s3-good/core/next";
+import { createRouteHandler } from "s3-good/next";
 
 // Next.js client helper factories (async)
 import {
   generateUploadButton,
   generateUploadDropzone,
   generateNextHelpers,
-} from "@s3-good/core/next-client";
+} from "s3-good/next-client";
 
 // Hono — framework-specific route handler
-import { createRouteHandler } from "@s3-good/core/hono";
+import { createRouteHandler } from "s3-good/hono";
 
 // Client — programmatic upload functions
-import { genUploader, createS3GoodClient } from "@s3-good/core/client";
+import { genUploader, createS3GoodClient } from "s3-good/client";
 
 // SDK utilities — bucket setup and validation
-import { setupBucket, validateBucketCors, S3Api } from "@s3-good/core/sdk";
+import { setupBucket, validateBucketCors, S3Api } from "s3-good/sdk";
 ```
 
 ## Next steps

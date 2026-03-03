@@ -2,13 +2,13 @@ import type {
   AllowedFileType,
   ExpandedRouteConfig,
   FileRouteConfig,
-} from "@s3-good/shared";
+} from "@s3-good-internal/shared";
 import {
   getAcceptedMimeTypes,
   matchesFileType,
   parseFileSize,
   formatFileSize,
-} from "@s3-good/shared";
+} from "@s3-good-internal/shared";
 
 // ---------------------------------------------------------------------------
 // Types

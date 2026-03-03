@@ -12,8 +12,8 @@ The **file router** is the core abstraction of `@s3-good`. It defines which uplo
 Use `createUploader()` to get the `f()` builder function:
 
 ```typescript title="src/server/upload-router.ts"
-import { createUploader } from "@s3-good/core/server";
-import type { FileRouter } from "@s3-good/core/server";
+import { createUploader } from "s3-good/server";
+import type { FileRouter } from "s3-good/server";
 
 const f = createUploader();
 ```
@@ -110,14 +110,14 @@ imageUploader: f({ image: { maxFileSize: "4MB" } })
 
 ### Middleware helpers
 
-`@s3-good/core/server` exports convenience functions for common auth patterns:
+`s3-good/server` exports convenience functions for common auth patterns:
 
 ```typescript
 import {
   getCookie,
   getBearerToken,
   getHeader,
-} from "@s3-good/core/server";
+} from "s3-good/server";
 
 .middleware(async ({ req }) => {
   // Extract a cookie value
@@ -138,7 +138,7 @@ import {
 Throw `UploadError` from middleware to reject the upload with a structured error:
 
 ```typescript
-import { UploadError } from "@s3-good/shared";
+import { UploadError } from "s3-good/types";
 
 .middleware(async ({ req }) => {
   const user = await getUser(req);
@@ -239,9 +239,9 @@ imageUploader: f({ image: { maxFileSize: "4MB" } })
 ## Complete example
 
 ```typescript title="src/server/upload-router.ts"
-import { createUploader } from "@s3-good/core/server";
-import type { FileRouter } from "@s3-good/core/server";
-import { UploadError } from "@s3-good/shared";
+import { createUploader } from "s3-good/server";
+import type { FileRouter } from "s3-good/server";
+import { UploadError } from "s3-good/types";
 import { z } from "zod";
 
 const f = createUploader();

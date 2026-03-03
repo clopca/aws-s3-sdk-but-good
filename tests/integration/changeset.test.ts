@@ -20,7 +20,7 @@ describe("Changeset Config (Task 41)", () => {
     expect(() => JSON.parse(content)).not.toThrow();
   });
 
-  it("changeset config links all 3 packages together", () => {
+  it("changeset config links all managed packages together", () => {
     const configPath = resolve(ROOT, ".changeset/config.json");
     const config = JSON.parse(readFileSync(configPath, "utf-8"));
 
@@ -29,9 +29,10 @@ describe("Changeset Config (Task 41)", () => {
     expect(linked.length).toBeGreaterThanOrEqual(1);
 
     const linkedGroup = linked[0];
-    expect(linkedGroup).toContain("@s3-good/core");
+    expect(linkedGroup).toContain("s3-good");
     expect(linkedGroup).toContain("@s3-good/react");
-    expect(linkedGroup).toContain("@s3-good/shared");
+    expect(linkedGroup).toContain("@s3-good-internal/shared");
+    expect(linkedGroup).toContain("@s3-good/browser");
   });
 
   it("changeset config has public access", () => {

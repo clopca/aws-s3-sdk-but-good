@@ -8,7 +8,7 @@
  */
 
 import { useCallback, useMemo, useRef } from "react";
-import type { BrowserFile, BrowserItem } from "@s3-good/shared";
+import type { BrowserFile, BrowserItem } from "@s3-good-internal/shared";
 import { useBrowserContext } from "../context/browser-context";
 import { Breadcrumbs } from "./breadcrumbs";
 import type { ContextMenuItem } from "./context-menu";

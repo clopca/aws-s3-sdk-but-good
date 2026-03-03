@@ -56,7 +56,7 @@ description: Fixes for the most common setup and runtime issues.
 - Runtime errors when forwarding `c` to handler
 
 **Fix**
-- Use `@s3-good/core/hono` and forward the same Hono context:
+- Use `s3-good/hono` and forward the same Hono context:
   - `app.get("/api/upload", (c) => GET(c))`
   - `app.post("/api/upload", (c) => POST(c))`
 

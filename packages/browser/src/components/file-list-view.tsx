@@ -4,7 +4,7 @@ import {
   observeElementRect as defaultObserveElementRect,
 } from "@tanstack/react-virtual";
 import type { Rect, Virtualizer } from "@tanstack/react-virtual";
-import type { BrowserItem, SortConfig, SortField } from "@s3-good/shared";
+import type { BrowserItem, SortConfig, SortField } from "@s3-good-internal/shared";
 import type { ContextMenuItem } from "./context-menu";
 import { EmptyState } from "./empty-state";
 import { FileItem } from "./file-item";

@@ -104,7 +104,7 @@ export default function HomePage() {
             <div className="overflow-x-auto rounded-lg bg-zinc-950 p-4 font-[family-name:var(--font-geist-mono)] text-sm leading-relaxed text-zinc-100">
               <p className="text-zinc-500"># Install core + React components</p>
               <p>
-                <span className="text-emerald-400">pnpm</span> add @s3-good/core
+                <span className="text-emerald-400">pnpm</span> add s3-good
                 @s3-good/react
               </p>
               <p className="mt-3 text-zinc-500"># Optional: file browser</p>
@@ -122,7 +122,7 @@ export default function HomePage() {
                 {"{ createUploader }"}{" "}
                 <span className="text-violet-400">from</span>{" "}
                 <span className="text-amber-300">
-                  {'"@s3-good/core/server"'}
+                  {'"s3-good/server"'}
                 </span>
                 ;
               </p>

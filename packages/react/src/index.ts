@@ -1,5 +1,5 @@
-import type { FileRouter, inferEndpoints } from "@s3-good/core/types";
-import { createS3GoodClient } from "@s3-good/core/client";
+import type { FileRouter, inferEndpoints } from "s3-good/types";
+import { createS3GoodClient } from "s3-good/client";
 import { useUpload, type UseUploadProps } from "./use-upload";
 
 // ─── generateReactHelpers Options ───────────────────────────────────────────
