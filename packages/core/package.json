@@ -79,11 +79,11 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.600.0",
     "@aws-sdk/s3-request-presigner": "^3.600.0",
-    "@s3-good-internal/shared": "workspace:*",
     "sqids": "^0.3.0"
   },
   "devDependencies": {
     "@s3-good/eslint-config": "workspace:*",
+    "@s3-good-internal/shared": "workspace:*",
     "@types/node": "^25.3.0",
     "eslint": "^10.0.2",
     "hono": "^4.12.2",

@@ -14,5 +14,5 @@ export default defineConfig({
   splitting: true,
   clean: true,
   treeshake: true,
-  external: ["react", "next", "hono", "zod", "@s3-good-internal/shared"],
+  external: ["react", "next", "hono", "zod"],
 });

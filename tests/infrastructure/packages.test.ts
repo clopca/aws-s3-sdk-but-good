@@ -16,15 +16,14 @@ function readFile(relativePath: string): string {
 }
 
 describe("Publish Readiness (Task 18)", () => {
-  const packages = [
+  const publishablePackages = [
     { name: "core", scope: "s3-good" },
     { name: "react", scope: "@s3-good/react" },
-    { name: "shared", scope: "@s3-good-internal/shared" },
     { name: "browser", scope: "@s3-good/browser" },
   ] as const;
 
-  describe("All packages have publishConfig", () => {
-    for (const pkg of packages) {
+  describe("Publishable packages have publishConfig", () => {
+    for (const pkg of publishablePackages) {
       it(`${pkg.scope} has publishConfig.access = "public"`, () => {
         const pkgJson = readJson(`packages/${pkg.name}/package.json`);
         const publishConfig = pkgJson.publishConfig as Record<string, string>;
@@ -35,8 +34,8 @@ describe("Publish Readiness (Task 18)", () => {
     }
   });
 
-  describe("All packages have files field", () => {
-    for (const pkg of packages) {
+  describe("Publishable packages have files field", () => {
+    for (const pkg of publishablePackages) {
       it(`${pkg.scope} has files: ["dist"]`, () => {
         const pkgJson = readJson(`packages/${pkg.name}/package.json`);
         const files = pkgJson.files as string[];
@@ -47,8 +46,8 @@ describe("Publish Readiness (Task 18)", () => {
     }
   });
 
-  describe("All packages have correct exports", () => {
-    for (const pkg of packages) {
+  describe("Publishable packages have correct exports", () => {
+    for (const pkg of publishablePackages) {
       it(`${pkg.scope} exports all have import and types fields`, () => {
         const pkgJson = readJson(`packages/${pkg.name}/package.json`);
         const exports = pkgJson.exports as Record<
@@ -78,8 +77,8 @@ describe("Publish Readiness (Task 18)", () => {
     }
   });
 
-  describe("All packages have correct name and version", () => {
-    for (const pkg of packages) {
+  describe("Publishable packages have correct name and version", () => {
+    for (const pkg of publishablePackages) {
       it(`${pkg.scope} has correct name`, () => {
         const pkgJson = readJson(`packages/${pkg.name}/package.json`);
         expect(pkgJson.name).toBe(pkg.scope);
@@ -93,26 +92,41 @@ describe("Publish Readiness (Task 18)", () => {
     }
   });
 
+  describe("Internal shared package release policy", () => {
+    it("@s3-good-internal/shared is private", () => {
+      const pkgJson = readJson("packages/shared/package.json");
+      expect(pkgJson.private).toBe(true);
+    });
+
+    it("@s3-good-internal/shared is not configured as publicly publishable", () => {
+      const pkgJson = readJson("packages/shared/package.json");
+      const publishConfig = pkgJson.publishConfig as
+        | Record<string, string>
+        | undefined;
+
+      expect(publishConfig?.access).not.toBe("public");
+    });
+  });
+
   describe("Changeset configuration", () => {
     it("has access set to public", () => {
       const config = readJson(".changeset/config.json");
       expect(config.access).toBe("public");
     });
 
-    it("has linked array including all managed packages", () => {
+    it("has linked array including only public packages", () => {
       const config = readJson(".changeset/config.json");
       const linked = config.linked as string[][];
-      const required = [
-        "s3-good",
-        "@s3-good/react",
-        "@s3-good-internal/shared",
-        "@s3-good/browser",
-      ];
+      const publicPackages = ["s3-good", "@s3-good/react", "@s3-good/browser"];
 
       expect(linked).toBeDefined();
       expect(linked.length).toBeGreaterThanOrEqual(1);
       expect(
-        linked.some((group) => required.every((pkg) => group.includes(pkg))),
+        linked.some(
+          (group) =>
+            publicPackages.every((pkg) => group.includes(pkg)) &&
+            !group.includes("@s3-good-internal/shared"),
+        ),
       ).toBe(true);
     });
 
@@ -128,11 +142,13 @@ describe("Publish Readiness (Task 18)", () => {
   });
 
   describe("Workspace dependencies", () => {
-    it("s3-good depends on @s3-good-internal/shared via workspace:*", () => {
+    it("s3-good uses @s3-good-internal/shared as a dev workspace dependency", () => {
       const pkg = readJson("packages/core/package.json");
       const deps = pkg.dependencies as Record<string, string>;
+      const devDeps = pkg.devDependencies as Record<string, string>;
 
-      expect(deps["@s3-good-internal/shared"]).toBe("workspace:*");
+      expect(deps["@s3-good-internal/shared"]).toBeUndefined();
+      expect(devDeps["@s3-good-internal/shared"]).toBe("workspace:*");
     });
 
     it("@s3-good/react depends on s3-good via workspace:*", () => {
