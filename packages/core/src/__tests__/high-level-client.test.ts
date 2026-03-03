@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { UploadError } from "@s3-good/shared";
+import { UploadError } from "@s3-good-internal/shared";
 import { createS3GoodClient } from "../_internal/high-level-client";
 
 const mockUploadFiles = vi.fn();

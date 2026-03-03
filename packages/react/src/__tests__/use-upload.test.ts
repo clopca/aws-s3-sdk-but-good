@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
-import { UploadError } from "@s3-good/shared";
+import { UploadError } from "s3-good/types";
 
 const mockUploadFiles = vi.fn();
 const mockCreateUpload = vi.fn();
@@ -8,7 +8,7 @@ const mockEnqueueUpload = vi.fn();
 const mockGetQueueState = vi.fn(() => ({ jobs: [], activeCount: 0 }));
 const mockResumePending = vi.fn();
 
-vi.mock("@s3-good/core/client", () => ({
+vi.mock("s3-good/client", () => ({
   genUploader: () => ({ uploadFiles: mockUploadFiles, createUpload: mockCreateUpload }),
   createS3GoodClient: () => ({
     uploads: {

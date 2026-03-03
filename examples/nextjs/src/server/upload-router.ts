@@ -1,5 +1,5 @@
-import { createUploader } from "@s3-good/core/server";
-import type { FileRouter } from "@s3-good/core/server";
+import { createUploader } from "s3-good/server";
+import type { FileRouter } from "s3-good/server";
 import { z } from "zod";
 
 const f = createUploader();

@@ -6,8 +6,8 @@ PACK_DIR="$(mktemp -d)"
 trap 'rm -rf "$PACK_DIR"' EXIT
 
 PACKAGES=(
-  "@s3-good/shared"
-  "@s3-good/core"
+  "@s3-good-internal/shared"
+  "s3-good"
   "@s3-good/react"
   "@s3-good/browser"
 )

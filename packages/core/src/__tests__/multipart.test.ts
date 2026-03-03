@@ -42,7 +42,7 @@ import {
   AbortMultipartUploadCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { S3Error } from "@s3-good/shared";
+import { S3Error } from "@s3-good-internal/shared";
 import {
   createMultipartUpload,
   generatePresignedPartUrls,

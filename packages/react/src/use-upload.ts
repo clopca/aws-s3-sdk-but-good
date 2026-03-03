@@ -4,16 +4,16 @@ import type {
   inferEndpointInput,
   inferEndpoints,
   PermittedFileInfo,
-} from "@s3-good/core/types";
-import type { UploadFileResponse } from "@s3-good/shared";
-import { UploadError, parseFileSize } from "@s3-good/shared";
+} from "s3-good/types";
+import type { UploadFileResponse } from "s3-good/types";
+import { UploadError, parseFileSize } from "s3-good/types";
 import {
   createS3GoodClient,
   type UploadJobSnapshot,
   type QueueOptions,
   type RetryOptions,
   type ResumeOptions,
-} from "@s3-good/core/client";
+} from "s3-good/client";
 
 // ─── Hook Types ─────────────────────────────────────────────────────────────
 

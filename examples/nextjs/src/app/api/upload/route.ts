@@ -1,4 +1,4 @@
-import { createRouteHandler } from "@s3-good/core/next";
+import { createRouteHandler } from "s3-good/next";
 import { uploadRouter } from "~/server/upload-router";
 
 export const { GET, POST } = createRouteHandler({

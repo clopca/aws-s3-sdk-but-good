@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 
 // ─── Mock genUploader ───────────────────────────────────────────────────────
 
-vi.mock("@s3-good/core/client", () => ({
+vi.mock("s3-good/client", () => ({
   genUploader: (opts?: { url?: string }) => ({
     uploadFiles: vi.fn(),
     createUpload: vi.fn(),

@@ -5,7 +5,7 @@ description: Configure your AWS S3 bucket for use with @s3-good.
 
 import { Tabs, TabItem, Aside, Steps } from "@astrojs/starlight/components";
 
-This guide walks you through setting up an AWS S3 bucket for use with `@s3-good/core`. It covers bucket creation, CORS configuration, IAM permissions, and the programmatic setup utility.
+This guide walks you through setting up an AWS S3 bucket for use with `s3-good`. It covers bucket creation, CORS configuration, IAM permissions, and the programmatic setup utility.
 
 <Aside type="tip">
   **Recommended**: Use the [`setupBucket` utility](#using-the-setup-utility-recommended) to configure CORS and lifecycle rules automatically. Manual steps are documented below for reference or restricted environments.
@@ -78,7 +78,7 @@ Your S3 bucket **must** have CORS configured to allow browser-based uploads. Wit
 The `setupBucket` function configures CORS and lifecycle rules in a single call:
 
 ```typescript
-import { setupBucket } from "@s3-good/core/sdk";
+import { setupBucket } from "s3-good/sdk";
 
 const result = await setupBucket(
   {
@@ -100,7 +100,7 @@ console.log(result);
 Or use the class-based API:
 
 ```typescript
-import { S3Api } from "@s3-good/core/sdk";
+import { S3Api } from "s3-good/sdk";
 
 const s3 = new S3Api({
   region: "us-east-1",
@@ -316,7 +316,7 @@ The SDK works with any S3-compatible storage service. Pass the `endpoint` and `f
 <Tabs>
   <TabItem label="MinIO">
     ```typescript
-    import { setupBucket } from "@s3-good/core/sdk";
+    import { setupBucket } from "s3-good/sdk";
 
     await setupBucket(
       {
@@ -382,7 +382,7 @@ interface S3Config {
 After configuring your bucket, verify that CORS is set up correctly:
 
 ```typescript
-import { validateBucketCors } from "@s3-good/core/sdk";
+import { validateBucketCors } from "s3-good/sdk";
 
 const result = await validateBucketCors({
   region: "us-east-1",
@@ -401,7 +401,7 @@ if (result.isValid) {
 Or using the class-based API:
 
 ```typescript
-import { S3Api } from "@s3-good/core/sdk";
+import { S3Api } from "s3-good/sdk";
 
 const s3 = new S3Api({
   region: "us-east-1",

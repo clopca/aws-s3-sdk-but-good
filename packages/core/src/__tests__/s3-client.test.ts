@@ -20,7 +20,7 @@ vi.mock("@aws-sdk/client-s3", () => {
   };
 });
 
-import type { S3Config } from "@s3-good/shared";
+import type { S3Config } from "@s3-good-internal/shared";
 import { getS3Client, getFileUrl, clearS3ClientCache } from "../_internal/s3";
 
 describe("S3 Client Init", () => {

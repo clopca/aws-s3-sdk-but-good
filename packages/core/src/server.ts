@@ -1,6 +1,6 @@
 import { UploadBuilder } from "./_internal/upload-builder";
 import type { UploadBuilderParams, FileRouter } from "./_internal/types";
-import type { ExpandedRouteConfig, S3Config } from "@s3-good/shared";
+import type { ExpandedRouteConfig, S3Config } from "./types";
 import { handleUploadAction } from "./_internal/handler";
 import { BrowserBuilder } from "./_internal/browser-builder";
 import { handleBrowserAction } from "./_internal/browser-handler";
@@ -18,7 +18,7 @@ export interface CreateUploaderOptions {
  *
  * @example
  * ```ts
- * import { createUploader } from "@s3-good/core/server";
+ * import { createUploader } from "s3-good/server";
  *
  * const f = createUploader();
  *
@@ -68,7 +68,7 @@ export interface BrowserRouteHandlerOptions {
  *
  * @example
  * ```ts
- * import { createRouteHandler } from "@s3-good/core/server";
+ * import { createRouteHandler } from "s3-good/server";
  *
  * const handler = createRouteHandler({
  *   router: uploadRouter,

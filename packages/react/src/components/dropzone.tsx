@@ -3,10 +3,10 @@ import type {
   FileRouter,
   inferEndpointInput,
   inferEndpoints,
-} from "@s3-good/core/types";
-import type { UploadFileResponse } from "@s3-good/shared";
-import type { UploadError } from "@s3-good/shared";
-import { formatFileSize } from "@s3-good/shared";
+} from "s3-good/types";
+import type { UploadFileResponse } from "s3-good/types";
+import type { UploadError } from "s3-good/types";
+import { formatFileSize } from "s3-good/types";
 import { useUpload } from "../use-upload";
 import {
   resolveStyle,

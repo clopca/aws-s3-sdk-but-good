@@ -7,8 +7,8 @@ import type {
   BrowserItem,
   BrowserListFilters,
   S3Config,
-} from "@s3-good/shared";
-import { getMimeType } from "@s3-good/shared";
+} from "@s3-good-internal/shared";
+import { getMimeType } from "@s3-good-internal/shared";
 import type { BrowserHandlerConfig, BrowserRouteConfig } from "./browser-types";
 import {
   copyObject,

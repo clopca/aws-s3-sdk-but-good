@@ -1,5 +1,5 @@
 import type { FileRouter } from "./_internal/types";
-import type { S3Config } from "@s3-good/shared";
+import type { S3Config } from "./types";
 import { handleUploadAction } from "./_internal/handler";
 import type { BrowserBuilder } from "./_internal/browser-builder";
 import { handleBrowserAction } from "./_internal/browser-handler";
@@ -37,7 +37,7 @@ type NextResponse = Response;
  * @example
  * ```ts
  * // app/api/upload/route.ts
- * import { createRouteHandler } from "@s3-good/core/next";
+ * import { createRouteHandler } from "s3-good/next";
  * import { uploadRouter } from "~/server/upload-router";
  *
  * export const { GET, POST } = createRouteHandler({

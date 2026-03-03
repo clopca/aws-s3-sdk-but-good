@@ -1,12 +1,12 @@
-import type { S3Config } from "@s3-good/shared";
+import type { S3Config } from "s3-good/types";
 import {
   S3Client,
   ListObjectsV2Command,
   DeleteObjectsCommand,
   HeadObjectCommand,
 } from "@aws-sdk/client-s3";
-import { createUploader, createRouteHandler } from "@s3-good/core/server";
-import type { FileRouter } from "@s3-good/core/server";
+import { createUploader, createRouteHandler } from "s3-good/server";
+import type { FileRouter } from "s3-good/server";
 import { z } from "zod";
 
 /** Generate a unique test prefix for object isolation */

@@ -5,7 +5,6 @@ export default defineConfig({
     server: "src/server.ts",
     client: "src/client.ts",
     next: "src/next.ts",
-    "next-client": "src/next-client.ts",
     hono: "src/hono.ts",
     types: "src/types.ts",
     "sdk/index": "src/sdk/index.ts",
@@ -15,5 +14,5 @@ export default defineConfig({
   splitting: true,
   clean: true,
   treeshake: true,
-  external: ["react", "next", "hono", "zod", "@s3-good/react", "@s3-good/shared"],
+  external: ["react", "next", "hono", "zod", "@s3-good-internal/shared"],
 });

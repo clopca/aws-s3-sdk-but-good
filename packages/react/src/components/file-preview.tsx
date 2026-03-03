@@ -1,5 +1,5 @@
 import { useState, useEffect, createElement, forwardRef } from "react";
-import { formatFileSize } from "@s3-good/shared";
+import { formatFileSize } from "s3-good/types";
 import { resolveStyle, resolveClassName, renderContent, cn } from "./shared";
 import type { StyleField } from "./shared";
 import { defaultFilePreviewClasses } from "../styles";

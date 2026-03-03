@@ -6,5 +6,5 @@ export default defineConfig({
   dts: true,
   clean: true,
   treeshake: true,
-  external: ["react", "react-dom", "@s3-good/core", "@s3-good/shared"],
+  external: ["react", "react-dom", "s3-good"],
 });

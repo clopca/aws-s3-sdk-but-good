@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { UploadError } from "@s3-good/shared";
+import { UploadError } from "@s3-good-internal/shared";
 
 // ─── Mock XMLHttpRequest ────────────────────────────────────────────────────
 

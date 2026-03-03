@@ -4,22 +4,23 @@ This document explains package boundaries, runtime separation, and key design de
 
 ## Monorepo package boundaries
 
-- `@s3-good/shared`
+- `@s3-good-internal/shared` (internal only)
   - Cross-package types, errors, and utility functions.
   - No framework-specific behavior.
-- `@s3-good/core`
+  - Not part of the public API surface.
+- `s3-good`
   - Upload route builder and server/client protocol implementation.
   - Framework adapters (`next`, `hono`) and S3 SDK utilities.
 - `@s3-good/react`
-  - Upload-focused React UI and typed helpers on top of `core/client`.
+  - Upload-focused React UI and typed helpers on top of `s3-good/client`.
 - `@s3-good/browser`
   - File browser UI + browser client/store/hooks for list/manage/preview workflows.
 
 Dependency direction is intentionally one-way:
 
-- `shared` <- `core` <- (`react`, `browser`)
+- `@s3-good-internal/shared` <- `s3-good` <- (`@s3-good/react`, `@s3-good/browser`)
 
-`react` and `browser` should not become dependencies of `core` server entry points.
+`@s3-good/react` and `@s3-good/browser` should not become dependencies of `s3-good` server entry points.
 
 ## Runtime model
 
@@ -42,13 +43,14 @@ Dependency direction is intentionally one-way:
 
 ## Entry-point separation (critical)
 
-`@s3-good/core` uses explicit entry points to prevent server/client boundary leaks:
+`s3-good` uses explicit entry points to prevent server/client boundary leaks:
 
-- `@s3-good/core/next`
+- `s3-good/next`
   - Server-only Next.js route handlers.
   - Must not import React UI modules.
-- `@s3-good/core/next-client`
-  - Async client helper factories that lazily access `@s3-good/react`.
+- `@s3-good/react/next`
+  - Synchronous client helper factories (`generateUploadButton`, `generateUploadDropzone`, `generateNextHelpers`).
+  - Lives in the `@s3-good/react` package (moved from the former `s3-good/next-client` entry point).
 
 Why this exists:
 
@@ -75,7 +77,7 @@ This separation allows transport/state logic to be tested independently from UI 
 
 - Server routes are defined with `createUploader()` and constrained by `FileRouter`.
 - Client helpers infer endpoint names and input/output from router types.
-- Shared request/response payload contracts live in `@s3-good/shared`.
+- Shared request/response payload contracts are re-exported from `s3-good/types`.
 
 Result:
 
@@ -85,7 +87,7 @@ Result:
 
 ## Design decisions (ADR summary)
 
-### ADR-001: Keep shared domain contracts in `@s3-good/shared`
+### ADR-001: Keep shared domain contracts in `@s3-good-internal/shared`
 
 Status: accepted.
 
@@ -94,14 +96,15 @@ Rationale:
 - Avoid duplicate model definitions across packages.
 - Keep core protocol and UI packages aligned.
 
-### ADR-002: Split `core/next` and `core/next-client`
+### ADR-002: Split `s3-good/next` and Next.js client helpers
 
-Status: accepted.
+Status: accepted (updated).
 
 Rationale:
 
 - Prevent client hooks/UI imports from contaminating server route bundles.
 - Make Next.js boundary behavior explicit and maintainable.
+- The client helpers (`generateUploadButton`, `generateUploadDropzone`, `generateNextHelpers`) have moved from `s3-good/next-client` to `@s3-good/react/next`, co-located with the React package they depend on. They are now synchronous (the former async wrappers existed only because of dynamic imports).
 
 ### ADR-003: Browser uses store + client + UI layering
 
@@ -114,13 +117,13 @@ Rationale:
 
 ## Extension points
 
-- Add framework adapters in `@s3-good/core` (same route protocol).
+- Add framework adapters in `s3-good` (same route protocol).
 - Add UI packages without changing core protocol.
 - Extend browser actions while preserving `BrowserActionPayload/Response` compatibility.
 
 ## Guardrails for future changes
 
 - Do not import `@s3-good/react` from server entry points.
-- Keep `shared` free of framework/runtime side effects.
+- Keep `@s3-good-internal/shared` free of framework/runtime side effects.
 - Add tests for boundary-sensitive behavior (Next.js server/client, hook-order stability, browser action validation).
 - Update README/docs when changing public entry points or contracts.

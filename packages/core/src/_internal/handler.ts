@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
-import type { S3Config, UploadErrorCode } from "@s3-good/shared";
-import { UploadError } from "@s3-good/shared";
+import type { S3Config, UploadErrorCode } from "@s3-good-internal/shared";
+import { UploadError } from "@s3-good-internal/shared";
 import type { FileRouter, FileRoute, AnyParams } from "./types";
 import { validateFilesForRoute } from "./file-types";
 import { generateFileKeys } from "./file-key";

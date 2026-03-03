@@ -173,7 +173,7 @@ describe("createRouteHandler (Hono)", () => {
 
   it("test_POST_error_handling_UploadError", async () => {
     // Arrange — mock handleUploadAction to throw UploadError
-    const { UploadError } = await import("@s3-good/shared");
+    const { UploadError } = await import("@s3-good-internal/shared");
     const { handleUploadAction } = await import("../_internal/handler");
     vi.mocked(handleUploadAction).mockRejectedValueOnce(
       new UploadError({ code: "ROUTE_NOT_FOUND", message: "Route not found" }),

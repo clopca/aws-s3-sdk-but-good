@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { UploadError } from "@s3-good/shared";
+import { UploadError } from "@s3-good-internal/shared";
 import type { FileRouter, FileRoute, AnyParams } from "../_internal/types";
 import {
   getRouteFromSlug,

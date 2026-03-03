@@ -4,7 +4,7 @@ import type {
   BrowserFile,
   BrowserItem,
   BrowserListFilters,
-} from "@s3-good/shared";
+} from "s3-good/types";
 import type {
   BrowserClientError,
   BrowserClientOptions,

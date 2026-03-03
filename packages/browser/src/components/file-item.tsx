@@ -1,6 +1,6 @@
 import { forwardRef } from "react";
-import type { BrowserItem } from "@s3-good/shared";
-import { getPreviewType } from "@s3-good/shared";
+import type { BrowserItem } from "s3-good/types";
+import { getPreviewType } from "s3-good/types";
 import type { ContextMenuItem } from "./context-menu";
 import { ContextMenu } from "./context-menu";
 import { FileIcon, FolderIcon } from "./file-icon";

@@ -38,7 +38,7 @@ vi.mock("@aws-sdk/s3-request-presigner", () => ({
   getSignedUrl: vi.fn(),
 }));
 
-import type { S3Config } from "@s3-good/shared";
+import type { S3Config } from "@s3-good-internal/shared";
 import {
   PutBucketCorsCommand,
   PutBucketLifecycleConfigurationCommand,

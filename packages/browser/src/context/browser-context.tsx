@@ -7,8 +7,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { genUploader } from "@s3-good/core/client";
-import type { FileRouter } from "@s3-good/core/server";
+import { genUploader } from "s3-good/client";
+import type { FileRouter } from "s3-good/server";
 import type {
   BrowserConfig,
   BrowserItem,
@@ -18,7 +18,7 @@ import type {
   SortDirection,
   SortField,
   ViewMode,
-} from "@s3-good/shared";
+} from "s3-good/types";
 import type { BrowserClient } from "../client";
 import type { BrowserStore } from "../state";
 import {

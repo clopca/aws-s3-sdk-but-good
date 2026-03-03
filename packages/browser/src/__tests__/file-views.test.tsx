@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { BrowserItem } from "@s3-good/shared";
+import type { BrowserItem } from "s3-good/types";
 import {
   EmptyState,
   FileGrid,

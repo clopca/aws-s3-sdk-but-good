@@ -1,6 +1,6 @@
 import { forwardRef, Suspense, useEffect } from "react";
-import type { BrowserFile } from "@s3-good/shared";
-import { getPreviewType } from "@s3-good/shared";
+import type { BrowserFile } from "s3-good/types";
+import { getPreviewType } from "s3-good/types";
 import { Dialog as DialogPrimitive } from "@base-ui/react";
 import {
   Button,

@@ -1,4 +1,4 @@
-import type { BrowserListFilters, BrowserItem } from "@s3-good/shared";
+import type { BrowserListFilters, BrowserItem } from "s3-good/types";
 
 export interface BrowserClientOptions {
   url?: string;

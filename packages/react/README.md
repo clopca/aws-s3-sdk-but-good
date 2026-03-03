@@ -1,11 +1,11 @@
 # @s3-good/react
 
-React UI primitives and typed helpers for `@s3-good/core` upload routes.
+React UI primitives and typed helpers for `s3-good` upload routes.
 
 ## Installation
 
 ```bash
-pnpm add @s3-good/react @s3-good/core zod
+pnpm add @s3-good/react s3-good zod
 ```
 
 Peer dependencies:
@@ -147,7 +147,7 @@ Also exported for custom UI compositions:
 ## Next.js notes
 
 - This package is client-side UI; use it from Client Components.
-- Your server handlers still live in `@s3-good/core/next` route files.
+- Your server handlers still live in `s3-good/next` route files.
 
 If using a monorepo + Next.js, keep `transpilePackages` configured in `next.config.ts` when needed:
 
@@ -155,7 +155,7 @@ If using a monorepo + Next.js, keep `transpilePackages` configured in `next.conf
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@s3-good/core", "@s3-good/react", "@s3-good/shared"],
+  transpilePackages: ["s3-good", "@s3-good/react"],
 };
 
 export default nextConfig;

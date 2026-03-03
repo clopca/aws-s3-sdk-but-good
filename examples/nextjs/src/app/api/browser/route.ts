@@ -1,4 +1,4 @@
-import { createBrowserRouteHandler } from "@s3-good/core/next";
+import { createBrowserRouteHandler } from "s3-good/next";
 import { browserRoute } from "~/server/browser-route";
 
 export const { GET, POST } = createBrowserRouteHandler({

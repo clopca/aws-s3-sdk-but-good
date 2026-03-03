@@ -7,7 +7,7 @@ import type {
   OnUploadCompleteFn,
   UploadErrorFn,
 } from "./types";
-import type { ExpandedRouteConfig } from "@s3-good/shared";
+import type { ExpandedRouteConfig } from "@s3-good-internal/shared";
 
 /**
  * Chainable builder for defining upload routes with full type inference.

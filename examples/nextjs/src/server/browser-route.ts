@@ -1,4 +1,4 @@
-import { createBrowser } from "@s3-good/core/server";
+import { createBrowser } from "s3-good/server";
 
 export const browserRoute = createBrowser()
   .rootPrefix(process.env.AWS_BROWSER_ROOT_PREFIX ?? "")

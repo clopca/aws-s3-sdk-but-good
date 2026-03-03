@@ -18,17 +18,16 @@ Type-safe uploads and file browsing for your own S3 bucket.
 
 | Package | Purpose | README |
 | --- | --- | --- |
-| `@s3-good/core` | Upload routes, server/client adapters, S3 setup SDK | [packages/core/README.md](./packages/core/README.md) |
+| `s3-good` | Upload routes, server/client adapters, S3 setup SDK | [packages/core/README.md](./packages/core/README.md) |
 | `@s3-good/react` | Upload UI primitives and typed React helpers | [packages/react/README.md](./packages/react/README.md) |
 | `@s3-good/browser` | Full S3 browser UI (list, preview, move/delete, upload) | [packages/browser/README.md](./packages/browser/README.md) |
-| `@s3-good/shared` | Shared types, errors, and MIME/file utilities | [packages/shared/README.md](./packages/shared/README.md) |
 
 ## Quick start
 
 ### 1) Install
 
 ```bash
-pnpm add @s3-good/core zod
+pnpm add s3-good zod
 pnpm add @s3-good/react # optional
 pnpm add @s3-good/browser # optional
 ```
@@ -37,7 +36,7 @@ pnpm add @s3-good/browser # optional
 
 ```ts
 // src/server/upload-router.ts
-import { createUploader, type FileRouter } from "@s3-good/core/server";
+import { createUploader, type FileRouter } from "s3-good/server";
 
 const f = createUploader();
 
@@ -59,7 +58,7 @@ export type OurFileRouter = typeof uploadRouter;
 
 ```ts
 // app/api/upload/route.ts
-import { createRouteHandler } from "@s3-good/core/next";
+import { createRouteHandler } from "s3-good/next";
 import { uploadRouter } from "~/server/upload-router";
 
 export const { GET, POST } = createRouteHandler({
@@ -94,7 +93,7 @@ export const { useUpload, uploadFiles } =
 
 ```ts
 // app/api/browser/route.ts
-import { createBrowser, createBrowserRouteHandler } from "@s3-good/core/next";
+import { createBrowser, createBrowserRouteHandler } from "s3-good/next";
 
 const browser = createBrowser()
   .buckets(["my-default-bucket"])
@@ -148,7 +147,7 @@ pnpm size:check
 ### Package-scoped commands
 
 ```bash
-pnpm --filter @s3-good/core test
+pnpm --filter s3-good test
 pnpm --filter @s3-good/browser dev
 pnpm --filter @s3-good/react build
 ```

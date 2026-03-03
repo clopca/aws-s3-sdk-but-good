@@ -22,7 +22,7 @@ import "@s3-good/browser/styles.css";
 
 ```ts
 // app/api/browser/route.ts
-import { createBrowser, createBrowserRouteHandler } from "@s3-good/core/next";
+import { createBrowser, createBrowserRouteHandler } from "s3-good/next";
 
 const browser = createBrowser()
   .buckets(["assets", "backups"])
