@@ -1,4 +1,4 @@
-import type { S3Config } from "@s3-good-internal/shared";
+import type { S3Config } from "s3-good/types";
 import {
   S3Client,
   ListObjectsV2Command,

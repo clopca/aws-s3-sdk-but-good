@@ -1,5 +1,5 @@
 import { forwardRef, useRef } from "react";
-import type { SortConfig, SortField, ViewMode } from "@s3-good-internal/shared";
+import type { SortConfig, SortField, ViewMode } from "s3-good/types";
 import {
   Button,
   cn,

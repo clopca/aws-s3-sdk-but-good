@@ -76,6 +76,8 @@ describe("Architecture Boundaries", () => {
 
   it("uses canonical docs slug for base API", () => {
     const astroConfig = readFile("docs/astro.config.mjs");
-    expect(astroConfig).toContain('{ label: "s3-good", slug: "api/s3-good" }');
+    expect(astroConfig).toMatch(
+      /label:\s*["']s3-good["']\s*,\s*slug:\s*["']api\/s3-good["']/,
+    );
   });
 });

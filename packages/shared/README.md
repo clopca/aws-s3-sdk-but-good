@@ -2,13 +2,8 @@
 
 Shared runtime/types package used by `s3-good`, `@s3-good/react`, and `@s3-good/browser`.
 
-Most users consume these exports transitively, but this package is useful directly for shared types, error handling, and MIME/file helpers.
-
-## Installation
-
-```bash
-pnpm add @s3-good-internal/shared
-```
+This is an internal workspace package and not part of the public API contract.
+It is published with public access so dependent public packages can resolve it at install time.
 
 ## What it provides
 

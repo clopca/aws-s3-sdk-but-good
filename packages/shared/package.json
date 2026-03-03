@@ -1,5 +1,6 @@
 {
   "name": "@s3-good-internal/shared",
+  "description": "Internal shared runtime/types for the s3-good package family.",
   "version": "0.1.0",
   "type": "module",
   "sideEffects": false,

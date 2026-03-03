@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getCodeLanguage } from "@s3-good-internal/shared";
+import { getCodeLanguage } from "s3-good/types";
 import type { PreviewRendererProps } from "./index";
 
 export default function CodePreview({ url, fileName }: PreviewRendererProps) {

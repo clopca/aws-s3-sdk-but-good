@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
-import type { BrowserFile, BrowserItem } from "@s3-good-internal/shared";
-import { getPreviewType } from "@s3-good-internal/shared";
+import type { BrowserFile, BrowserItem } from "s3-good/types";
+import { getPreviewType } from "s3-good/types";
 import type { BrowserClient } from "../client";
 import type { BrowserStore } from "../state";
 

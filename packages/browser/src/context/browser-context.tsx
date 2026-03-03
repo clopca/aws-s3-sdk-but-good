@@ -18,7 +18,7 @@ import type {
   SortDirection,
   SortField,
   ViewMode,
-} from "@s3-good-internal/shared";
+} from "s3-good/types";
 import type { BrowserClient } from "../client";
 import type { BrowserStore } from "../state";
 import {

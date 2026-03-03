@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { BrowserItem } from "@s3-good-internal/shared";
+import type { BrowserItem } from "s3-good/types";
 import { FileGrid } from "../components/file-grid";
 import { FileListView } from "../components/file-list-view";
 

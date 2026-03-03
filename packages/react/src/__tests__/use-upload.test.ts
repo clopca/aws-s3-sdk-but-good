@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
-import { UploadError } from "@s3-good-internal/shared";
+import { UploadError } from "s3-good/types";
 
 const mockUploadFiles = vi.fn();
 const mockCreateUpload = vi.fn();

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@s3-good-internal/shared", () => ({
+vi.mock("s3-good/types", () => ({
   getPreviewType: vi.fn(),
   getCodeLanguage: vi.fn(),
 }));

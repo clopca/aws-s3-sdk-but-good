@@ -4,7 +4,7 @@ import type {
   SortDirection,
   SortField,
   ViewMode,
-} from "@s3-good-internal/shared";
+} from "s3-good/types";
 import type { BrowserState, BrowserStateListener, BrowserStore } from "./types";
 
 const DEFAULT_SORT: SortConfig = { field: "name", direction: "asc" };

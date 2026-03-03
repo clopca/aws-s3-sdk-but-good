@@ -4,7 +4,7 @@
  * Browser-focused UI and hooks for S3 file management.
  */
 
-export { getCodeLanguage, getPreviewType } from "@s3-good-internal/shared";
+export { getCodeLanguage, getPreviewType } from "s3-good/types";
 
 export type {
   BrowserAction,
@@ -19,7 +19,7 @@ export type {
   SortDirection,
   SortField,
   ViewMode,
-} from "@s3-good-internal/shared";
+} from "s3-good/types";
 
 export { createBrowserStore } from "./state";
 export type { BrowserState, BrowserStore } from "./state";

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import type { BrowserItem } from "@s3-good-internal/shared";
-import { getPreviewType } from "@s3-good-internal/shared";
+import type { BrowserItem } from "s3-good/types";
+import { getPreviewType } from "s3-good/types";
 import { FileIcon, FolderIcon } from "./file-icon";
 
 export interface FileThumbnailProps {

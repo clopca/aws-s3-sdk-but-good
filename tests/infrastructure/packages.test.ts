@@ -102,15 +102,18 @@ describe("Publish Readiness (Task 18)", () => {
     it("has linked array including all managed packages", () => {
       const config = readJson(".changeset/config.json");
       const linked = config.linked as string[][];
+      const required = [
+        "s3-good",
+        "@s3-good/react",
+        "@s3-good-internal/shared",
+        "@s3-good/browser",
+      ];
 
       expect(linked).toBeDefined();
       expect(linked.length).toBeGreaterThanOrEqual(1);
-
-      const linkedPackages = linked[0];
-      expect(linkedPackages).toContain("s3-good");
-      expect(linkedPackages).toContain("@s3-good/react");
-      expect(linkedPackages).toContain("@s3-good-internal/shared");
-      expect(linkedPackages).toContain("@s3-good/browser");
+      expect(
+        linked.some((group) => required.every((pkg) => group.includes(pkg))),
+      ).toBe(true);
     });
 
     it("has baseBranch set to main", () => {
@@ -132,12 +135,20 @@ describe("Publish Readiness (Task 18)", () => {
       expect(deps["@s3-good-internal/shared"]).toBe("workspace:*");
     });
 
-    it("@s3-good/react depends on s3-good and @s3-good-internal/shared via workspace:*", () => {
+    it("@s3-good/react depends on s3-good via workspace:*", () => {
       const pkg = readJson("packages/react/package.json");
       const deps = pkg.dependencies as Record<string, string>;
 
       expect(deps["s3-good"]).toBe("workspace:*");
-      expect(deps["@s3-good-internal/shared"]).toBe("workspace:*");
+      expect(deps["@s3-good-internal/shared"]).toBeUndefined();
+    });
+
+    it("@s3-good/browser depends on s3-good via workspace:*", () => {
+      const pkg = readJson("packages/browser/package.json");
+      const deps = pkg.dependencies as Record<string, string>;
+
+      expect(deps["s3-good"]).toBe("workspace:*");
+      expect(deps["@s3-good-internal/shared"]).toBeUndefined();
     });
   });
 });

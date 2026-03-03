@@ -8,7 +8,7 @@ import { SelectionBar } from "../components/selection-bar";
 import { Toolbar } from "../components/toolbar";
 import { FileGrid } from "../components/file-grid";
 import { FileListView } from "../components/file-list-view";
-import type { BrowserFile } from "@s3-good-internal/shared";
+import type { BrowserFile } from "s3-good/types";
 
 describe("forwardRef + cn() on browser components", () => {
   afterEach(() => {

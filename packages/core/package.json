@@ -6,6 +6,17 @@
   "main": "./dist/server.cjs",
   "module": "./dist/server.js",
   "types": "./dist/server.d.ts",
+  "typesVersions": {
+    "*": {
+      "server": ["dist/server.d.ts"],
+      "client": ["dist/client.d.ts"],
+      "next": ["dist/next.d.ts"],
+      "next-client": ["dist/next-client.d.ts"],
+      "types": ["dist/types.d.ts"],
+      "hono": ["dist/hono.d.ts"],
+      "sdk": ["dist/sdk/index.d.ts"]
+    }
+  },
   "exports": {
     ".": {
       "types": "./dist/server.d.ts",

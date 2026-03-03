@@ -29,7 +29,6 @@
   },
   "dependencies": {
     "s3-good": "workspace:*",
-    "@s3-good-internal/shared": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "tailwind-merge": "^3.5.0"

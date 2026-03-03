@@ -1,5 +1,5 @@
 import type { FileRouter } from "./_internal/types";
-import type { S3Config } from "@s3-good-internal/shared";
+import type { S3Config } from "./types";
 import { handleUploadAction } from "./_internal/handler";
 import type { BrowserBuilder } from "./_internal/browser-builder";
 import { handleBrowserAction } from "./_internal/browser-handler";

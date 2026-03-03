@@ -8,7 +8,7 @@ import {
 } from "react";
 import { genUploader } from "s3-good/client";
 import type { FileRouter } from "s3-good/server";
-import type { BrowserConfig, BrowserFile, BrowserItem } from "@s3-good-internal/shared";
+import type { BrowserConfig, BrowserFile, BrowserItem } from "s3-good/types";
 import {
   useBreadcrumbs,
   useBrowser,

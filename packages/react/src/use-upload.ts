@@ -5,8 +5,8 @@ import type {
   inferEndpoints,
   PermittedFileInfo,
 } from "s3-good/types";
-import type { UploadFileResponse } from "@s3-good-internal/shared";
-import { UploadError, parseFileSize } from "@s3-good-internal/shared";
+import type { UploadFileResponse } from "s3-good/types";
+import { UploadError, parseFileSize } from "s3-good/types";
 import {
   createS3GoodClient,
   type UploadJobSnapshot,

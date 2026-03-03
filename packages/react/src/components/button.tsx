@@ -4,8 +4,8 @@ import type {
   inferEndpointInput,
   inferEndpoints,
 } from "s3-good/types";
-import type { UploadFileResponse } from "@s3-good-internal/shared";
-import type { UploadError } from "@s3-good-internal/shared";
+import type { UploadFileResponse } from "s3-good/types";
+import type { UploadError } from "s3-good/types";
 import { useUpload } from "../use-upload";
 import {
   resolveStyle,
