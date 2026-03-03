@@ -1,5 +1,14 @@
 # nextjs-example
 
+## 0.0.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - s3-good@0.2.0
+  - @s3-good/react@0.2.0
+  - @s3-good/browser@0.2.0
+
 ## 0.0.1
 
 ### Patch Changes

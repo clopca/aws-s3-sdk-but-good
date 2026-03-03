@@ -1,5 +1,16 @@
 # @s3-good/react
 
+## 0.2.0
+
+### Minor Changes
+
+- Transition package architecture to the `s3-good` base naming scheme, move Next client helper exports to `@s3-good/react/next`, and update the release policy to keep `@s3-good-internal/shared` private and non-published.
+
+### Patch Changes
+
+- Updated dependencies []:
+  - s3-good@0.2.0
+
 ## 0.1.0
 
 ### Major Changes
