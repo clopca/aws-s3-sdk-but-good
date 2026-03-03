@@ -1,10 +1,6 @@
-import type {
-  FileRouter,
-  inferEndpointInput,
-  inferEndpoints,
-} from "./types";
-import type { UploadFileResponse } from "@s3-good-internal/shared";
-import { UploadError, computeSHA256 } from "@s3-good-internal/shared";
+import type { FileRouter, inferEndpointInput, inferEndpoints } from "./types";
+import type { UploadFileResponse } from "../types";
+import { UploadError, computeSHA256 } from "../types";
 import type { UploadProgressEvent } from "./upload-browser";
 import { uploadFile } from "./upload-browser";
 import { MULTIPART_THRESHOLD } from "./s3";
@@ -38,7 +34,12 @@ export interface UploadFilesOptions<
 async function requestPresignedUrls(
   url: string,
   endpoint: string,
-  files: Array<{ name: string; size: number; type: string; checksumSHA256?: string }>,
+  files: Array<{
+    name: string;
+    size: number;
+    type: string;
+    checksumSHA256?: string;
+  }>,
   input: unknown,
   headers?: HeadersInit,
 ): Promise<{
@@ -182,7 +183,12 @@ export function genUploader<TRouter extends FileRouter>(
     // 1. Compute SHA-256 checksums for single-part files (< MULTIPART_THRESHOLD)
     const fileMetadata = await Promise.all(
       files.map(async (f) => {
-        const meta: { name: string; size: number; type: string; checksumSHA256?: string } = {
+        const meta: {
+          name: string;
+          size: number;
+          type: string;
+          checksumSHA256?: string;
+        } = {
           name: f.name,
           size: f.size,
           type: f.type,
