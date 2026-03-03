@@ -127,9 +127,6 @@ importers:
       '@base-ui/react':
         specifier: ^1.0.0
         version: 1.2.0(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      '@s3-good-internal/shared':
-        specifier: workspace:*
-        version: link:../shared
       '@tanstack/react-virtual':
         specifier: ^3.13.19
         version: 3.13.19(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -234,9 +231,6 @@ importers:
 
   packages/react:
     dependencies:
-      '@s3-good-internal/shared':
-        specifier: workspace:*
-        version: link:../shared
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1

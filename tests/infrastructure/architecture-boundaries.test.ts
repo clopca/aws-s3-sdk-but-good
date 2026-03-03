@@ -65,8 +65,11 @@ describe("Architecture Boundaries", () => {
       ...(corePkg.devDependencies as Record<string, string>),
       ...(corePkg.peerDependencies as Record<string, string>),
     };
-    const reactDeps = reactPkg.dependencies as Record<string, string>;
-    const browserDeps = browserPkg.dependencies as Record<string, string>;
+    const reactDeps = (reactPkg.dependencies ?? {}) as Record<string, string>;
+    const browserDeps = (browserPkg.dependencies ?? {}) as Record<
+      string,
+      string
+    >;
 
     expect(coreDeps["@s3-good/react"]).toBeUndefined();
     expect(coreDeps["@s3-good/browser"]).toBeUndefined();
