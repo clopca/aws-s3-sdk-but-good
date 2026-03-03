@@ -17,7 +17,7 @@ Complete API reference for the `s3-good` package. This package provides the serv
 | `@s3-good/react/next` | Client      | Next.js helper factories for typed React helpers/components (from `@s3-good/react`) |
 | `s3-good/hono`        | Server      | Hono framework adapter                                                              |
 | `s3-good/client`      | Browser     | Client-side upload functions                                                        |
-| `s3-good/types`       | Both        | Type exports for inference utilities                                                |
+| `s3-good/types`       | Both        | Shared types plus runtime error classes and utilities                               |
 | `s3-good/sdk`         | Server      | High-level S3 API class                                                             |
 
 ---
@@ -188,9 +188,9 @@ function generateNextHelpers<TRouter extends FileRouter>(opts?: {
 Creates a pre-typed `UploadDropzone` helper component factory.
 
 ```typescript
-async function generateUploadDropzone<TRouter extends FileRouter>(opts?: {
+function generateUploadDropzone<TRouter extends FileRouter>(opts?: {
   url?: string;
-}): Promise<(props: UploadDropzoneProps) => unknown>;
+}): (props: UploadDropzoneProps) => unknown;
 ```
 
 ### generateNextHelpers
@@ -198,13 +198,13 @@ async function generateUploadDropzone<TRouter extends FileRouter>(opts?: {
 Creates typed React helpers with Next.js defaults (`/api/upload`).
 
 ```typescript
-async function generateNextHelpers<TRouter extends FileRouter>(opts?: {
+function generateNextHelpers<TRouter extends FileRouter>(opts?: {
   url?: string;
-}): Promise<{
+}): {
   useUpload: TypedUseUpload;
   uploadFiles: TypedUploadFiles;
   createUpload: TypedCreateUpload;
-}>;
+};
 ```
 
 ---
@@ -327,7 +327,7 @@ interface UploadProgressEvent {
 
 ## s3-good/types
 
-Type-only exports for inference and shared types.
+Exports inference/shared types and runtime values (for example, `UploadError` and `S3Error`).
 
 ### Router types
 

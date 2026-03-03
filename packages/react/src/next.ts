@@ -1,3 +1,4 @@
+import { createElement } from "react";
 import type { FileRouter } from "s3-good/types";
 import type { UploadButtonProps } from "./components/button";
 import type { UploadDropzoneProps } from "./components/dropzone";
@@ -25,7 +26,7 @@ export function generateUploadButton<TRouter extends FileRouter>(opts?: {
   function TypedUploadButton(
     props: Omit<UploadButtonProps<TRouter, never>, "__internal">,
   ) {
-    return UploadButton({
+    return createElement(UploadButton, {
       ...props,
       __internal: { url },
     } as UploadButtonProps<TRouter, never>);
@@ -54,7 +55,7 @@ export function generateUploadDropzone<TRouter extends FileRouter>(opts?: {
   function TypedUploadDropzone(
     props: Omit<UploadDropzoneProps<TRouter, never>, "__internal">,
   ) {
-    return UploadDropzone({
+    return createElement(UploadDropzone, {
       ...props,
       __internal: { url },
     } as UploadDropzoneProps<TRouter, never>);
